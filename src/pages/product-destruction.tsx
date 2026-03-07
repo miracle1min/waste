@@ -582,7 +582,7 @@ export default function ProductDestruction() {
         startY += 7;
 
         // Table headers
-        const headers = [['No', 'Nama Produk', 'Kode Produk', 'Jumlah', 'Metode', 'Alasan', 'Jam', 'QC', 'Manajer', 'Dokumentasi']];
+        const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
         
         // Helper: extract URL from =IMAGE("url"; ...) or =IMAGE("url", ...) formula
         const extractImageUrl = (val: string): string => {
@@ -666,20 +666,21 @@ export default function ProductDestruction() {
           body: rows,
           startY: startY,
           margin: { left: margin, right: margin },
-          styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 12 },
-          headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 8, valign: 'middle' },
+          headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle' },
           columnStyles: {
-            0: { cellWidth: 8, halign: 'center', valign: 'middle' },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 25 },
-            3: { cellWidth: 15, halign: 'center' },
-            4: { cellWidth: 20 },
-            5: { cellWidth: 28 },
-            6: { cellWidth: 33 },
-            7: { cellWidth: 20, halign: 'center' },
-            8: { cellWidth: 22, halign: 'center' },
-            9: { cellWidth: 30, halign: 'center' },
+            0: { cellWidth: 9, halign: 'center', valign: 'middle' },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 16, halign: 'center' },
+            4: { cellWidth: 25 },
+            5: { cellWidth: 35 },
+            6: { cellWidth: 35 },
+            7: { cellWidth: 25, halign: 'center' },
+            8: { cellWidth: 28, halign: 'center' },
+            9: { cellWidth: 31, halign: 'center' },
           },
+          tableWidth: 'wrap',
           theme: 'grid',
           didDrawCell: (data: any) => {
             if (data.section !== 'body') return;
@@ -731,15 +732,19 @@ export default function ProductDestruction() {
                 doc.setTextColor(0, 0, 255);
                 doc.setFontSize(7);
                 const linkText = 'Lihat Foto';
-                const linkX = cellX + (cellW - doc.getTextWidth(linkText)) / 2;
-                const linkY = cellY + cellH / 2 + 1;
-                doc.textWithLink(linkText, linkX, linkY, { url: spreadsheetUrl });
-                doc.setTextColor(0, 0, 0);
-                // Underline
                 const textWidth = doc.getTextWidth(linkText);
+                const linkX = cellX + (cellW - textWidth) / 2;
+                const linkY = cellY + cellH / 2 + 1;
+                doc.text(linkText, linkX, linkY);
+                // Underline
                 doc.setDrawColor(0, 0, 255);
+                doc.setLineWidth(0.2);
                 doc.line(linkX, linkY + 0.5, linkX + textWidth, linkY + 0.5);
                 doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.1);
+                // Clickable area over the text
+                doc.link(linkX, linkY - 3, textWidth, 5, { url: spreadsheetUrl });
+                doc.setTextColor(0, 0, 0);
               }
             }
           },
