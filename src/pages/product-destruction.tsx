@@ -704,11 +704,11 @@ export default function ProductDestruction() {
           const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
           if (entry) {
             // Keep multi-line items in one cell per station
-            const namaProduk = (entry.namaProduk || '-').replace(/,\s*/g, '\n');
-            const kodeProduk = (entry.kodeProduk || '-').replace(/,\s*/g, '\n');
-            const jumlahProduk = (entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
-            const metode = (entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
-            const alasan = (entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
+            const namaProduk = String(entry.namaProduk || '-').replace(/,\s*/g, '\n');
+            const kodeProduk = String(entry.kodeProduk || '-').replace(/,\s*/g, '\n');
+            const jumlahProduk = String(entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+            const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
+            const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
             
             // Check if dokumentasi has actual content
             const hasDocs = entry.dokumentasi?.some((d: string) => {
