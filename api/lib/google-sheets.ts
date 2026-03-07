@@ -56,7 +56,7 @@ async function getAccessToken(credentials: { client_email: string; private_key: 
 const SHEETS_BASE_URL = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 const HEADERS = [
-  'STATION', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH PRODUK', 'UNIT',
+  'SHIFT', 'STORE', 'STATION', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH PRODUK', 'UNIT',
   'METODE PEMUSNAHAN', 'ALASAN PEMUSNAHAN', 'JAM & TGL PEMUSNAHAN',
   'PARAF QC', 'PARAF MANAJER', 'DOKUMENTASI 1', 'DOKUMENTASI 2', 'DOKUMENTASI 3',
   'DOKUMENTASI 4', 'DOKUMENTASI 5', 'DOKUMENTASI 6', 'DOKUMENTASI 7',
@@ -94,7 +94,7 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
     // Write header values
     await sheetsRequest(
       accessToken,
-      `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A1:T1?valueInputOption=RAW`,
+      `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A1:V1?valueInputOption=RAW`,
       'PUT',
       { values: [HEADERS] }
     );
@@ -104,7 +104,7 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
       requests: [
         {
           repeatCell: {
-            range: { sheetId: newSheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 20 },
+            range: { sheetId: newSheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 22 },
             cell: {
               userEnteredFormat: {
                 horizontalAlignment: 'CENTER',
@@ -197,7 +197,7 @@ export async function appendToGoogleSheets(
 
   await sheetsRequest(
     accessToken,
-    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:T:append?valueInputOption=USER_ENTERED`,
+    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:V:append?valueInputOption=USER_ENTERED`,
     'POST',
     { values: [rowData] }
   );
@@ -233,7 +233,7 @@ export async function appendGroupToGoogleSheets(
 
   await sheetsRequest(
     accessToken,
-    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:T:append?valueInputOption=USER_ENTERED`,
+    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:V:append?valueInputOption=USER_ENTERED`,
     'POST',
     { values: [categoryHeaderRow, ...itemRows] }
   );
@@ -243,7 +243,7 @@ export async function appendGroupToGoogleSheets(
     requests: [
       {
         repeatCell: {
-          range: { sheetId, startRowIndex: rowNumber, endRowIndex: rowNumber + 1, startColumnIndex: 0, endColumnIndex: 11 },
+          range: { sheetId, startRowIndex: rowNumber, endRowIndex: rowNumber + 1, startColumnIndex: 0, endColumnIndex: 22 },
           cell: { userEnteredFormat: { textFormat: { bold: true }, horizontalAlignment: 'CENTER' } },
           fields: 'userEnteredFormat(textFormat,horizontalAlignment)'
         }
@@ -267,7 +267,7 @@ export async function appendGroupToGoogleSheets(
 }
 
 export async function appendGroupedToGoogleSheets(
-  credentialsString: string, spreadsheetId: string, data: any, imageUrls: any
+  credentialsString: string, spreadsheetId: string, data: any, imageUrls: any, shift?: string, storeName?: string
 ): Promise<void> {
   const credentials = JSON.parse(credentialsString);
   const accessToken = await getAccessToken(credentials);
@@ -285,6 +285,8 @@ export async function appendGroupedToGoogleSheets(
 
   const dokumentasiCols = buildDokumentasiColumns(imageUrls.dokumentasi || '');
   const categoryRow = [
+    (shift || 'OPENING').toUpperCase(),
+    (storeName || 'BEKASI KP. BULU').toUpperCase(),
     data.kategoriInduk.toUpperCase(),
     productNames, productCodes, quantities, units, methods, reasons,
     data.jamTanggalPemusnahan,
@@ -295,7 +297,7 @@ export async function appendGroupedToGoogleSheets(
 
   await sheetsRequest(
     accessToken,
-    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:T:append?valueInputOption=USER_ENTERED`,
+    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:V:append?valueInputOption=USER_ENTERED`,
     'POST',
     { values: [categoryRow] }
   );
@@ -305,7 +307,7 @@ export async function appendGroupedToGoogleSheets(
     requests: [
       {
         repeatCell: {
-          range: { sheetId, startRowIndex: rowNumber, endRowIndex: rowNumber + 1, startColumnIndex: 0, endColumnIndex: 11 },
+          range: { sheetId, startRowIndex: rowNumber, endRowIndex: rowNumber + 1, startColumnIndex: 0, endColumnIndex: 22 },
           cell: {
             userEnteredFormat: {
               textFormat: { bold: true },

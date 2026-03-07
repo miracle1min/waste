@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut, Download, AlertTriangle } from "lucide-react";
 import { useStableCallback, useDebounce, usePerformanceMonitor } from "@/hooks/usePerformanceOptimization";
 import { parseApiError, getUserFriendlyErrorMessage, retryRequest } from "@/utils/errorHandler";
 
@@ -33,6 +33,21 @@ const PREDEFINED_PRODUCTS = {
   DIMSUM: ["UDANG KEJU", "UDANG RAMBUTAN", "LUMPIA UDANG", "SIOMAY"],
   PRODUKSI: ["KULIT PANGSIT", "PANGSIT GORENG", "CABE"]
 };
+
+type Shift = 'OPENING' | 'MIDDLE' | 'CLOSING' | 'MIDNIGHT';
+
+const SHIFTS: { id: Shift; label: string; color: string }[] = [
+  { id: 'OPENING', label: 'Opening', color: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' },
+  { id: 'MIDDLE', label: 'Middle', color: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' },
+  { id: 'CLOSING', label: 'Closing', color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' },
+  { id: 'MIDNIGHT', label: 'Midnight', color: 'bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700' },
+];
+
+const STORES = [
+  'BEKASI KP. BULU',
+  'BEKASI JATIASIH',
+  'CIKARANG',
+];
 
 type WasteItem = z.infer<typeof insertIndividualProductWithFilesSchema>;
 type Category = "NOODLE" | "DIMSUM" | "BAR" | "PRODUKSI";
@@ -101,6 +116,12 @@ export default function ProductDestruction() {
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<Shift>('OPENING');
+  const [storeName, setStoreName] = useState<string>('BEKASI KP. BULU');
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [showPdfButton, setShowPdfButton] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [customProductName, setCustomProductName] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const { toast } = useToast();
@@ -164,6 +185,8 @@ export default function ProductDestruction() {
       // Basic group data
       formData.append('tanggal', selectedDate);
       formData.append('kategoriInduk', categoryGroup.kategoriInduk);
+      formData.append('shift', selectedShift);
+      formData.append('storeName', storeName);
       
       // Extract arrays for grouped data
       const productList = categoryGroup.items.map(item => item.namaProduk);
@@ -229,10 +252,7 @@ export default function ProductDestruction() {
     }),
     onSuccess: useStableCallback(() => {
       setShowSuccessModal(true);
-      setCurrentStep("date");
-      setCompletedSteps([]);
-      setSelectedCategory(null);
-      setCategoryGroups([]);
+      setShowPdfButton(true);
       toast({
         title: "Berhasil!",
         description: `Data pemusnahan berhasil disimpan ke Google Spreadsheet.`,
@@ -464,6 +484,178 @@ export default function ProductDestruction() {
     );
   };
 
+  // Check for duplicate submission
+  const checkDuplicate = async () => {
+    if (!selectedCategory) return false;
+    setIsCheckingDuplicate(true);
+    setDuplicateWarning(null);
+    try {
+      const res = await fetch(`/api/check-duplicate?date=${selectedDate}&shift=${selectedShift}&station=${selectedCategory}`);
+      const data = await res.json();
+      if (data.isDuplicate) {
+        setDuplicateWarning(`Data untuk shift ${selectedShift} - station ${selectedCategory} pada tanggal ini sudah ada!`);
+        return true;
+      }
+      return false;
+    } catch {
+      return false; // Don't block on error
+    } finally {
+      setIsCheckingDuplicate(false);
+    }
+  };
+
+  // Generate PDF for the day
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const res = await fetch(`/api/get-day-data?date=${selectedDate}`);
+      const dayData = await res.json();
+      if (!dayData.success || !dayData.grouped) {
+        toast({ title: "Error", description: "Gagal mengambil data dari spreadsheet", variant: "destructive" });
+        return;
+      }
+      // Dynamic import jspdf
+      const { default: jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+
+      // Try to load logo
+      let logoImg: string | null = null;
+      try {
+        const logoRes = await fetch('/logo-ppa.png');
+        if (logoRes.ok) {
+          const blob = await logoRes.blob();
+          logoImg = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch {}
+
+      // Header
+      if (logoImg) {
+        doc.addImage(logoImg, 'PNG', margin, 5, 25, 25);
+      }
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PT. PESTA PORA ABADI', pageWidth / 2, 12, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text('FORM PEMUSNAHAN PRODUK', pageWidth / 2, 19, { align: 'center' });
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Dok.No. PPA/FORM/OPS-STORE/016', pageWidth - margin, 10, { align: 'right' });
+
+      // Info line
+      const dateObj = new Date(selectedDate + 'T00:00:00');
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const dayName = days[dateObj.getDay()];
+      const dateDisplay = `${dateObj.getDate().toString().padStart(2,'0')}/${(dateObj.getMonth()+1).toString().padStart(2,'0')}/${dateObj.getFullYear()}`;
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const infoY = 28;
+      doc.text(`Hari: ${dayName}`, margin, infoY);
+      doc.text(`Tanggal: ${dateDisplay}`, margin + 50, infoY);
+      doc.text(`Store: ${dayData.storeName || storeName}`, margin + 110, infoY);
+
+      // Table for each shift
+      const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];
+      const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
+      let startY = 33;
+
+      shifts.forEach((shift, shiftIdx) => {
+        const shiftData = dayData.grouped[shift] || [];
+        
+        // Section header
+        doc.setFillColor(200, 200, 200);
+        doc.rect(margin, startY, pageWidth - 2 * margin, 6, 'F');
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
+        startY += 7;
+
+        // Table headers
+        const headers = [['No', 'Nama Produk', 'Kode Produk', 'Jumlah', 'Metode', 'Alasan', 'Jam', 'QC', 'Manajer', 'Dokumentasi']];
+        
+        // Build rows - 4 rows per shift (one per station)
+        const rows: string[][] = [];
+        stationOrder.forEach((station, idx) => {
+          const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+          if (entry) {
+            rows.push([
+              (idx + 1).toString(),
+              (entry.namaProduk || '').replace(/\n/g, ', '),
+              (entry.kodeProduk || '').replace(/\n/g, ', '),
+              (entry.jumlahProduk || '').replace(/\n/g, ', '),
+              (entry.metodePemusnahan || '').replace(/\n/g, ', '),
+              (entry.alasanPemusnahan || '').replace(/\n/g, ', '),
+              entry.jamTanggalPemusnahan || '',
+              entry.parafQC ? '✓' : '-',
+              entry.parafManager ? '✓' : '-',
+              entry.dokumentasi?.length ? `${entry.dokumentasi.length} foto` : '-',
+            ]);
+          } else {
+            rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+          }
+        });
+
+        autoTable(doc, {
+          head: headers,
+          body: rows,
+          startY: startY,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1 },
+          headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          columnStyles: {
+            0: { cellWidth: 8, halign: 'center' },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 15, halign: 'center' },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 30 },
+            6: { cellWidth: 35 },
+            7: { cellWidth: 15, halign: 'center' },
+            8: { cellWidth: 18, halign: 'center' },
+            9: { cellWidth: 25, halign: 'center' },
+          },
+          theme: 'grid',
+        });
+
+        startY = (doc as any).lastAutoTable.finalY + 3;
+        
+        // Check if we need a new page
+        if (startY > pageHeight - 30 && shiftIdx < shifts.length - 1) {
+          doc.addPage();
+          startY = 15;
+        }
+      });
+
+      // Footer
+      startY = Math.min(startY + 8, pageHeight - 20);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Diketahui Oleh : AM/RM', margin, startY);
+      doc.line(margin, startY + 15, margin + 50, startY + 15);
+
+      // Save
+      const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
+      doc.save(fileName);
+      
+      toast({ title: "PDF Generated!", description: `File ${fileName} berhasil didownload` });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({ title: "Error", description: "Gagal generate PDF. Coba lagi.", variant: "destructive" });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const submitCurrentGroup = () => {
     if (!selectedCategory) return;
     
@@ -478,7 +670,19 @@ export default function ProductDestruction() {
     }
 
     setIsSubmitting(true);
-    submitMutation.mutate(group);
+    // Check for duplicates first
+    checkDuplicate().then((isDup) => {
+      if (isDup) {
+        setIsSubmitting(false);
+        toast({
+          title: "⚠️ Data Duplikat",
+          description: `Shift ${selectedShift} - Station ${selectedCategory} sudah pernah disubmit untuk tanggal ini!`,
+          variant: "destructive",
+        });
+        return;
+      }
+      submitMutation.mutate(group);
+    });
   };
 
   const currentGroup = selectedCategory ? categoryGroups.find(g => g.kategoriInduk === selectedCategory) : null;
@@ -586,6 +790,42 @@ export default function ProductDestruction() {
                     </div>
                   )}
                   
+                  {/* Shift Selector */}
+                  <div className="space-y-3">
+                    <Label className="text-base sm:text-lg font-medium">Shift</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {SHIFTS.map((shift) => (
+                        <button
+                          key={shift.id}
+                          type="button"
+                          onClick={() => setSelectedShift(shift.id)}
+                          className={`p-3 rounded-lg border-2 text-center font-semibold transition-all ${
+                            selectedShift === shift.id
+                              ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
+                              : `${shift.color} hover:border-primary/50`
+                          }`}
+                        >
+                          {shift.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Store Selector */}
+                  <div className="space-y-3">
+                    <Label className="text-base sm:text-lg font-medium">Store / Outlet</Label>
+                    <Select value={storeName} onValueChange={setStoreName}>
+                      <SelectTrigger className="text-base h-12 sm:h-14">
+                        <SelectValue placeholder="Pilih store" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STORES.map((store) => (
+                          <SelectItem key={store} value={store}>{store}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
                     <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
                       <strong>Penting:</strong> Tanggal ini akan menentukan nama sheet di Google Spreadsheet. Pilih tanggal hari kerja yang sesuai untuk menghindari data masuk ke sheet yang salah.
@@ -990,6 +1230,14 @@ export default function ProductDestruction() {
                         <p className="font-medium">{formatWIBForDisplay(selectedDate)}</p>
                       </div>
                       <div>
+                        <span className="text-muted-foreground">Shift:</span>
+                        <p className="font-medium">{selectedShift}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Store:</span>
+                        <p className="font-medium">{storeName}</p>
+                      </div>
+                      <div>
                         <span className="text-muted-foreground">Kategori:</span>
                         <p className="font-medium">{selectedCategory}</p>
                       </div>
@@ -1096,10 +1344,36 @@ export default function ProductDestruction() {
             </div>
             <DialogTitle className="text-center text-lg sm:text-xl">Data Berhasil Dikirim!</DialogTitle>
             <DialogDescription className="text-center text-sm sm:text-base px-2">
-              Data pemusnahan kategori {selectedCategory} telah berhasil disimpan ke Google Spreadsheet.
+              Data pemusnahan shift {selectedShift} - kategori {selectedCategory} telah berhasil disimpan ke Google Spreadsheet.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
+          
+          {showPdfButton && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200 text-center mb-3">
+                📄 Generate PDF BA WASTE untuk tanggal ini?
+              </p>
+              <Button
+                onClick={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF BA WASTE
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-2">
             <Button
               variant="outline"
               onClick={() => setShowSuccessModal(false)}
@@ -1114,6 +1388,7 @@ export default function ProductDestruction() {
                 setCompletedSteps([]);
                 setSelectedCategory(null);
                 setCategoryGroups([]);
+                setShowPdfButton(false);
                 resetForm();
               }}
               className="flex-1 h-11 sm:h-10 text-base sm:text-sm bg-primary hover:bg-primary/90"

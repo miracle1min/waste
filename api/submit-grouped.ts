@@ -19,6 +19,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const metodePemusnahanList = JSON.parse(fields.metodePemusnahanList || '[]');
     const alasanPemusnahanList = JSON.parse(fields.alasanPemusnahanList || '[]');
 
+    const shift = fields.shift || 'OPENING';
+    const storeName = fields.storeName || 'BEKASI KP. BULU';
+
     const data = {
       tanggal: fields.tanggal,
       kategoriInduk: fields.kategoriInduk,
@@ -79,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
     if (GOOGLE_SHEETS_CREDENTIALS && GOOGLE_SPREADSHEET_ID) {
       try {
-        await appendGroupedToGoogleSheets(GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID, data, imageUrls);
+        await appendGroupedToGoogleSheets(GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID, data, imageUrls, shift, storeName);
       } catch (e) { console.error('Google Sheets error:', e); }
     }
 
