@@ -57,6 +57,17 @@ type CategoryGroup = {
   items: WasteItem[];
 };
 
+type ItemRow = {
+  namaProduk: string;
+  kodeProduk: string;
+  jumlahProduk: number | string;
+  unit: string;
+  metodePemusnahan: string;
+  alasanPemusnahan: string;
+  alasanPemusnahanManual: string;
+  customProductName: string;
+};
+
 type Step = "date" | "category" | "products" | "files" | "review";
 
 const STEPS = [
@@ -124,6 +135,8 @@ export default function ProductDestruction() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [customProductName, setCustomProductName] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const emptyItemRow: ItemRow = { namaProduk: '', kodeProduk: '', jumlahProduk: 1, unit: '', metodePemusnahan: '', alasanPemusnahan: '', alasanPemusnahanManual: '', customProductName: '' };
+  const [itemRows, setItemRows] = useState<ItemRow[]>([{ ...emptyItemRow }]);
   const { toast } = useToast();
   const productFormRef = useRef<HTMLDivElement>(null);
 
@@ -342,6 +355,69 @@ export default function ProductDestruction() {
     toast({
       title: "Produk Ditambahkan",
       description: `Produk berhasil ditambahkan ke kategori ${selectedCategory}`,
+    });
+  };
+
+  const addItemRow = () => {
+    setItemRows(prev => [...prev, { ...emptyItemRow }]);
+  };
+
+  const removeItemRow = (index: number) => {
+    setItemRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateItemRow = (index: number, field: keyof ItemRow, value: string | number) => {
+    setItemRows(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+  };
+
+  const allItemRowsValid = itemRows.every(row =>
+    row.namaProduk.trim() !== '' &&
+    row.kodeProduk.trim() !== '' &&
+    (typeof row.jumlahProduk === 'number' ? row.jumlahProduk > 0 : parseInt(row.jumlahProduk) > 0) &&
+    row.unit.trim() !== '' &&
+    row.metodePemusnahan.trim() !== ''
+  );
+
+  const addAllItemsToCurrentGroup = () => {
+    if (!selectedCategory) return;
+    const jamValue = form.getValues('jamTanggalPemusnahan');
+
+    const newItems: WasteItem[] = itemRows.map(row => ({
+      tanggal: selectedDate,
+      kategoriInduk: selectedCategory,
+      namaProduk: row.namaProduk,
+      kodeProduk: row.kodeProduk,
+      jumlahProduk: typeof row.jumlahProduk === 'string' ? parseInt(row.jumlahProduk) || 1 : row.jumlahProduk,
+      unit: row.unit,
+      metodePemusnahan: row.metodePemusnahan,
+      alasanPemusnahan: row.alasanPemusnahan,
+      alasanPemusnahanManual: row.alasanPemusnahanManual,
+      jamTanggalPemusnahan: jamValue,
+      parafQCName: '',
+      parafManagerName: '',
+      dokumentasiUrl: '',
+      dokumentasiFile: undefined,
+      dokumentasiFiles: undefined,
+    }));
+
+    setCategoryGroups(prev => {
+      const existingGroup = prev.find(g => g.kategoriInduk === selectedCategory);
+      if (existingGroup) {
+        return prev.map(group =>
+          group.kategoriInduk === selectedCategory
+            ? { ...group, items: [...group.items, ...newItems] }
+            : group
+        );
+      } else {
+        return [...prev, { kategoriInduk: selectedCategory, items: newItems }];
+      }
+    });
+
+    setItemRows([{ ...emptyItemRow }]);
+
+    toast({
+      title: "Produk Ditambahkan",
+      description: `${newItems.length} produk berhasil ditambahkan ke kategori ${selectedCategory}`,
     });
   };
 
@@ -1038,112 +1114,130 @@ export default function ProductDestruction() {
                   </p>
                 </div>
 
-                <Form {...form}>
-                  <form ref={productFormRef} className="space-y-6 max-w-full md:max-w-2xl mx-auto">
-                    <div className="space-y-4 md:space-y-6">{/* Changed from grid to vertical layout for better mobile experience */}
-                      <FormField
-                        control={form.control}
-                        name="namaProduk"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nama Produk</FormLabel>
-                            {selectedCategory && (selectedCategory === "DIMSUM" || selectedCategory === "PRODUKSI") ? (
-                              <div className="space-y-3">
-                                <Select onValueChange={(value) => {
-                                  field.onChange(value);
-                                  setCustomProductName("");
-                                }} value={field.value && !customProductName ? field.value : ""}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Pilih produk" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {PREDEFINED_PRODUCTS[selectedCategory as keyof typeof PREDEFINED_PRODUCTS].map((product) => (
-                                      <SelectItem key={product} value={product}>{product}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Input 
-                                  placeholder="Atau masukkan nama produk lain (optional)"
-                                  className="text-base"
-                                  value={customProductName}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setCustomProductName(value);
-                                    field.onChange(value);
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <FormControl>
-                                <Input 
-                                  placeholder={
-                                    selectedCategory === "NOODLE" ? "Cth: PANGSIT GORENG, MIE" :
-                                    selectedCategory === "BAR" ? "Cth: APEL, PEER, STROBERI" :
-                                    selectedCategory === "PRODUKSI" ? "Cth: KULIT PANGSIT" :
-                                    selectedCategory === "DIMSUM" ? "Cth: UDANG KEJU, SIOMAY" :
-                                    "Contoh: Nama Produk"
-                                  }
-                                  className="text-base"
-                                  {...field}
-                                />
-                              </FormControl>
-                            )}
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                {/* Edit mode: single item form using react-hook-form */}
+                {editingIndex !== null ? (
+                  <Form {...form}>
+                    <form ref={productFormRef} className="space-y-6 max-w-full md:max-w-2xl mx-auto">
+                      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3 text-center text-sm text-blue-800 dark:text-blue-200 font-medium">
+                        ✏️ Mode Edit — Mengedit item yang sudah ditambahkan
+                      </div>
+                      <div className="space-y-4 md:space-y-6">
+                        <FormField
+                          control={form.control}
+                          name="namaProduk"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nama Produk</FormLabel>
+                              {selectedCategory && (selectedCategory === "DIMSUM" || selectedCategory === "PRODUKSI") ? (
+                                <div className="space-y-3">
+                                  <Select onValueChange={(value) => { field.onChange(value); setCustomProductName(""); }} value={field.value && !customProductName ? field.value : ""}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih produk" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                      {PREDEFINED_PRODUCTS[selectedCategory as keyof typeof PREDEFINED_PRODUCTS].map((product) => (
+                                        <SelectItem key={product} value={product}>{product}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Input placeholder="Atau masukkan nama produk lain (optional)" className="text-base" value={customProductName} onChange={(e) => { setCustomProductName(e.target.value); field.onChange(e.target.value); }} />
+                                </div>
+                              ) : (
+                                <FormControl><Input placeholder="Contoh: Nama Produk" className="text-base" {...field} /></FormControl>
+                              )}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField control={form.control} name="kodeProduk" render={({ field }) => (<FormItem><FormLabel>Kode Lot/Exp</FormLabel><FormControl><Input placeholder="Contoh: 010825.01" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="jumlahProduk" render={({ field }) => (<FormItem><FormLabel>Jumlah Produk</FormLabel><FormControl><Input type="number" min={1} placeholder="0" className="text-base min-h-[44px]" {...field} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih unit" /></SelectTrigger></FormControl><SelectContent><SelectItem value="PCS">PCS</SelectItem><SelectItem value="PORSI">PORSI</SelectItem><SelectItem value="PACK">PACK</SelectItem><SelectItem value="GRAM">GRAM</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      </div>
+                      <FormField control={form.control} name="metodePemusnahan" render={({ field }) => (<FormItem><FormLabel>Metode Pemusnahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih metode" /></SelectTrigger></FormControl><SelectContent><SelectItem value="DI BUANG">DI BUANG</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <div className="space-y-4">
+                        <FormField control={form.control} name="alasanPemusnahan" render={({ field }) => (<FormItem><FormLabel>Alasan Pemusnahan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih alasan pemusnahan" /></SelectTrigger></FormControl><SelectContent><SelectItem value="HANDLING">HANDLING</SelectItem><SelectItem value="KUALITAS EKSTERNAL">KUALITAS EKSTERNAL</SelectItem><SelectItem value="SUSUT">SUSUT</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="alasanPemusnahanManual" render={({ field }) => (<FormItem><FormLabel>Alasan Lainnya (Optional)</FormLabel><FormControl><Input placeholder="Tulis alasan lainnya jika diperlukan" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      </div>
+                      <FormField control={form.control} name="jamTanggalPemusnahan" render={({ field }) => (<FormItem><FormLabel>Jam & Tanggal Pemusnahan</FormLabel><FormControl><Input type="datetime-local" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button type="button" onClick={updateItemInCurrentGroup} className="flex-1 min-h-[48px] text-base sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium" disabled={!form.watch("namaProduk") || !form.watch("kodeProduk") || !form.watch("jumlahProduk") || !form.watch("unit") || !form.watch("metodePemusnahan")}>
+                          <Save className="w-4 h-4 mr-2" />Update Produk
+                        </Button>
+                        <Button type="button" onClick={cancelEdit} variant="outline" className="min-h-[48px] text-base sm:text-sm">
+                          <X className="w-4 h-4 mr-2" />Batal
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                ) : (
+                  /* Multi-item add mode */
+                  <div ref={productFormRef} className="space-y-4 max-w-full md:max-w-2xl mx-auto">
+                    {itemRows.map((row, rowIndex) => (
+                      <div key={rowIndex} className="border border-border rounded-lg p-4 space-y-4 bg-card/50">
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Item {rowIndex + 1}
+                          </span>
+                          {itemRows.length > 1 && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItemRow(rowIndex)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="kodeProduk"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Kode Lot/Exp</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Contoh: 010825.01" className="text-base min-h-[44px]" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="jumlahProduk"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Jumlah Produk</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min={1}
-                                placeholder="0"
-                                className="text-base min-h-[44px]"
-                                {...field} 
-                                onChange={(e) => field.onChange(e.target.value)}
+                        {/* Nama Produk */}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Nama Produk</Label>
+                          {selectedCategory && (selectedCategory === "DIMSUM" || selectedCategory === "PRODUKSI") ? (
+                            <div className="space-y-2">
+                              <Select
+                                onValueChange={(value) => { updateItemRow(rowIndex, 'namaProduk', value); updateItemRow(rowIndex, 'customProductName', ''); }}
+                                value={row.namaProduk && !row.customProductName ? row.namaProduk : ""}
+                              >
+                                <SelectTrigger><SelectValue placeholder="Pilih produk" /></SelectTrigger>
+                                <SelectContent>
+                                  {PREDEFINED_PRODUCTS[selectedCategory as keyof typeof PREDEFINED_PRODUCTS].map((product) => (
+                                    <SelectItem key={product} value={product}>{product}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                placeholder="Atau masukkan nama produk lain (optional)"
+                                className="text-base"
+                                value={row.customProductName}
+                                onChange={(e) => { updateItemRow(rowIndex, 'customProductName', e.target.value); updateItemRow(rowIndex, 'namaProduk', e.target.value); }}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            </div>
+                          ) : (
+                            <Input
+                              placeholder={
+                                selectedCategory === "NOODLE" ? "Cth: PANGSIT GORENG, MIE" :
+                                selectedCategory === "BAR" ? "Cth: APEL, PEER, STROBERI" :
+                                "Contoh: Nama Produk"
+                              }
+                              className="text-base"
+                              value={row.namaProduk}
+                              onChange={(e) => updateItemRow(rowIndex, 'namaProduk', e.target.value)}
+                            />
+                          )}
+                        </div>
 
-                      <FormField
-                        control={form.control}
-                        name="unit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Unit</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="min-h-[44px]">
-                                  <SelectValue placeholder="Pilih unit" />
-                                </SelectTrigger>
-                              </FormControl>
+                        {/* Kode Lot/Exp */}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Kode Lot/Exp</Label>
+                          <Input placeholder="Contoh: 010825.01" className="text-base min-h-[44px]" value={row.kodeProduk} onChange={(e) => updateItemRow(rowIndex, 'kodeProduk', e.target.value)} />
+                        </div>
+
+                        {/* Jumlah + Unit side by side */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-medium">Jumlah</Label>
+                            <Input type="number" min={1} placeholder="0" className="text-base min-h-[44px]" value={row.jumlahProduk} onChange={(e) => updateItemRow(rowIndex, 'jumlahProduk', e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-medium">Unit</Label>
+                            <Select onValueChange={(value) => updateItemRow(rowIndex, 'unit', value)} value={row.unit}>
+                              <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih unit" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="PCS">PCS</SelectItem>
                                 <SelectItem value="PORSI">PORSI</SelectItem>
@@ -1151,126 +1245,80 @@ export default function ProductDestruction() {
                                 <SelectItem value="GRAM">GRAM</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                          </div>
+                        </div>
 
-                    <FormField
-                      control={form.control}
-                      name="metodePemusnahan"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Metode Pemusnahan</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="min-h-[44px]">
-                                <SelectValue placeholder="Pilih metode" />
-                              </SelectTrigger>
-                            </FormControl>
+                        {/* Metode Pemusnahan */}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Metode Pemusnahan</Label>
+                          <Select onValueChange={(value) => updateItemRow(rowIndex, 'metodePemusnahan', value)} value={row.metodePemusnahan}>
+                            <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                            <SelectContent><SelectItem value="DI BUANG">DI BUANG</SelectItem></SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Alasan Pemusnahan */}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Alasan Pemusnahan</Label>
+                          <Select onValueChange={(value) => updateItemRow(rowIndex, 'alasanPemusnahan', value)} value={row.alasanPemusnahan}>
+                            <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih alasan pemusnahan" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="DI BUANG">DI BUANG</SelectItem>
+                              <SelectItem value="HANDLING">HANDLING</SelectItem>
+                              <SelectItem value="KUALITAS EKSTERNAL">KUALITAS EKSTERNAL</SelectItem>
+                              <SelectItem value="SUSUT">SUSUT</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        </div>
 
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="alasanPemusnahan"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Alasan Pemusnahan</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                        {/* Alasan Lainnya */}
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Alasan Lainnya (Optional)</Label>
+                          <Input placeholder="Tulis alasan lainnya jika diperlukan" className="text-base min-h-[44px]" value={row.alasanPemusnahanManual} onChange={(e) => updateItemRow(rowIndex, 'alasanPemusnahanManual', e.target.value)} />
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add Item button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addItemRow}
+                      className="w-full min-h-[48px] border-dashed border-2 border-green-400 dark:border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 font-medium"
+                    >
+                      + Tambah Item
+                    </Button>
+
+                    {/* Shared Jam Pemusnahan */}
+                    <Form {...form}>
+                      <div className="space-y-1.5">
+                        <FormField
+                          control={form.control}
+                          name="jamTanggalPemusnahan"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Jam & Tanggal Pemusnahan (berlaku untuk semua item)</FormLabel>
                               <FormControl>
-                                <SelectTrigger className="min-h-[44px]">
-                                  <SelectValue placeholder="Pilih alasan pemusnahan" />
-                                </SelectTrigger>
+                                <Input type="datetime-local" className="text-base min-h-[44px]" {...field} />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="HANDLING">HANDLING</SelectItem>
-                                <SelectItem value="KUALITAS EKSTERNAL">KUALITAS EKSTERNAL</SelectItem>
-                                <SelectItem value="SUSUT">SUSUT</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="alasanPemusnahanManual"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Alasan Lainnya (Optional)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Tulis alasan lainnya jika diperlukan"
-                                className="text-base min-h-[44px]"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </Form>
 
-                    <FormField
-                      control={form.control}
-                      name="jamTanggalPemusnahan"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Jam & Tanggal Pemusnahan</FormLabel>
-                          <FormControl>
-                            <Input type="datetime-local" className="text-base min-h-[44px]" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {editingIndex !== null ? (
-                        <>
-                          <Button
-                            type="button"
-                            onClick={updateItemInCurrentGroup}
-                            className="flex-1 min-h-[48px] text-base sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                            disabled={!form.watch("namaProduk") || !form.watch("kodeProduk") || !form.watch("jumlahProduk") || !form.watch("unit") || !form.watch("metodePemusnahan")}
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            Update Produk
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={cancelEdit}
-                            variant="outline"
-                            className="min-h-[48px] text-base sm:text-sm"
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Batal
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={addItemToCurrentGroup}
-                          className="w-full min-h-[48px] text-base sm:text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
-                          disabled={!form.watch("namaProduk") || !form.watch("kodeProduk") || !form.watch("jumlahProduk") || !form.watch("unit") || !form.watch("metodePemusnahan")}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Tambah Produk ke {selectedCategory}
-                        </Button>
-                      )}
-                    </div>
-                  </form>
-                </Form>
+                    {/* Add All button */}
+                    <Button
+                      type="button"
+                      onClick={addAllItemsToCurrentGroup}
+                      className="w-full min-h-[48px] text-base sm:text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
+                      disabled={!allItemRowsValid}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Tambah Semua ke {selectedCategory} ({itemRows.length} item)
+                    </Button>
+                  </div>
+                )}
 
                 {/* Product List */}
                 {currentGroup && currentGroup.items.length > 0 && (
