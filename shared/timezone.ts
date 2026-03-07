@@ -1,6 +1,50 @@
 /**
  * Timezone utility functions for GMT+7 Jakarta (WIB)
+ * 
+ * IMPORTANT: Business date cutoff is at 05:00 WIB.
+ * Before 05:00, the business date is still the previous day (Midnight shift).
+ * Example: 2026-03-08 02:46 WIB → business date = 2026-03-07
  */
+
+const BUSINESS_DAY_CUTOFF_HOUR = 5; // 05:00 WIB
+
+/**
+ * Get current WIB time parts using Intl
+ */
+function getWIBParts(date?: Date): { year: string; month: string; day: string; hour: string; minute: string; second: string } {
+  const target = date || new Date();
+  const wibFormatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  const parts = wibFormatter.formatToParts(target);
+  return {
+    year: parts.find(p => p.type === 'year')?.value || '',
+    month: parts.find(p => p.type === 'month')?.value || '',
+    day: parts.find(p => p.type === 'day')?.value || '',
+    hour: parts.find(p => p.type === 'hour')?.value || '',
+    minute: parts.find(p => p.type === 'minute')?.value || '',
+    second: parts.find(p => p.type === 'second')?.value || '',
+  };
+}
+
+/**
+ * Get the business date in WIB (accounts for 05:00 cutoff).
+ * Before 05:00 WIB, returns yesterday's date.
+ */
+export function getBusinessDateWIB(): Date {
+  const p = getWIBParts();
+  const wibDate = new Date(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`);
+  if (parseInt(p.hour) < BUSINESS_DAY_CUTOFF_HOUR) {
+    wibDate.setDate(wibDate.getDate() - 1);
+  }
+  return wibDate;
+}
 
 /**
  * Get current date and time in GMT+7 (WIB) timezone
@@ -62,20 +106,13 @@ export function toWIBDate(date: Date | string): Date {
  * Always returns current WIB time
  */
 export function formatWIBForInput(date?: Date | string): string {
-  // Format directly from WIB parts to avoid toISOString() converting back to UTC
-  const now = new Date();
-  const wibFormatter = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Jakarta',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  // sv-SE locale gives "YYYY-MM-DD HH:mm" format
-  const formatted = wibFormatter.format(now);
-  // Convert "YYYY-MM-DD HH:mm" to "YYYY-MM-DDTHH:mm" for datetime-local input
-  return formatted.replace(' ', 'T');
+  // Use business date (before 05:00 = still yesterday) + current WIB time
+  const bizDate = getBusinessDateWIB();
+  const p = getWIBParts(); // current actual WIB time
+  const y = bizDate.getFullYear();
+  const m = (bizDate.getMonth() + 1).toString().padStart(2, '0');
+  const d = bizDate.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}T${p.hour}:${p.minute}`;
 }
 
 /**
@@ -134,15 +171,11 @@ export function formatWIBForSheetTab(date?: Date | string): string {
  * Get current date in WIB for date input (YYYY-MM-DD)
  */
 export function getCurrentWIBDateString(): string {
-  const now = new Date();
-  const wibFormatter = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Jakarta',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  // sv-SE locale gives "YYYY-MM-DD" format
-  return wibFormatter.format(now);
+  const bizDate = getBusinessDateWIB();
+  const y = bizDate.getFullYear();
+  const m = (bizDate.getMonth() + 1).toString().padStart(2, '0');
+  const d = bizDate.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /**
