@@ -1,10 +1,16 @@
-
-import { useState, useRef, forwardRef } from "react";
-import { Upload, X, CloudUpload, CheckCircle, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, ChevronDown, Trash2, User } from "lucide-react";
 import { Button } from "./button";
 import { Label } from "./label";
 import { cn } from "@/lib/utils";
-import { FileUpload } from "./file-upload";
+
+const MANAGER_SIGNATURES = [
+  { name: "Bu Gissel", file: "/signatures/manager/bu-gissel.jpg" },
+  { name: "Bu Anisa", file: "/signatures/manager/bu-anisa.jpeg" },
+  { name: "Pak Aqil", file: "/signatures/manager/pak-aqil.jpg" },
+  { name: "Pak Hutri", file: "/signatures/manager/pak-hutri.jpeg" },
+  { name: "Pak Imbron", file: "/signatures/manager/pak-imbron.jpg" },
+];
 
 interface ParafManagerSelectorProps {
   value?: File;
@@ -21,8 +27,30 @@ export function ParafManagerSelector({
   description,
   className
 }: ParafManagerSelectorProps) {
-  const handleFileSelect = (file: File | null) => {
-    onValueChange(file || undefined);
+  const [selectedName, setSelectedName] = useState<string>("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSelect = async (person: typeof MANAGER_SIGNATURES[0]) => {
+    setIsOpen(false);
+    setLoading(true);
+    setSelectedName(person.name);
+    try {
+      const response = await fetch(person.file);
+      const blob = await response.blob();
+      const fileName = person.file.split("/").pop() || "signature.jpg";
+      const file = new File([blob], fileName, { type: blob.type });
+      onValueChange(file);
+    } catch (e) {
+      console.error("Failed to load signature:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setSelectedName("");
+    onValueChange(undefined);
   };
 
   return (
@@ -31,34 +59,65 @@ export function ParafManagerSelector({
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
       )}
-      
-      <FileUpload
-        onFileSelect={handleFileSelect}
-        accept="image/*"
-        acceptedTypes={["image/jpeg", "image/png", "image/jpg", "image/svg+xml"]}
-        maxSize={5 * 1024 * 1024}
-        maxSizeInMB={5}
-        className="w-full"
-      />
 
-      {value && (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 bg-card border border-border rounded-lg text-left hover:bg-accent/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className={cn("text-sm", selectedName ? "text-foreground" : "text-muted-foreground")}>
+              {selectedName || "Pilih nama Manajer..."}
+            </span>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+            {MANAGER_SIGNATURES.map((person) => (
+              <button
+                key={person.name}
+                type="button"
+                onClick={() => handleSelect(person)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-accent/50 transition-colors text-left"
+              >
+                <div className="flex-shrink-0 w-10 h-7 sm:w-12 sm:h-8 bg-white border rounded overflow-hidden">
+                  <img src={person.file} alt={person.name} className="w-full h-full object-contain" />
+                </div>
+                <span className="text-sm font-medium">{person.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {loading && (
+        <p className="text-xs text-muted-foreground animate-pulse">Memuat tanda tangan...</p>
+      )}
+
+      {value && selectedName && !loading && (
         <div className="mt-3 p-2 sm:p-3 bg-success/10 rounded-lg border border-success/20">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex-shrink-0 w-12 h-8 sm:w-16 sm:h-10 bg-white border rounded overflow-hidden">
-              <img 
-                src={URL.createObjectURL(value)} 
+              <img
+                src={URL.createObjectURL(value)}
                 alt="Paraf Manager"
                 className="w-full h-full object-contain"
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-foreground">Paraf Manager Terpilih:</p>
-              <p className="text-xs text-muted-foreground truncate">{value.name}</p>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-success" />
+                <p className="text-xs sm:text-sm font-medium text-foreground">Paraf Manajer: {selectedName}</p>
+              </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onValueChange(undefined)}
+              onClick={handleClear}
               className="text-destructive hover:text-destructive h-6 w-6 sm:h-8 sm:w-8 p-0 flex-shrink-0"
             >
               <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
