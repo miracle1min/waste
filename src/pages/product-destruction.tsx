@@ -36,11 +36,11 @@ const PREDEFINED_PRODUCTS = {
 
 type Shift = 'OPENING' | 'MIDDLE' | 'CLOSING' | 'MIDNIGHT';
 
-const SHIFTS: { id: Shift; label: string; color: string }[] = [
-  { id: 'OPENING', label: 'Opening', color: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' },
-  { id: 'MIDDLE', label: 'Middle', color: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' },
-  { id: 'CLOSING', label: 'Closing', color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' },
-  { id: 'MIDNIGHT', label: 'Midnight', color: 'bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700' },
+const SHIFTS: { id: Shift; label: string; active: string; inactive: string }[] = [
+  { id: 'OPENING', label: 'Opening', active: 'bg-yellow-500 border-yellow-400 text-black shadow-lg shadow-yellow-500/30', inactive: 'bg-yellow-900/20 border-yellow-700/50 text-yellow-300 hover:bg-yellow-900/40 hover:border-yellow-500' },
+  { id: 'MIDDLE', label: 'Middle', active: 'bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/30', inactive: 'bg-blue-900/20 border-blue-700/50 text-blue-300 hover:bg-blue-900/40 hover:border-blue-500' },
+  { id: 'CLOSING', label: 'Closing', active: 'bg-purple-500 border-purple-400 text-white shadow-lg shadow-purple-500/30', inactive: 'bg-purple-900/20 border-purple-700/50 text-purple-300 hover:bg-purple-900/40 hover:border-purple-500' },
+  { id: 'MIDNIGHT', label: 'Midnight', active: 'bg-gray-500 border-gray-400 text-white shadow-lg shadow-gray-500/30', inactive: 'bg-gray-900/20 border-gray-700/50 text-gray-300 hover:bg-gray-900/40 hover:border-gray-500' },
 ];
 
 const STORES = [
@@ -801,8 +801,8 @@ export default function ProductDestruction() {
                           onClick={() => setSelectedShift(shift.id)}
                           className={`p-3 rounded-lg border-2 text-center font-semibold transition-all ${
                             selectedShift === shift.id
-                              ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
-                              : `${shift.color} hover:border-primary/50`
+                              ? shift.active
+                              : shift.inactive
                           }`}
                         >
                           {shift.label}
