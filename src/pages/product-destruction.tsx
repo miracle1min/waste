@@ -569,7 +569,8 @@ export default function ProductDestruction() {
       const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
       let startY = 33;
 
-      shifts.forEach((shift, shiftIdx) => {
+      for (let shiftIdx = 0; shiftIdx < shifts.length; shiftIdx++) {
+        const shift = shifts[shiftIdx];
         const shiftData = dayData.grouped[shift] || [];
         
         // Section header
@@ -721,7 +722,7 @@ export default function ProductDestruction() {
           doc.addPage();
           startY = 15;
         }
-      });
+      }
 
       // Footer
       startY = Math.min(startY + 8, pageHeight - 20);
