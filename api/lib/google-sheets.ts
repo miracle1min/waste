@@ -129,7 +129,29 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
             properties: { pixelSize: 40 },
             fields: 'pixelSize'
           }
-        }
+        },
+        // Column widths: SHIFT(A), STORE(B), STATION(C), NAMA PRODUK(D), KODE PRODUK(E), JUMLAH(F), UNIT(G), METODE(H), ALASAN(I), JAM(J), QC(K), MANAJER(L), DOK 1-10(M-V)
+        ...[
+          { start: 0, end: 1, size: 100 },   // A: SHIFT
+          { start: 1, end: 2, size: 180 },   // B: STORE
+          { start: 2, end: 3, size: 120 },   // C: STATION
+          { start: 3, end: 4, size: 200 },   // D: NAMA PRODUK
+          { start: 4, end: 5, size: 130 },   // E: KODE PRODUK
+          { start: 5, end: 6, size: 100 },   // F: JUMLAH PRODUK
+          { start: 6, end: 7, size: 80 },    // G: UNIT
+          { start: 7, end: 8, size: 180 },   // H: METODE PEMUSNAHAN
+          { start: 8, end: 9, size: 160 },   // I: ALASAN PEMUSNAHAN
+          { start: 9, end: 10, size: 160 },  // J: JAM & TGL
+          { start: 10, end: 11, size: 100 }, // K: PARAF QC
+          { start: 11, end: 12, size: 100 }, // L: PARAF MANAJER
+          { start: 12, end: 22, size: 100 }, // M-V: DOKUMENTASI 1-10
+        ].map(col => ({
+          updateDimensionProperties: {
+            range: { sheetId: newSheetId, dimension: 'COLUMNS', startIndex: col.start, endIndex: col.end },
+            properties: { pixelSize: col.size },
+            fields: 'pixelSize'
+          }
+        }))
       ]
     });
   }
