@@ -539,7 +539,7 @@ export default function ProductDestruction() {
 
       // Header
       if (logoImg) {
-        doc.addImage(logoImg, 'PNG', margin, 5, 25, 25);
+        doc.addImage(logoImg, 'PNG', margin, 7, 18, 18);
       }
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
@@ -759,12 +759,54 @@ export default function ProductDestruction() {
         }
       }
 
-      // Footer
-      startY = Math.min(startY + 8, pageHeight - 20);
+      // Footer - ensure enough space
+      if (startY > pageHeight - 45) {
+        doc.addPage();
+        startY = 15;
+      }
+      startY = startY + 8;
+
+      // Extract QC name from any entry's Cloudinary URL
+      let qcName = '';
+      let qcSigImg: string | null = null;
+      for (const shift of shifts) {
+        if (qcName) break;
+        for (const station of stationOrder) {
+          const entries = dayData.entries.filter(
+            (e: any) => (e.shift || '').toUpperCase() === shift && (e.station || '').toUpperCase() === station
+          );
+          if (entries.length > 0 && entries[0].parafQC) {
+            const url = extractImageUrl(entries[0].parafQC);
+            if (url) {
+              // Extract name from URL: .../johan-claus-thenu.jpeg → Johan Claus Thenu
+              const match = url.match(/\/([^/]+)\.(jpeg|jpg|png|webp)/i);
+              if (match) {
+                qcName = match[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              }
+              // Try to get signature image
+              if (sigCache[url]) {
+                qcSigImg = sigCache[url];
+              }
+            }
+            break;
+          }
+        }
+      }
+
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
+
+      // Left: Diketahui Oleh AM/RM
       doc.text('Diketahui Oleh : AM/RM', margin, startY);
       doc.line(margin, startY + 15, margin + 50, startY + 15);
+
+      // Right: Dilaporkan oleh QC
+      const rightX = pageWidth - margin - 60;
+      doc.text(`Dilaporkan oleh : ${qcName || 'QC'}`, rightX, startY);
+      if (qcSigImg) {
+        doc.addImage(qcSigImg, 'PNG', rightX + 10, startY + 2, 30, 10);
+      }
+      doc.line(rightX, startY + 15, rightX + 55, startY + 15);
 
       // Save
       const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
