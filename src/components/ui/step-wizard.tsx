@@ -21,7 +21,6 @@ export function StepWizard({ steps, currentStep, completedSteps, className }: St
           const isCompleted = completedSteps.includes(step.id);
           const isCurrent = currentStep === step.id;
 
-          // Only show current step on mobile
           if (!isCurrent) return null;
 
           return (
@@ -42,13 +41,13 @@ export function StepWizard({ steps, currentStep, completedSteps, className }: St
               </div>
               <div className="text-center">
                 <p className={cn(
-                  "text-sm font-medium",
-                  isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-muted-foreground"
+                  "text-sm font-semibold tracking-wide",
+                  isCurrent ? "text-cyan-400" : isCompleted ? "text-emerald-400" : "text-muted-foreground"
                 )}>
                   {step.title}
                 </p>
                 {step.description && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-slate-500">
                     {step.description}
                   </p>
                 )}
@@ -58,14 +57,12 @@ export function StepWizard({ steps, currentStep, completedSteps, className }: St
         })}
       </div>
 
-      {/* Desktop: Show only active and completed steps */}
+      {/* Desktop: Show active and completed steps */}
       <div className="hidden sm:flex items-center justify-center w-full">
         {steps.map((step, index) => {
           const isCompleted = completedSteps.includes(step.id);
           const isCurrent = currentStep === step.id;
-          const isLast = index === steps.length - 1;
 
-          // Only show completed or current steps on desktop
           if (!isCompleted && !isCurrent) return null;
 
           return (
@@ -87,25 +84,20 @@ export function StepWizard({ steps, currentStep, completedSteps, className }: St
                 </div>
                 <div className="mt-2 text-center">
                   <p className={cn(
-                    "text-xs font-medium",
-                    isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-muted-foreground"
+                    "text-xs font-semibold tracking-wide",
+                    isCurrent ? "text-cyan-400" : isCompleted ? "text-emerald-400" : "text-slate-500"
                   )}>
                     {step.title}
                   </p>
                   {step.description && (
-                    <p className="text-[10px] text-muted-foreground mt-1 max-w-[80px] leading-tight">
+                    <p className="text-[10px] text-slate-600 mt-1 max-w-[80px] leading-tight">
                       {step.description}
                     </p>
                   )}
                 </div>
               </div>
-              {!isLast && !isCurrent && isCompleted && (
-                <div
-                  className={cn(
-                    "h-px mx-4 w-8 transition-colors duration-200",
-                    "bg-success"
-                  )}
-                />
+              {!isLast(index, steps, currentStep, completedSteps) && isCompleted && (
+                <div className="h-px mx-4 w-8 bg-gradient-to-r from-emerald-500/50 to-emerald-500/20" />
               )}
             </div>
           );
@@ -113,4 +105,12 @@ export function StepWizard({ steps, currentStep, completedSteps, className }: St
       </div>
     </div>
   );
+}
+
+function isLast(index: number, steps: { id: string }[], currentStep: string, completedSteps: string[]) {
+  const isCurrent = currentStep === steps[index].id;
+  if (isCurrent) return true;
+  // Check if this is the last visible step
+  const remaining = steps.slice(index + 1);
+  return !remaining.some(s => completedSteps.includes(s.id) || s.id === currentStep);
 }

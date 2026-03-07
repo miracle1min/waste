@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+// Theme is always dark (cyberpunk)
 import { StepWizard } from "@/components/ui/step-wizard";
 import { CategorySelector } from "@/components/ui/category-selector";
 import { FileUploadZone } from "@/components/ui/file-upload-zone";
@@ -104,7 +104,7 @@ function LogoutButton() {
       size="sm"
       onClick={handleLogout}
       disabled={isLoggingOut}
-      className="p-2 w-10 h-10"
+      className="p-2 w-10 h-10 text-slate-400 hover:text-cyan-400 border border-transparent hover:border-cyan-800/50 transition-colors duration-200"
       title="Keluar"
     >
       {isLoggingOut ? (
@@ -950,21 +950,21 @@ export default function ProductDestruction() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex flex-col">
-      {/* Header - Fixed responsive design */}
-      <div className="bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-40 shadow-sm">
+    <div className="min-h-screen bg-cyber-dark cyber-grid-bg flex flex-col">
+      {/* Header - Cyberpunk */}
+      <div className="bg-cyber-header backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 relative">
                 <img 
                   src={wasteLogo} 
                   alt="WASTE Logo" 
-                  className="h-10 w-auto sm:h-12 md:h-14 lg:h-16 rounded-lg"
+                  className="h-10 w-auto sm:h-12 md:h-14 lg:h-16 rounded-lg cyber-border"
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-heading font-bold heading-gradient truncate">
+                <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-heading font-bold heading-gradient truncate tracking-wider">
                   BA WASTE
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
@@ -973,7 +973,7 @@ export default function ProductDestruction() {
                     href="https://www.facebook.com/hipnotismagic" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors duration-200 font-semibold"
+                    className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 font-semibold"
                   >
                     Pajar
                   </a>
@@ -981,7 +981,6 @@ export default function ProductDestruction() {
               </div>
             </div>
             <div className="flex-shrink-0 flex items-center gap-2">
-              <ThemeToggle />
               <LogoutButton />
             </div>
           </div>
@@ -998,14 +997,14 @@ export default function ProductDestruction() {
         />
 
         {/* Step Content - Improved responsive design */}
-        <div className="form-step animate-slide-in bg-background/60 border border-border/50 rounded-lg overflow-hidden">
+        <div className="form-step animate-slide-in">
           <div className="p-4 sm:p-6">{/* Consistent padding across screen sizes */}
             
             {/* Step 1: Date Selection */}
             {currentStep === "date" && (
               <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
                 <div className="text-center">
-                  <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-primary mb-3 sm:mb-4" />
+                  <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
                   <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">Pilih Tanggal Hari Kerja</h2>
                   <p className="text-sm sm:text-base text-muted-foreground px-4">Pilih tanggal untuk pencatatan pemusnahan produk (menentukan sheet di Spreadsheet)</p>
                 </div>
@@ -1025,8 +1024,8 @@ export default function ProductDestruction() {
                   </div>
                   
                   {selectedDate && (
-                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
-                      <p className="text-sm sm:text-base text-blue-800 dark:text-blue-200 text-center">
+                    <div className="bg-cyan-950/20 border border-cyan-800/30 rounded-lg p-3 sm:p-4">
+                      <p className="text-sm sm:text-base text-cyan-300 text-center">
                         <strong>Tanggal terpilih:</strong><br className="sm:hidden" />
                         <span className="sm:ml-2">{formatWIBIndonesian(selectedDate)}</span>
                       </p>
@@ -1069,8 +1068,8 @@ export default function ProductDestruction() {
                     </Select>
                   </div>
 
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+                  <div className="bg-amber-950/20 border border-amber-700/30 rounded-lg p-3 sm:p-4">
+                    <p className="text-xs sm:text-sm text-amber-300">
                       <strong>Penting:</strong> Tanggal ini akan menentukan nama sheet di Google Spreadsheet. Pilih tanggal hari kerja yang sesuai untuk menghindari data masuk ke sheet yang salah.
                     </p>
                   </div>
@@ -1082,7 +1081,7 @@ export default function ProductDestruction() {
             {currentStep === "category" && (
               <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
                 <div className="text-center">
-                  <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-primary mb-3 sm:mb-4" />
+                  <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
                   <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">Pilih Station</h2>
                   <p className="text-sm sm:text-base text-muted-foreground px-4">Pilih station yang akan dimusnahkan</p>
                 </div>
@@ -1106,7 +1105,7 @@ export default function ProductDestruction() {
             {currentStep === "products" && selectedCategory && (
               <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
                 <div className="text-center">
-                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-primary mb-3 sm:mb-4" />
+                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
                   <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">
                     {editingIndex !== null ? `Edit Produk - ${selectedCategory}` : `Detail Produk - ${selectedCategory}`}
                   </h2>
@@ -1119,7 +1118,7 @@ export default function ProductDestruction() {
                 {editingIndex !== null ? (
                   <Form {...form}>
                     <form ref={productFormRef} className="space-y-6 max-w-full md:max-w-2xl mx-auto">
-                      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3 text-center text-sm text-blue-800 dark:text-blue-200 font-medium">
+                      <div className="bg-cyan-950/20 border border-cyan-700/30 rounded-lg p-3 text-center text-sm text-cyan-300 font-medium">
                         ✏️ Mode Edit — Mengedit item yang sudah ditambahkan
                       </div>
                       <div className="space-y-4 md:space-y-6">
@@ -1161,7 +1160,7 @@ export default function ProductDestruction() {
                       </div>
                       <FormField control={form.control} name="jamTanggalPemusnahan" render={({ field }) => (<FormItem><FormLabel>Jam & Tanggal Pemusnahan</FormLabel><FormControl><Input type="datetime-local" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <Button type="button" onClick={updateItemInCurrentGroup} className="flex-1 min-h-[48px] text-base sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium" disabled={!form.watch("namaProduk") || !form.watch("kodeProduk") || !form.watch("jumlahProduk") || !form.watch("unit") || !form.watch("metodePemusnahan")}>
+                        <Button type="button" onClick={updateItemInCurrentGroup} className="flex-1 min-h-[48px] text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium transition-all duration-200" disabled={!form.watch("namaProduk") || !form.watch("kodeProduk") || !form.watch("jumlahProduk") || !form.watch("unit") || !form.watch("metodePemusnahan")}>
                           <Save className="w-4 h-4 mr-2" />Update Produk
                         </Button>
                         <Button type="button" onClick={cancelEdit} variant="outline" className="min-h-[48px] text-base sm:text-sm">
@@ -1174,7 +1173,7 @@ export default function ProductDestruction() {
                   /* Multi-item add mode - compact layout */
                   <div ref={productFormRef} className="space-y-3 max-w-full md:max-w-2xl mx-auto">
                     {itemRows.map((row, rowIndex) => (
-                      <div key={rowIndex} className="border border-border rounded-md p-3 space-y-2 bg-card/50 relative">
+                      <div key={rowIndex} className="border border-cyan-900/30 rounded-md p-3 space-y-2 bg-slate-900/40 relative">
                         {/* Row header: number + delete */}
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-semibold text-muted-foreground">#{rowIndex + 1}</span>
@@ -1358,7 +1357,7 @@ export default function ProductDestruction() {
             {currentStep === "files" && selectedCategory && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center px-2 sm:px-0">
-                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-primary mb-3 sm:mb-4" />
+                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
                   <h2 className="text-xl sm:text-2xl font-bold mb-2">Upload Dokumen</h2>
                   <p className="text-sm sm:text-base text-muted-foreground">Upload paraf dan dokumentasi (opsional)</p>
                 </div>
@@ -1405,14 +1404,14 @@ export default function ProductDestruction() {
             {currentStep === "review" && selectedCategory && currentGroup && (
               <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
                 <div className="text-center">
-                  <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-success mb-3 sm:mb-4" />
+                  <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-emerald-400 mb-3 sm:mb-4" />
                   <h2 className="text-xl sm:text-2xl font-bold mb-2">Review Data</h2>
                   <p className="text-sm sm:text-base text-muted-foreground px-4">Periksa kembali data sebelum mengirim</p>
                 </div>
 
                 <div className="max-w-full sm:max-w-3xl mx-auto space-y-3 sm:space-y-4">
-                  <div className="bg-muted/20 rounded-lg p-3 sm:p-4 border border-border/50">{/* Reduced padding and lighter background for mobile */}
-                    <h3 className="text-lg font-semibold mb-4">Ringkasan Pengiriman</h3>
+                  <div className="bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-cyan-900/30">{/* Review summary */}
+                    <h3 className="text-lg font-semibold mb-4 text-cyan-300">Ringkasan Pengiriman</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Tanggal:</span>
@@ -1441,11 +1440,11 @@ export default function ProductDestruction() {
                     </div>
                   </div>
 
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 sm:p-4">{/* Reduced padding for mobile */}
-                    <h4 className="font-semibold text-warning-foreground dark:text-warning mb-2">
+                  <div className="bg-amber-950/20 border border-amber-700/30 rounded-lg p-3 sm:p-4">{/* Warning box */}
+                    <h4 className="font-semibold text-amber-400 mb-2">
                       ⚠️ Konfirmasi Pengiriman
                     </h4>
-                    <p className="text-sm text-warning-foreground dark:text-warning">
+                    <p className="text-sm text-amber-300/80">
                       Data akan langsung dikirim ke Google Spreadsheet dan tidak dapat dibatalkan. 
                       Pastikan semua informasi sudah benar.
                     </p>
@@ -1454,7 +1453,7 @@ export default function ProductDestruction() {
                   <Button
                     onClick={submitCurrentGroup}
                     disabled={isSubmitting}
-                    className="w-full h-12 sm:h-14 text-base sm:text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold shadow-lg"
+                    className="w-full h-12 sm:h-14 text-base sm:text-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 font-semibold shadow-lg shadow-cyan-500/10 transition-all duration-200"
                   >
                     {isSubmitting ? (
                       <>
@@ -1493,7 +1492,7 @@ export default function ProductDestruction() {
                   <Button
                     onClick={nextStep}
                     disabled={!canProceedToNextStep()}
-                    className="flex items-center justify-center gap-2 min-h-[48px] px-8 text-base sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                    className="flex items-center justify-center gap-2 min-h-[48px] px-8 text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium transition-all duration-200"
                   >
                     Selanjutnya
                     <ArrowRight className="w-4 h-4" />
@@ -1514,7 +1513,7 @@ export default function ProductDestruction() {
                   setEditingIndex(null);
                   resetForm();
                 }}
-                className="w-full flex items-center justify-center gap-2 min-h-[48px] text-base sm:text-sm bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300 dark:bg-red-950 dark:hover:bg-red-900 dark:text-red-400 dark:border-red-800 dark:hover:border-red-700"
+                className="w-full flex items-center justify-center gap-2 min-h-[48px] text-base sm:text-sm bg-red-950/30 hover:bg-red-950/50 text-red-400 border border-red-800/40 hover:border-red-700/60 transition-all duration-200"
               >
                 <RotateCcw className="w-4 h-4" />
                 Reset
@@ -1528,8 +1527,8 @@ export default function ProductDestruction() {
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="max-w-sm sm:max-w-md mx-4">
           <DialogHeader>
-            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-3 sm:mb-4">
-              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-emerald-950/40 border border-emerald-500/30 rounded-full flex items-center justify-center mb-3 sm:mb-4" style={{boxShadow: '0 0 20px rgba(16,185,129,0.2)'}}>
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-400" />
             </div>
             <DialogTitle className="text-center text-lg sm:text-xl">Data Berhasil Dikirim!</DialogTitle>
             <DialogDescription className="text-center text-sm sm:text-base px-2">
@@ -1538,14 +1537,14 @@ export default function ProductDestruction() {
           </DialogHeader>
           
           {showPdfButton && (
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200 text-center mb-3">
+            <div className="bg-cyan-950/20 border border-cyan-700/30 rounded-lg p-4">
+              <p className="text-sm text-cyan-300 text-center mb-3">
                 📄 Generate PDF BA WASTE untuk tanggal ini?
               </p>
               <Button
                 onClick={handleGeneratePdf}
                 disabled={isGeneratingPdf}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="w-full h-11 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium transition-all duration-200"
               >
                 {isGeneratingPdf ? (
                   <>
@@ -1580,7 +1579,7 @@ export default function ProductDestruction() {
                 setShowPdfButton(false);
                 resetForm();
               }}
-              className="flex-1 h-11 sm:h-10 text-base sm:text-sm bg-primary hover:bg-primary/90"
+              className="flex-1 h-11 sm:h-10 text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 transition-all duration-200"
             >
               Buat Entri Baru
             </Button>
