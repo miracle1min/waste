@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Upload multiple dokumentasi files
     const dokumentasiUrls: string[] = [];
     for (let i = 0; i < 10; i++) {
-      const file = files[`dokumentasi${i}`];
+      const file = files[`dokumentasi_${i}`];
       if (file && !Array.isArray(file) && file.size > 0) {
         try {
           const { buffer, name, type } = await fileToBuffer(file);
