@@ -608,37 +608,59 @@ export default function ProductDestruction() {
 
         // Build rows - 4 rows per shift (one per station)
         // Store entry references for didDrawCell
-        type RowEntry = { entry: any | null; stationIdx: number };
+        type RowEntry = { entry: any | null; stationIdx: number; isFirstItem: boolean; itemCount: number };
         const rowEntries: RowEntry[] = [];
         const rows: string[][] = [];
         
+        // Helper: extract URL from =IMAGE("url"; ...) formula
+        const extractImageUrl = (val: string): string => {
+          if (!val) return '';
+          const match = val.match(/=IMAGE\("([^"]+)"/i);
+          return match ? match[1] : val;
+        };
+
         // Pre-fetch all signatures for this shift
         for (const station of stationOrder) {
           const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
           if (entry) {
-            if (entry.parafQC) await fetchSigImage(entry.parafQC);
-            if (entry.parafManager) await fetchSigImage(entry.parafManager);
+            const qcUrl = extractImageUrl(entry.parafQC);
+            const mgrUrl = extractImageUrl(entry.parafManager);
+            if (qcUrl) await fetchSigImage(qcUrl);
+            if (mgrUrl) await fetchSigImage(mgrUrl);
           }
         }
 
         stationOrder.forEach((station, idx) => {
           const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
           if (entry) {
-            rowEntries.push({ entry, stationIdx: idx });
-            rows.push([
-              (idx + 1).toString(),
-              (entry.namaProduk || '').replace(/\n/g, ', '),
-              (entry.kodeProduk || '').replace(/\n/g, ', '),
-              (entry.jumlahProduk || '').replace(/\n/g, ', '),
-              (entry.metodePemusnahan || '').replace(/\n/g, ', '),
-              (entry.alasanPemusnahan || '').replace(/\n/g, ', '),
-              entry.jamTanggalPemusnahan || '',
-              '', // QC - will draw image in didDrawCell
-              '', // Manajer - will draw image in didDrawCell
-              entry.dokumentasi?.length ? 'Lihat Foto' : '-',
-            ]);
+            // Split products into individual items
+            const names = (entry.namaProduk || '-').split('\n');
+            const codes = (entry.kodeProduk || '-').split('\n');
+            const quantities = (entry.jumlahProduk || '-').split('\n');
+            const methods = (entry.metodePemusnahan || '-').split('\n');
+            const reasons = (entry.alasanPemusnahan || '-').split('\n');
+            const itemCount = Math.max(names.length, 1);
+
+            // Check if dokumentasi has actual URLs
+            const hasDocs = entry.dokumentasi?.some((d: string) => d && d !== '-' && d.length > 0);
+
+            for (let i = 0; i < itemCount; i++) {
+              rowEntries.push({ entry, stationIdx: idx, isFirstItem: i === 0, itemCount });
+              rows.push([
+                (idx + 1).toString(),
+                (names[i] || '-').trim(),
+                (codes[i] || '-').trim(),
+                (quantities[i] || '-').trim(),
+                (methods[i] || '-').trim(),
+                (reasons[i] || '-').trim(),
+                i === 0 ? (entry.jamTanggalPemusnahan || '-') : '',
+                '', // QC - will draw image in didDrawCell (first item only)
+                '', // Manajer - will draw image in didDrawCell (first item only)
+                i === 0 && hasDocs ? '' : (i === 0 ? '-' : ''),
+              ]);
+            }
           } else {
-            rowEntries.push({ entry: null, stationIdx: idx });
+            rowEntries.push({ entry: null, stationIdx: idx, isFirstItem: true, itemCount: 1 });
             rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
           }
         });
@@ -677,40 +699,51 @@ export default function ProductDestruction() {
             const cellW = data.cell.width;
             const cellH = data.cell.height;
 
+            // Only draw QC/Manajer/Dokumentasi on first item row of each station
+            if (!rowEntry.isFirstItem) return;
+
             // QC signature (col 7)
-            if (colIdx === 7 && rowEntry.entry.parafQC && sigCache[rowEntry.entry.parafQC]) {
-              try {
-                const imgData = sigCache[rowEntry.entry.parafQC];
-                const imgH = cellH - 2;
-                const imgW = Math.min(cellW - 2, imgH * 2);
-                const imgX = cellX + (cellW - imgW) / 2;
-                const imgY = cellY + 1;
-                doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
-              } catch {}
+            if (colIdx === 7) {
+              const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
+              if (qcUrl && sigCache[qcUrl]) {
+                try {
+                  const imgData = sigCache[qcUrl];
+                  const imgH = cellH - 2;
+                  const imgW = Math.min(cellW - 2, imgH * 2);
+                  const imgX = cellX + (cellW - imgW) / 2;
+                  const imgY = cellY + 1;
+                  doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+                } catch {}
+              }
             }
 
             // Manajer signature (col 8)
-            if (colIdx === 8 && rowEntry.entry.parafManager && sigCache[rowEntry.entry.parafManager]) {
-              try {
-                const imgData = sigCache[rowEntry.entry.parafManager];
-                const imgH = cellH - 2;
-                const imgW = Math.min(cellW - 2, imgH * 2);
-                const imgX = cellX + (cellW - imgW) / 2;
-                const imgY = cellY + 1;
-                doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
-              } catch {}
+            if (colIdx === 8) {
+              const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
+              if (mgrUrl && sigCache[mgrUrl]) {
+                try {
+                  const imgData = sigCache[mgrUrl];
+                  const imgH = cellH - 2;
+                  const imgW = Math.min(cellW - 2, imgH * 2);
+                  const imgX = cellX + (cellW - imgW) / 2;
+                  const imgY = cellY + 1;
+                  doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+                } catch {}
+              }
             }
 
             // Dokumentasi link (col 9)
-            if (colIdx === 9 && rowEntry.entry.dokumentasi?.length > 0) {
-              doc.setTextColor(0, 0, 255);
-              doc.textWithLink('Lihat Foto', cellX + 2, cellY + cellH / 2 + 1, { url: spreadsheetUrl });
-              doc.setTextColor(0, 0, 0);
-              // Add underline
-              const textWidth = doc.getTextWidth('Lihat Foto');
-              doc.setDrawColor(0, 0, 255);
-              doc.line(cellX + 2, cellY + cellH / 2 + 1.5, cellX + 2 + textWidth, cellY + cellH / 2 + 1.5);
-              doc.setDrawColor(0, 0, 0);
+            if (colIdx === 9) {
+              const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => d && d !== '-' && d.length > 0);
+              if (hasDocs) {
+                doc.setTextColor(0, 0, 255);
+                doc.textWithLink('Lihat Foto', cellX + 2, cellY + cellH / 2 + 1, { url: spreadsheetUrl });
+                doc.setTextColor(0, 0, 0);
+                const textWidth = doc.getTextWidth('Lihat Foto');
+                doc.setDrawColor(0, 0, 255);
+                doc.line(cellX + 2, cellY + cellH / 2 + 1.5, cellX + 2 + textWidth, cellY + cellH / 2 + 1.5);
+                doc.setDrawColor(0, 0, 0);
+              }
             }
           },
         });
