@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tabName = formatDateToTab(date as string);
 
     // Read all data from the tab
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:V`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:V?valueRenderOption=FORMULA`;
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     });

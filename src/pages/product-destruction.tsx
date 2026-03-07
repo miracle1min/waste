@@ -584,39 +584,28 @@ export default function ProductDestruction() {
         // Table headers
         const headers = [['No', 'Nama Produk', 'Kode Produk', 'Jumlah', 'Metode', 'Alasan', 'Jam', 'QC', 'Manajer', 'Dokumentasi']];
         
-        // Pre-fetch signature images for this shift
-        const sigCache: Record<string, string> = {};
-        const fetchSigImage = async (url: string): Promise<string | null> => {
-          if (!url || url === '-') return null;
-          if (sigCache[url]) return sigCache[url];
-          try {
-            const imgRes = await fetch(url);
-            if (!imgRes.ok) return null;
-            const blob = await imgRes.blob();
-            return new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = reader.result as string;
-                sigCache[url] = result;
-                resolve(result);
-              };
-              reader.onerror = () => resolve('');
-              reader.readAsDataURL(blob);
-            });
-          } catch { return null; }
-        };
-
-        // Build rows - 4 rows per shift (one per station)
-        // Store entry references for didDrawCell
-        type RowEntry = { entry: any | null; stationIdx: number; isFirstItem: boolean; itemCount: number };
-        const rowEntries: RowEntry[] = [];
-        const rows: string[][] = [];
-        
-        // Helper: extract URL from =IMAGE("url"; ...) formula
+        // Helper: extract URL from =IMAGE("url"; ...) or =IMAGE("url", ...) formula
         const extractImageUrl = (val: string): string => {
           if (!val) return '';
-          const match = val.match(/=IMAGE\("([^"]+)"/i);
-          return match ? match[1] : val;
+          const match = val.match(/=IMAGE\(["']([^"']+)["']/i);
+          return match ? match[1] : (val.startsWith('http') ? val : '');
+        };
+
+        // Fetch signature image via server proxy to avoid CORS issues
+        const sigCache: Record<string, string> = {};
+        const fetchSigImage = async (url: string): Promise<string | null> => {
+          if (!url || url === '-' || !url.startsWith('http')) return null;
+          if (sigCache[url]) return sigCache[url];
+          try {
+            const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+            if (!proxyRes.ok) return null;
+            const data = await proxyRes.json();
+            if (data.success && data.dataUrl) {
+              sigCache[url] = data.dataUrl;
+              return data.dataUrl;
+            }
+            return null;
+          } catch { return null; }
         };
 
         // Pre-fetch all signatures for this shift
@@ -630,37 +619,42 @@ export default function ProductDestruction() {
           }
         }
 
+        // Build rows - 1 row per station, items joined with newline in cells
+        type RowEntry = { entry: any | null; stationIdx: number };
+        const rowEntries: RowEntry[] = [];
+        const rows: string[][] = [];
+
         stationOrder.forEach((station, idx) => {
           const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
           if (entry) {
-            // Split products into individual items
-            const names = (entry.namaProduk || '-').split('\n');
-            const codes = (entry.kodeProduk || '-').split('\n');
-            const quantities = (entry.jumlahProduk || '-').split('\n');
-            const methods = (entry.metodePemusnahan || '-').split('\n');
-            const reasons = (entry.alasanPemusnahan || '-').split('\n');
-            const itemCount = Math.max(names.length, 1);
+            // Keep multi-line items in one cell per station
+            const namaProduk = (entry.namaProduk || '-').replace(/,\s*/g, '\n');
+            const kodeProduk = (entry.kodeProduk || '-').replace(/,\s*/g, '\n');
+            const jumlahProduk = (entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+            const metode = (entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
+            const alasan = (entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
+            
+            // Check if dokumentasi has actual content
+            const hasDocs = entry.dokumentasi?.some((d: string) => {
+              if (!d || d === '-') return false;
+              return d.includes('http') || d.includes('IMAGE');
+            });
 
-            // Check if dokumentasi has actual URLs
-            const hasDocs = entry.dokumentasi?.some((d: string) => d && d !== '-' && d.length > 0);
-
-            for (let i = 0; i < itemCount; i++) {
-              rowEntries.push({ entry, stationIdx: idx, isFirstItem: i === 0, itemCount });
-              rows.push([
-                (idx + 1).toString(),
-                (names[i] || '-').trim(),
-                (codes[i] || '-').trim(),
-                (quantities[i] || '-').trim(),
-                (methods[i] || '-').trim(),
-                (reasons[i] || '-').trim(),
-                i === 0 ? (entry.jamTanggalPemusnahan || '-') : '',
-                '', // QC - will draw image in didDrawCell (first item only)
-                '', // Manajer - will draw image in didDrawCell (first item only)
-                i === 0 && hasDocs ? '' : (i === 0 ? '-' : ''),
-              ]);
-            }
+            rowEntries.push({ entry, stationIdx: idx });
+            rows.push([
+              (idx + 1).toString(),
+              namaProduk,
+              kodeProduk,
+              jumlahProduk,
+              metode,
+              alasan,
+              entry.jamTanggalPemusnahan || '-',
+              '', // QC - drawn as image in didDrawCell
+              '', // Manajer - drawn as image in didDrawCell
+              hasDocs ? '' : '-', // Dokumentasi - drawn as link in didDrawCell
+            ]);
           } else {
-            rowEntries.push({ entry: null, stationIdx: idx, isFirstItem: true, itemCount: 1 });
+            rowEntries.push({ entry: null, stationIdx: idx });
             rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
           }
         });
@@ -675,7 +669,7 @@ export default function ProductDestruction() {
           styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 12 },
           headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
           columnStyles: {
-            0: { cellWidth: 8, halign: 'center' },
+            0: { cellWidth: 8, halign: 'center', valign: 'middle' },
             1: { cellWidth: 40 },
             2: { cellWidth: 25 },
             3: { cellWidth: 15, halign: 'center' },
@@ -699,20 +693,16 @@ export default function ProductDestruction() {
             const cellW = data.cell.width;
             const cellH = data.cell.height;
 
-            // Only draw QC/Manajer/Dokumentasi on first item row of each station
-            if (!rowEntry.isFirstItem) return;
-
             // QC signature (col 7)
             if (colIdx === 7) {
               const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
               if (qcUrl && sigCache[qcUrl]) {
                 try {
-                  const imgData = sigCache[qcUrl];
-                  const imgH = cellH - 2;
+                  const imgH = Math.min(cellH - 2, 14);
                   const imgW = Math.min(cellW - 2, imgH * 2);
                   const imgX = cellX + (cellW - imgW) / 2;
-                  const imgY = cellY + 1;
-                  doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+                  const imgY = cellY + (cellH - imgH) / 2;
+                  doc.addImage(sigCache[qcUrl], 'PNG', imgX, imgY, imgW, imgH);
                 } catch {}
               }
             }
@@ -722,26 +712,33 @@ export default function ProductDestruction() {
               const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
               if (mgrUrl && sigCache[mgrUrl]) {
                 try {
-                  const imgData = sigCache[mgrUrl];
-                  const imgH = cellH - 2;
+                  const imgH = Math.min(cellH - 2, 14);
                   const imgW = Math.min(cellW - 2, imgH * 2);
                   const imgX = cellX + (cellW - imgW) / 2;
-                  const imgY = cellY + 1;
-                  doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+                  const imgY = cellY + (cellH - imgH) / 2;
+                  doc.addImage(sigCache[mgrUrl], 'PNG', imgX, imgY, imgW, imgH);
                 } catch {}
               }
             }
 
             // Dokumentasi link (col 9)
             if (colIdx === 9) {
-              const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => d && d !== '-' && d.length > 0);
+              const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => {
+                if (!d || d === '-') return false;
+                return d.includes('http') || d.includes('IMAGE');
+              });
               if (hasDocs) {
                 doc.setTextColor(0, 0, 255);
-                doc.textWithLink('Lihat Foto', cellX + 2, cellY + cellH / 2 + 1, { url: spreadsheetUrl });
+                doc.setFontSize(7);
+                const linkText = 'Lihat Foto';
+                const linkX = cellX + (cellW - doc.getTextWidth(linkText)) / 2;
+                const linkY = cellY + cellH / 2 + 1;
+                doc.textWithLink(linkText, linkX, linkY, { url: spreadsheetUrl });
                 doc.setTextColor(0, 0, 0);
-                const textWidth = doc.getTextWidth('Lihat Foto');
+                // Underline
+                const textWidth = doc.getTextWidth(linkText);
                 doc.setDrawColor(0, 0, 255);
-                doc.line(cellX + 2, cellY + cellH / 2 + 1.5, cellX + 2 + textWidth, cellY + cellH / 2 + 1.5);
+                doc.line(linkX, linkY + 0.5, linkX + textWidth, linkY + 0.5);
                 doc.setDrawColor(0, 0, 0);
               }
             }
