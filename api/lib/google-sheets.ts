@@ -86,15 +86,52 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
   const sheetExists = spreadsheet.sheets?.some((sheet: any) => sheet.properties?.title === tabName);
 
   if (!sheetExists) {
-    await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
+    const addSheetResponse = await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
       requests: [{ addSheet: { properties: { title: tabName } } }]
     });
+    const newSheetId = addSheetResponse.replies?.[0]?.addSheet?.properties?.sheetId || 0;
+
+    // Write header values
     await sheetsRequest(
       accessToken,
       `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A1:T1?valueInputOption=RAW`,
       'PUT',
       { values: [HEADERS] }
     );
+
+    // Format header row: Bold, centered, dark background with white text, freeze row
+    await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
+      requests: [
+        {
+          repeatCell: {
+            range: { sheetId: newSheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 20 },
+            cell: {
+              userEnteredFormat: {
+                horizontalAlignment: 'CENTER',
+                verticalAlignment: 'MIDDLE',
+                backgroundColor: { red: 0.2, green: 0.2, blue: 0.2 },
+                textFormat: { bold: true, fontSize: 10, foregroundColor: { red: 1, green: 1, blue: 1 } },
+                wrapStrategy: 'WRAP'
+              }
+            },
+            fields: 'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment,backgroundColor,wrapStrategy)'
+          }
+        },
+        {
+          updateSheetProperties: {
+            properties: { sheetId: newSheetId, gridProperties: { frozenRowCount: 1 } },
+            fields: 'gridProperties.frozenRowCount'
+          }
+        },
+        {
+          updateDimensionProperties: {
+            range: { sheetId: newSheetId, dimension: 'ROWS', startIndex: 0, endIndex: 1 },
+            properties: { pixelSize: 40 },
+            fields: 'pixelSize'
+          }
+        }
+      ]
+    });
   }
 }
 
