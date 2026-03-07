@@ -9,7 +9,7 @@ export const Footer: React.FC = () => {
           <p className="text-sm text-muted-foreground">
             Made with ☕ By{' '}
             <span className="font-bold text-green-600 dark:text-green-400">
-              (~/Marko)
+              (~/Pajar)
             </span>
           </p>
         </div>

@@ -847,10 +847,10 @@ export default function ProductDestruction() {
 
       // Map QC name to signature filename
       const qcSigMap: Record<string, string> = {
-        'Johan': 'johan-claus-thenu',
-        'Rizki': 'rizki',
-        'Luisa': 'luisa',
-        'Marko': 'marko',
+        'JOHAN CLAUS THENU': 'johan-claus-thenu',
+        'M. RIZKI RAMDANI': 'm-rizki-ramdani',
+        'LUISA RIKE FERNANDA': 'luisa-rike-fernanda',
+        'PAJAR HIDAYAT': 'pajar-hidayat',
       };
 
       // Fetch QC signature image from public folder
@@ -975,7 +975,7 @@ export default function ProductDestruction() {
                     rel="noopener noreferrer"
                     className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors duration-200 font-semibold"
                   >
-                    Marko
+                    Pajar
                   </a>
                 </p>
               </div>

@@ -12,10 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import logoUrl from "@assets/waste-logo_1753322218969.webp";
 
 const QC_OPTIONS = [
-  { value: "Johan", label: "Johan" },
-  { value: "Rizki", label: "Rizki" },
-  { value: "Luisa", label: "Luisa" },
-  { value: "Marko", label: "Marko" },
+  { value: "JOHAN CLAUS THENU", label: "JOHAN CLAUS THENU" },
+  { value: "M. RIZKI RAMDANI", label: "M. RIZKI RAMDANI" },
+  { value: "LUISA RIKE FERNANDA", label: "LUISA RIKE FERNANDA" },
+  { value: "PAJAR HIDAYAT", label: "PAJAR HIDAYAT" },
 ];
 
 const loginSchema = z.object({
@@ -251,7 +251,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         
         <div className="px-6 pb-6">
           <div className="text-center text-xs text-muted-foreground border-t pt-4">
-            <p className="font-medium">By Kang Marko | Jangan Lupa ☕</p>
+            <p className="font-medium">By Kang Pajar | Jangan Lupa ☕</p>
           </div>
         </div>
       </Card>

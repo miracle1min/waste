@@ -5,10 +5,10 @@ import { Label } from "./label";
 import { cn } from "@/lib/utils";
 
 const QC_SIGNATURES = [
-  { name: "Johan Claus Thenu", file: "/signatures/qc/johan-claus-thenu.jpeg" },
-  { name: "Rizki", file: "/signatures/qc/rizki.jpeg" },
-  { name: "Luisa", file: "/signatures/qc/luisa.jpeg" },
-  { name: "Marko", file: "/signatures/qc/marko.jpeg" },
+  { name: "JOHAN CLAUS THENU", file: "/signatures/qc/johan-claus-thenu.jpeg" },
+  { name: "M. RIZKI RAMDANI", file: "/signatures/qc/m-rizki-ramdani.jpeg" },
+  { name: "LUISA RIKE FERNANDA", file: "/signatures/qc/luisa-rike-fernanda.jpeg" },
+  { name: "PAJAR HIDAYAT", file: "/signatures/qc/pajar-hidayat.jpeg" },
 ];
 
 interface ParafSelectorProps {
