@@ -892,7 +892,8 @@ export default function ProductDestruction() {
       toast({ title: "PDF Generated!", description: `File ${fileName} berhasil didownload` });
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast({ title: "Error", description: "Gagal generate PDF. Coba lagi.", variant: "destructive" });
+      const errMsg = error instanceof Error ? error.message : String(error);
+      toast({ title: "Error Generate PDF", description: `${errMsg}`, variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
     }
