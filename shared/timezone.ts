@@ -62,8 +62,20 @@ export function toWIBDate(date: Date | string): Date {
  * Always returns current WIB time
  */
 export function formatWIBForInput(date?: Date | string): string {
-  const wibDate = getCurrentWIBDate(); // Always use current time for datetime-local inputs
-  return wibDate.toISOString().slice(0, 16);
+  // Format directly from WIB parts to avoid toISOString() converting back to UTC
+  const now = new Date();
+  const wibFormatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  // sv-SE locale gives "YYYY-MM-DD HH:mm" format
+  const formatted = wibFormatter.format(now);
+  // Convert "YYYY-MM-DD HH:mm" to "YYYY-MM-DDTHH:mm" for datetime-local input
+  return formatted.replace(' ', 'T');
 }
 
 /**
@@ -122,8 +134,15 @@ export function formatWIBForSheetTab(date?: Date | string): string {
  * Get current date in WIB for date input (YYYY-MM-DD)
  */
 export function getCurrentWIBDateString(): string {
-  const wibDate = getCurrentWIBDate();
-  return wibDate.toISOString().slice(0, 10); // Return YYYY-MM-DD format for date inputs
+  const now = new Date();
+  const wibFormatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  // sv-SE locale gives "YYYY-MM-DD" format
+  return wibFormatter.format(now);
 }
 
 /**
