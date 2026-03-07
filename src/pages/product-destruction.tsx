@@ -766,31 +766,32 @@ export default function ProductDestruction() {
       }
       startY = startY + 8;
 
-      // Extract QC name from any entry's Cloudinary URL
-      let qcName = '';
+      // Get logged-in QC name from localStorage
+      const loggedInQC = localStorage.getItem('waste_app_qc_name') || 'QC';
+
+      // Map QC name to signature filename
+      const qcSigMap: Record<string, string> = {
+        'Johan': 'johan-claus-thenu',
+        'Rizki': 'rizki',
+        'Luisa': 'luisa',
+        'Marko': 'marko',
+      };
+
+      // Fetch QC signature image from public folder
       let qcSigImg: string | null = null;
-      for (const shift of shifts) {
-        if (qcName) break;
-        for (const station of stationOrder) {
-          const entries = dayData.entries.filter(
-            (e: any) => (e.shift || '').toUpperCase() === shift && (e.station || '').toUpperCase() === station
-          );
-          if (entries.length > 0 && entries[0].parafQC) {
-            const url = extractImageUrl(entries[0].parafQC);
-            if (url) {
-              // Extract name from URL: .../johan-claus-thenu.jpeg → Johan Claus Thenu
-              const match = url.match(/\/([^/]+)\.(jpeg|jpg|png|webp)/i);
-              if (match) {
-                qcName = match[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              }
-              // Try to get signature image
-              if (sigCache[url]) {
-                qcSigImg = sigCache[url];
-              }
-            }
-            break;
+      const sigFileName = qcSigMap[loggedInQC];
+      if (sigFileName) {
+        try {
+          const sigRes = await fetch(`/signatures/qc/${sigFileName}.jpeg`);
+          if (sigRes.ok) {
+            const blob = await sigRes.blob();
+            qcSigImg = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
           }
-        }
+        } catch {}
       }
 
       doc.setFontSize(9);
@@ -802,9 +803,9 @@ export default function ProductDestruction() {
 
       // Right: Dilaporkan oleh QC
       const rightX = pageWidth - margin - 60;
-      doc.text(`Dilaporkan oleh : ${qcName || 'QC'}`, rightX, startY);
+      doc.text(`Dilaporkan oleh : ${loggedInQC}`, rightX, startY);
       if (qcSigImg) {
-        doc.addImage(qcSigImg, 'PNG', rightX + 10, startY + 2, 30, 10);
+        doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
       }
       doc.line(rightX, startY + 15, rightX + 55, startY + 15);
 

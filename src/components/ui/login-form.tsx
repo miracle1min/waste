@@ -7,17 +7,26 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Loader2 } from "lucide-react";
+import { AlertCircle, Lock, Loader2, User, CheckCircle2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoUrl from "@assets/waste-logo_1753322218969.webp";
 
+const QC_OPTIONS = [
+  { value: "Johan", label: "Johan" },
+  { value: "Rizki", label: "Rizki" },
+  { value: "Luisa", label: "Luisa" },
+  { value: "Marko", label: "Marko" },
+];
+
 const loginSchema = z.object({
+  qcName: z.string().min(1, "Pilih nama QC terlebih dahulu"),
   password: z.string().min(1, "Password wajib diisi"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
-  onLogin: () => void;
+  onLogin: (qcName: string) => void;
 }
 
 // Typewriter effect component with repeat
@@ -29,17 +38,13 @@ function TypewriterText({ text, speed = 50 }: { text: string; speed?: number }) 
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!isDeleting && currentIndex < text.length) {
-        // Typing phase
         setDisplayText(prev => prev + text[currentIndex]);
         setCurrentIndex(prev => prev + 1);
       } else if (!isDeleting && currentIndex === text.length) {
-        // Wait before deleting
         setTimeout(() => setIsDeleting(true), 1500);
       } else if (isDeleting && displayText.length > 0) {
-        // Deleting phase
         setDisplayText(prev => prev.slice(0, -1));
       } else if (isDeleting && displayText.length === 0) {
-        // Reset for next cycle
         setIsDeleting(false);
         setCurrentIndex(0);
       }
@@ -59,10 +64,13 @@ function TypewriterText({ text, speed = 50 }: { text: string; speed?: number }) 
 export function LoginForm({ onLogin }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmedName, setConfirmedName] = useState("");
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
+      qcName: "",
       password: "",
     },
   });
@@ -71,22 +79,64 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setIsSubmitting(true);
     setError(null);
 
-    // Simulate a brief delay for UX
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Check password
-    if (data.password === "CKRSUK") {
-      // Store login state in localStorage
-      localStorage.setItem("waste_app_authenticated", "true");
-      localStorage.setItem("waste_app_login_time", Date.now().toString());
-      onLogin();
+    if (data.password === "CKRBUL123") {
+      setConfirmedName(data.qcName);
+      setShowConfirm(true);
     } else {
       setError("Password salah. Silakan coba lagi.");
-      form.reset();
+      form.setValue("password", "");
     }
 
     setIsSubmitting(false);
   };
+
+  const handleConfirmLogin = () => {
+    onLogin(confirmedName);
+  };
+
+  // Confirmation screen
+  if (showConfirm) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="pt-8 pb-8 text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Konfirmasi Login</h2>
+              <p className="text-muted-foreground mt-2">Kamu akan masuk sebagai:</p>
+              <p className="text-2xl font-bold mt-3 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                {confirmedName}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1 h-11"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setConfirmedName("");
+                }}
+              >
+                Kembali
+              </Button>
+              <Button 
+                className="flex-1 h-11 bg-green-600 hover:bg-green-700"
+                onClick={handleConfirmLogin}
+              >
+                Ya, Masuk!
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 p-4">
@@ -121,6 +171,34 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
+                name="qcName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Nama QC
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Pilih nama kamu" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {QC_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
@@ -135,7 +213,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                         placeholder="Masukkan password"
                         disabled={isSubmitting}
                         className="h-11"
-                        autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             form.handleSubmit(handleSubmit)();
@@ -167,12 +244,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
           <div className="mt-6 text-center text-sm text-muted-foreground min-h-[20px]">
             <p>
-              <TypewriterText text="Gunakan password koderesto kamu" speed={60} />
+              <TypewriterText text="Pilih nama kamu dan masukkan password" speed={60} />
             </p>
           </div>
         </CardContent>
         
-        {/* Footer like in the main application */}
         <div className="px-6 pb-6">
           <div className="text-center text-xs text-muted-foreground border-t pt-4">
             <p className="font-medium">By Kang Marko | Jangan Lupa ☕</p>

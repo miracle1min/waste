@@ -4,24 +4,23 @@ export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const [qcName, setQcName] = useState<string>("");
 
   useEffect(() => {
     checkAuthStatus();
     
-    // Set up activity listener to extend session
     const handleUserActivity = () => {
       if (isAuthenticated) {
         extendSession();
       }
     };
 
-    // Track user activity (mouse moves, key presses, clicks)
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     let activityTimeout: NodeJS.Timeout;
 
     const throttledActivity = () => {
       clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(handleUserActivity, 60000); // Extend session every minute of activity
+      activityTimeout = setTimeout(handleUserActivity, 60000);
     };
 
     events.forEach(event => {
@@ -40,18 +39,17 @@ export function useAuth() {
     try {
       const authenticated = localStorage.getItem("waste_app_authenticated");
       const loginTime = localStorage.getItem("waste_app_login_time");
+      const storedQcName = localStorage.getItem("waste_app_qc_name");
       
       if (authenticated === "true" && loginTime) {
         const loginTimestamp = parseInt(loginTime);
         const currentTime = Date.now();
-        
-        // Session expires after 8 hours (8 * 60 * 60 * 1000 ms)
         const sessionDuration = 8 * 60 * 60 * 1000;
         
         if (currentTime - loginTimestamp < sessionDuration) {
           setIsAuthenticated(true);
+          setQcName(storedQcName || "");
         } else {
-          // Session expired, clear storage
           logout();
         }
       }
@@ -63,9 +61,11 @@ export function useAuth() {
     }
   };
 
-  const login = () => {
+  const login = (name: string) => {
     localStorage.setItem("waste_app_authenticated", "true");
     localStorage.setItem("waste_app_login_time", Date.now().toString());
+    localStorage.setItem("waste_app_qc_name", name);
+    setQcName(name);
     setIsAuthenticated(true);
   };
 
@@ -74,7 +74,8 @@ export function useAuth() {
     setIsLoggingOut(true);
     localStorage.removeItem("waste_app_authenticated");
     localStorage.removeItem("waste_app_login_time");
-    console.log("Setting isAuthenticated to false");
+    localStorage.removeItem("waste_app_qc_name");
+    setQcName("");
     setIsAuthenticated(false);
     console.log("Logout completed");
   };
@@ -89,6 +90,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     isLoggingOut,
+    qcName,
     login,
     logout,
     extendSession,
