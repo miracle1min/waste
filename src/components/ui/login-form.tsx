@@ -498,7 +498,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <div className="text-center min-h-[20px]">
               <TypewriterText
                 texts={[
-                  "Pilih nama kamu dan masukkan password...",
+                  "Masukkan kredensial untuk lanjut",
                   "Waste tracking made simple ☕",
                   "System ready. Awaiting input...",
                 ]}
