@@ -583,11 +583,47 @@ export default function ProductDestruction() {
         // Table headers
         const headers = [['No', 'Nama Produk', 'Kode Produk', 'Jumlah', 'Metode', 'Alasan', 'Jam', 'QC', 'Manajer', 'Dokumentasi']];
         
+        // Pre-fetch signature images for this shift
+        const sigCache: Record<string, string> = {};
+        const fetchSigImage = async (url: string): Promise<string | null> => {
+          if (!url || url === '-') return null;
+          if (sigCache[url]) return sigCache[url];
+          try {
+            const imgRes = await fetch(url);
+            if (!imgRes.ok) return null;
+            const blob = await imgRes.blob();
+            return new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = reader.result as string;
+                sigCache[url] = result;
+                resolve(result);
+              };
+              reader.onerror = () => resolve('');
+              reader.readAsDataURL(blob);
+            });
+          } catch { return null; }
+        };
+
         // Build rows - 4 rows per shift (one per station)
+        // Store entry references for didDrawCell
+        type RowEntry = { entry: any | null; stationIdx: number };
+        const rowEntries: RowEntry[] = [];
         const rows: string[][] = [];
+        
+        // Pre-fetch all signatures for this shift
+        for (const station of stationOrder) {
+          const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+          if (entry) {
+            if (entry.parafQC) await fetchSigImage(entry.parafQC);
+            if (entry.parafManager) await fetchSigImage(entry.parafManager);
+          }
+        }
+
         stationOrder.forEach((station, idx) => {
           const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
           if (entry) {
+            rowEntries.push({ entry, stationIdx: idx });
             rows.push([
               (idx + 1).toString(),
               (entry.namaProduk || '').replace(/\n/g, ', '),
@@ -596,35 +632,86 @@ export default function ProductDestruction() {
               (entry.metodePemusnahan || '').replace(/\n/g, ', '),
               (entry.alasanPemusnahan || '').replace(/\n/g, ', '),
               entry.jamTanggalPemusnahan || '',
-              entry.parafQC ? '✓' : '-',
-              entry.parafManager ? '✓' : '-',
-              entry.dokumentasi?.length ? `${entry.dokumentasi.length} foto` : '-',
+              '', // QC - will draw image in didDrawCell
+              '', // Manajer - will draw image in didDrawCell
+              entry.dokumentasi?.length ? 'Lihat Foto' : '-',
             ]);
           } else {
+            rowEntries.push({ entry: null, stationIdx: idx });
             rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
           }
         });
+
+        const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/12W36gW1ma3Df2-zftIYkX-z6c0m_X1KV8C1ISDw8PtI/edit';
 
         autoTable(doc, {
           head: headers,
           body: rows,
           startY: startY,
           margin: { left: margin, right: margin },
-          styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1 },
+          styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 12 },
           headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
           columnStyles: {
             0: { cellWidth: 8, halign: 'center' },
-            1: { cellWidth: 45 },
-            2: { cellWidth: 30 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 25 },
             3: { cellWidth: 15, halign: 'center' },
             4: { cellWidth: 20 },
-            5: { cellWidth: 30 },
-            6: { cellWidth: 35 },
-            7: { cellWidth: 15, halign: 'center' },
-            8: { cellWidth: 18, halign: 'center' },
-            9: { cellWidth: 25, halign: 'center' },
+            5: { cellWidth: 28 },
+            6: { cellWidth: 33 },
+            7: { cellWidth: 20, halign: 'center' },
+            8: { cellWidth: 22, halign: 'center' },
+            9: { cellWidth: 30, halign: 'center' },
           },
           theme: 'grid',
+          didDrawCell: (data: any) => {
+            if (data.section !== 'body') return;
+            const rowIdx = data.row.index;
+            const colIdx = data.column.index;
+            const rowEntry = rowEntries[rowIdx];
+            if (!rowEntry?.entry) return;
+
+            const cellX = data.cell.x;
+            const cellY = data.cell.y;
+            const cellW = data.cell.width;
+            const cellH = data.cell.height;
+
+            // QC signature (col 7)
+            if (colIdx === 7 && rowEntry.entry.parafQC && sigCache[rowEntry.entry.parafQC]) {
+              try {
+                const imgData = sigCache[rowEntry.entry.parafQC];
+                const imgH = cellH - 2;
+                const imgW = Math.min(cellW - 2, imgH * 2);
+                const imgX = cellX + (cellW - imgW) / 2;
+                const imgY = cellY + 1;
+                doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+              } catch {}
+            }
+
+            // Manajer signature (col 8)
+            if (colIdx === 8 && rowEntry.entry.parafManager && sigCache[rowEntry.entry.parafManager]) {
+              try {
+                const imgData = sigCache[rowEntry.entry.parafManager];
+                const imgH = cellH - 2;
+                const imgW = Math.min(cellW - 2, imgH * 2);
+                const imgX = cellX + (cellW - imgW) / 2;
+                const imgY = cellY + 1;
+                doc.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH);
+              } catch {}
+            }
+
+            // Dokumentasi link (col 9)
+            if (colIdx === 9 && rowEntry.entry.dokumentasi?.length > 0) {
+              doc.setTextColor(0, 0, 255);
+              doc.textWithLink('Lihat Foto', cellX + 2, cellY + cellH / 2 + 1, { url: spreadsheetUrl });
+              doc.setTextColor(0, 0, 0);
+              // Add underline
+              const textWidth = doc.getTextWidth('Lihat Foto');
+              doc.setDrawColor(0, 0, 255);
+              doc.line(cellX + 2, cellY + cellH / 2 + 1.5, cellX + 2 + textWidth, cellY + cellH / 2 + 1.5);
+              doc.setDrawColor(0, 0, 0);
+            }
+          },
         });
 
         startY = (doc as any).lastAutoTable.finalY + 3;
