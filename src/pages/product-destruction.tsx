@@ -1170,98 +1170,77 @@ export default function ProductDestruction() {
                     </form>
                   </Form>
                 ) : (
-                  /* Multi-item add mode */
-                  <div ref={productFormRef} className="space-y-4 max-w-full md:max-w-2xl mx-auto">
+                  /* Multi-item add mode - compact layout */
+                  <div ref={productFormRef} className="space-y-3 max-w-full md:max-w-2xl mx-auto">
                     {itemRows.map((row, rowIndex) => (
-                      <div key={rowIndex} className="border border-border rounded-lg p-4 space-y-4 bg-card/50">
-                        <div className="flex items-center justify-between">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            Item {rowIndex + 1}
-                          </span>
+                      <div key={rowIndex} className="border border-border rounded-md p-3 space-y-2 bg-card/50 relative">
+                        {/* Row header: number + delete */}
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold text-muted-foreground">#{rowIndex + 1}</span>
                           {itemRows.length > 1 && (
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItemRow(rowIndex)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950">
-                              <Trash2 className="w-4 h-4" />
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItemRow(rowIndex)} className="h-6 w-6 p-0 text-red-500 hover:text-red-700">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           )}
                         </div>
 
                         {/* Nama Produk */}
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Nama Produk</Label>
-                          {selectedCategory && (selectedCategory === "DIMSUM" || selectedCategory === "PRODUKSI") ? (
-                            <div className="space-y-2">
-                              <Select
-                                onValueChange={(value) => { updateItemRow(rowIndex, 'namaProduk', value); updateItemRow(rowIndex, 'customProductName', ''); }}
-                                value={row.namaProduk && !row.customProductName ? row.namaProduk : ""}
-                              >
-                                <SelectTrigger><SelectValue placeholder="Pilih produk" /></SelectTrigger>
-                                <SelectContent>
-                                  {PREDEFINED_PRODUCTS[selectedCategory as keyof typeof PREDEFINED_PRODUCTS].map((product) => (
-                                    <SelectItem key={product} value={product}>{product}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                placeholder="Atau masukkan nama produk lain (optional)"
-                                className="text-base"
-                                value={row.customProductName}
-                                onChange={(e) => { updateItemRow(rowIndex, 'customProductName', e.target.value); updateItemRow(rowIndex, 'namaProduk', e.target.value); }}
-                              />
-                            </div>
-                          ) : (
-                            <Input
-                              placeholder={
-                                selectedCategory === "NOODLE" ? "Cth: PANGSIT GORENG, MIE" :
-                                selectedCategory === "BAR" ? "Cth: APEL, PEER, STROBERI" :
-                                "Contoh: Nama Produk"
-                              }
-                              className="text-base"
-                              value={row.namaProduk}
-                              onChange={(e) => updateItemRow(rowIndex, 'namaProduk', e.target.value)}
-                            />
-                          )}
-                        </div>
-
-                        {/* Kode Lot/Exp */}
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Kode Lot/Exp</Label>
-                          <Input placeholder="Contoh: 010825.01" className="text-base min-h-[44px]" value={row.kodeProduk} onChange={(e) => updateItemRow(rowIndex, 'kodeProduk', e.target.value)} />
-                        </div>
-
-                        {/* Jumlah + Unit side by side */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {selectedCategory && (selectedCategory === "DIMSUM" || selectedCategory === "PRODUKSI") ? (
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-medium">Jumlah</Label>
-                            <Input type="number" min={1} placeholder="0" className="text-base min-h-[44px]" value={row.jumlahProduk} onChange={(e) => updateItemRow(rowIndex, 'jumlahProduk', e.target.value)} />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-sm font-medium">Unit</Label>
-                            <Select onValueChange={(value) => updateItemRow(rowIndex, 'unit', value)} value={row.unit}>
-                              <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih unit" /></SelectTrigger>
+                            <Select
+                              onValueChange={(value) => { updateItemRow(rowIndex, 'namaProduk', value); updateItemRow(rowIndex, 'customProductName', ''); }}
+                              value={row.namaProduk && !row.customProductName ? row.namaProduk : ""}
+                            >
+                              <SelectTrigger className="h-10"><SelectValue placeholder="Pilih produk" /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="PCS">PCS</SelectItem>
-                                <SelectItem value="PORSI">PORSI</SelectItem>
-                                <SelectItem value="PACK">PACK</SelectItem>
-                                <SelectItem value="GRAM">GRAM</SelectItem>
+                                {PREDEFINED_PRODUCTS[selectedCategory as keyof typeof PREDEFINED_PRODUCTS].map((product) => (
+                                  <SelectItem key={product} value={product}>{product}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
+                            <Input
+                              placeholder="Atau ketik nama produk lain"
+                              className="h-10 text-sm"
+                              value={row.customProductName}
+                              onChange={(e) => { updateItemRow(rowIndex, 'customProductName', e.target.value); updateItemRow(rowIndex, 'namaProduk', e.target.value); }}
+                            />
                           </div>
-                        </div>
+                        ) : (
+                          <Input
+                            placeholder={
+                              selectedCategory === "NOODLE" ? "Nama produk (cth: PANGSIT GORENG)" :
+                              selectedCategory === "BAR" ? "Nama produk (cth: APEL, PEER)" :
+                              "Nama produk"
+                            }
+                            className="h-10 text-sm"
+                            value={row.namaProduk}
+                            onChange={(e) => updateItemRow(rowIndex, 'namaProduk', e.target.value)}
+                          />
+                        )}
 
-                        {/* Metode Pemusnahan */}
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Metode Pemusnahan</Label>
-                          <Select onValueChange={(value) => updateItemRow(rowIndex, 'metodePemusnahan', value)} value={row.metodePemusnahan}>
-                            <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih metode" /></SelectTrigger>
-                            <SelectContent><SelectItem value="DI BUANG">DI BUANG</SelectItem></SelectContent>
+                        {/* Kode + Jumlah + Unit in one row */}
+                        <div className="grid grid-cols-[1fr_0.6fr_0.6fr] gap-2">
+                          <Input placeholder="Kode Lot/Exp" className="h-10 text-sm" value={row.kodeProduk} onChange={(e) => updateItemRow(rowIndex, 'kodeProduk', e.target.value)} />
+                          <Input type="number" min={1} placeholder="Jml" className="h-10 text-sm" value={row.jumlahProduk} onChange={(e) => updateItemRow(rowIndex, 'jumlahProduk', e.target.value)} />
+                          <Select onValueChange={(value) => updateItemRow(rowIndex, 'unit', value)} value={row.unit}>
+                            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Unit" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PCS">PCS</SelectItem>
+                              <SelectItem value="PORSI">PORSI</SelectItem>
+                              <SelectItem value="PACK">PACK</SelectItem>
+                              <SelectItem value="GRAM">GRAM</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Alasan Pemusnahan */}
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Alasan Pemusnahan</Label>
+                        {/* Metode + Alasan in one row */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Select onValueChange={(value) => updateItemRow(rowIndex, 'metodePemusnahan', value)} value={row.metodePemusnahan}>
+                            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Metode" /></SelectTrigger>
+                            <SelectContent><SelectItem value="DI BUANG">DI BUANG</SelectItem></SelectContent>
+                          </Select>
                           <Select onValueChange={(value) => updateItemRow(rowIndex, 'alasanPemusnahan', value)} value={row.alasanPemusnahan}>
-                            <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Pilih alasan pemusnahan" /></SelectTrigger>
+                            <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Alasan" /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="HANDLING">HANDLING</SelectItem>
                               <SelectItem value="KUALITAS EKSTERNAL">KUALITAS EKSTERNAL</SelectItem>
@@ -1270,52 +1249,47 @@ export default function ProductDestruction() {
                           </Select>
                         </div>
 
-                        {/* Alasan Lainnya */}
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium">Alasan Lainnya (Optional)</Label>
-                          <Input placeholder="Tulis alasan lainnya jika diperlukan" className="text-base min-h-[44px]" value={row.alasanPemusnahanManual} onChange={(e) => updateItemRow(rowIndex, 'alasanPemusnahanManual', e.target.value)} />
-                        </div>
+                        {/* Alasan Lainnya - only show if needed */}
+                        <Input placeholder="Alasan lainnya (opsional)" className="h-10 text-sm" value={row.alasanPemusnahanManual} onChange={(e) => updateItemRow(rowIndex, 'alasanPemusnahanManual', e.target.value)} />
                       </div>
                     ))}
 
-                    {/* Add Item button */}
+                    {/* Add Item button - right below items */}
                     <Button
                       type="button"
                       variant="outline"
                       onClick={addItemRow}
-                      className="w-full min-h-[48px] border-dashed border-2 border-green-400 dark:border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 font-medium"
+                      className="w-full h-10 border-dashed border-2 border-green-400 dark:border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 text-sm font-medium"
                     >
                       + Tambah Item
                     </Button>
 
                     {/* Shared Jam Pemusnahan */}
                     <Form {...form}>
-                      <div className="space-y-1.5">
-                        <FormField
-                          control={form.control}
-                          name="jamTanggalPemusnahan"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Jam & Tanggal Pemusnahan (berlaku untuk semua item)</FormLabel>
-                              <FormControl>
-                                <Input type="datetime-local" className="text-base min-h-[44px]" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="jamTanggalPemusnahan"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm">Jam Pemusnahan (semua item)</FormLabel>
+                            <FormControl>
+                              <Input type="datetime-local" className="h-10 text-sm" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </Form>
 
                     {/* Add All button */}
                     <Button
                       type="button"
                       onClick={addAllItemsToCurrentGroup}
-                      className="w-full min-h-[48px] text-base sm:text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
+                      className="w-full h-11 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
                       disabled={!allItemRowsValid}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Tambah Semua ke {selectedCategory} ({itemRows.length} item)
+                      Tambah {itemRows.length > 1 ? `Semua (${itemRows.length} item)` : "ke"} {selectedCategory}
                     </Button>
                   </div>
                 )}
