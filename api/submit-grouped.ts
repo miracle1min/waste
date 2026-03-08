@@ -32,6 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       metodePemusnahanList,
       alasanPemusnahanList,
       jamTanggalPemusnahan: fields.jamTanggalPemusnahan,
+      jamTanggalPemusnahanList: fields.jamTanggalPemusnahanList ? JSON.parse(fields.jamTanggalPemusnahanList) : null,
     };
 
     const imageUrls: Record<string, string> = {};

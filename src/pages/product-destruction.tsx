@@ -351,6 +351,9 @@ export default function ProductDestruction() {
       formData.append('unitList', JSON.stringify(unitList));
       formData.append('metodePemusnahanList', JSON.stringify(metodePemusnahanList));
       formData.append('alasanPemusnahanList', JSON.stringify(alasanPemusnahanList));
+      // Send per-item jam list for multi-line display in PDF
+      const jamList = categoryGroup.items.map(item => item.jamTanggalPemusnahan);
+      formData.append('jamTanggalPemusnahanList', JSON.stringify(jamList));
       formData.append('jamTanggalPemusnahan', firstItem.jamTanggalPemusnahan);
 
       // Handle paraf QC file (use from first item)
@@ -777,6 +780,34 @@ export default function ProductDestruction() {
         doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
         startY += 7;
 
+
+    // Helper: parse jam value from various formats to "HH:MM WIB"
+    const parseJamValue = (raw: string): string => {
+      if (!raw || raw === '-') return '-';
+      // Already formatted with WIB
+      if (raw.includes('WIB')) return raw;
+      // Handle multi-line values (newline separated)
+      if (raw.includes('\n')) {
+        return raw.split('\n').map(line => parseJamValue(line.trim())).join('\n');
+      }
+      // Excel serial date number (like 46039.57261666666)
+      const num = parseFloat(raw);
+      if (!isNaN(num) && num > 40000) {
+        const timeFraction = num % 1;
+        const totalMinutes = Math.round(timeFraction * 24 * 60);
+        const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+        const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+        return `${hours}:${minutes} WIB`;
+      }
+      // datetime-local format "2026-03-08T23:28"
+      const dtMatch = raw.match(/T(\d{2}:\d{2})/);
+      if (dtMatch) return `${dtMatch[1]} WIB`;
+      // Just time "23:28" or "23:28:00"
+      const timeMatch = raw.match(/^(\d{2}:\d{2})/);
+      if (timeMatch) return `${timeMatch[1]} WIB`;
+      return raw;
+    };
+
         // Table headers
         const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
         
@@ -844,7 +875,7 @@ export default function ProductDestruction() {
               jumlahProduk,
               metode,
               alasan,
-              entry.jamTanggalPemusnahan || '-',
+              parseJamValue(entry.jamTanggalPemusnahan || '-'),
               '', // QC - drawn as image in didDrawCell
               '', // Manajer - drawn as image in didDrawCell
               hasDocs ? '' : '-', // Dokumentasi - drawn as link in didDrawCell

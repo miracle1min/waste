@@ -194,6 +194,22 @@ function formatWIBForSheetTab(date?: Date | string): string {
 
 // ===== Public API =====
 
+/**
+ * Convert datetime-local string to "HH:MM WIB" text format.
+ * This prevents Google Sheets from auto-converting to serial numbers.
+ */
+function formatJamForStorage(datetimeLocal: string): string {
+  if (!datetimeLocal || datetimeLocal === '-') return '-';
+  // datetime-local format "2026-03-08T23:28"
+  const match = datetimeLocal.match(/T(\d{2}:\d{2})/);
+  if (match) return `${match[1]} WIB`;
+  // Already has WIB
+  if (datetimeLocal.includes('WIB')) return datetimeLocal;
+  // Just time "23:28"
+  if (/^\d{2}:\d{2}/.test(datetimeLocal)) return `${datetimeLocal.substring(0,5)} WIB`;
+  return datetimeLocal;
+}
+
 export async function appendToGoogleSheets(
   credentialsString: string, spreadsheetId: string, data: any, imageUrls: any
 ): Promise<void> {
@@ -211,7 +227,10 @@ export async function appendToGoogleSheets(
     data.unit,
     data.metodePemusnahan,
     data.alasanPemusnahan || '',
-    data.jamTanggalPemusnahan,
+    // Format jam per-item (join with newline like other fields)
+    (data.jamTanggalPemusnahanList 
+      ? data.jamTanggalPemusnahanList.map((j: string) => formatJamForStorage(j)).join('\n')
+      : formatJamForStorage(data.jamTanggalPemusnahan)),
     imageUrls.parafQC ? `=IMAGE("${imageUrls.parafQC}"; 4; 90; 90)` : '',
     imageUrls.parafManager ? `=IMAGE("${imageUrls.parafManager}"; 4; 90; 90)` : '',
     ...dokumentasiCols
@@ -246,7 +265,7 @@ export async function appendGroupToGoogleSheets(
       item.unit.toUpperCase(),
       item.metodePemusnahan.toUpperCase(),
       item.alasanPemusnahan || '',
-      item.jamTanggalPemusnahan,
+      formatJamForStorage(item.jamTanggalPemusnahan),
       item.parafQCUrl ? `=IMAGE("${item.parafQCUrl}"; 4; 90; 90)` : '❌ Tidak ada',
       item.parafManagerUrl ? `=IMAGE("${item.parafManagerUrl}"; 4; 90; 90)` : '❌ Tidak ada',
       ...dokumentasiCols
@@ -311,7 +330,7 @@ export async function appendGroupedToGoogleSheets(
     (storeName || 'BEKASI KP. BULU').toUpperCase(),
     data.kategoriInduk.toUpperCase(),
     productNames, productCodes, quantities, units, methods, reasons,
-    data.jamTanggalPemusnahan,
+    formatJamForStorage(data.jamTanggalPemusnahan),
     imageUrls.parafQC ? `=IMAGE("${imageUrls.parafQC}"; 4; 90; 90)` : '❌ Tidak ada',
     imageUrls.parafManager ? `=IMAGE("${imageUrls.parafManager}"; 4; 90; 90)` : '❌ Tidak ada',
     ...dokumentasiCols
