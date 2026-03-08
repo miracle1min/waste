@@ -139,6 +139,10 @@ export default function ProductDestruction() {
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ ...emptyItemRow }]);
   const { toast } = useToast();
   const productFormRef = useRef<HTMLDivElement>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [shiftStationStatus, setShiftStationStatus] = useState<Record<string, string[]>>({});
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const cacheRestoredRef = useRef(false);
 
   // Auto-scroll to product form when entering products step
   useEffect(() => {
@@ -149,6 +153,122 @@ export default function ProductDestruction() {
       });
     }
   }, [currentStep]);
+
+  // === SECURITY: Prevent accidental navigation (back/close/refresh) ===
+  useEffect(() => {
+    const hasUnsavedData = categoryGroups.some(g => g.items.length > 0) ||
+      itemRows.some(r => r.namaProduk.trim() !== '');
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedData) {
+        e.preventDefault();
+        e.returnValue = 'Data belum disimpan! Yakin mau meninggalkan halaman?';
+      }
+    };
+
+    const handlePopState = () => {
+      if (hasUnsavedData) {
+        if (!window.confirm('Data belum disimpan! Yakin mau kembali?')) {
+          window.history.pushState(null, '', window.location.pathname);
+        }
+      }
+    };
+
+    if (hasUnsavedData) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.history.pushState(null, '', window.location.pathname);
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [categoryGroups, itemRows]);
+
+  // === CACHING: Save form state to localStorage ===
+  const CACHE_KEY = 'waste_form_cache';
+
+  // Restore cache on mount (only once)
+  useEffect(() => {
+    if (cacheRestoredRef.current) return;
+    cacheRestoredRef.current = true;
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const data = JSON.parse(cached);
+        const hasData = data.categoryGroups?.some((g: CategoryGroup) => g.items.length > 0);
+        if (hasData && window.confirm('Ada data sebelumnya yang belum selesai. Mau lanjutkan?')) {
+          if (data.selectedDate) setSelectedDate(data.selectedDate);
+          if (data.selectedShift) setSelectedShift(data.selectedShift);
+          if (data.storeName) setStoreName(data.storeName);
+          if (data.selectedCategory) setSelectedCategory(data.selectedCategory);
+          if (data.categoryGroups) setCategoryGroups(data.categoryGroups);
+          if (data.currentStep) setCurrentStep(data.currentStep);
+          if (data.completedSteps) setCompletedSteps(data.completedSteps);
+        } else {
+          localStorage.removeItem(CACHE_KEY);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore cache:', e);
+    }
+  }, []);
+
+  // Save to cache whenever state changes
+  useEffect(() => {
+    if (!cacheRestoredRef.current) return;
+    try {
+      const hasData = categoryGroups.some(g => g.items.length > 0);
+      if (hasData) {
+        // Strip non-serializable fields (File objects) from categoryGroups
+        const serializableGroups = categoryGroups.map(g => ({
+          ...g,
+          items: g.items.map(item => ({
+            ...item,
+            dokumentasiFile: undefined,
+            dokumentasiFiles: undefined,
+            parafQCFile: undefined,
+            parafManagerFile: undefined,
+          }))
+        }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          selectedDate,
+          selectedShift,
+          storeName,
+          selectedCategory,
+          categoryGroups: serializableGroups,
+          currentStep,
+          completedSteps,
+        }));
+      } else {
+        localStorage.removeItem(CACHE_KEY);
+      }
+    } catch (e) {
+      console.warn('Failed to save cache:', e);
+    }
+  }, [selectedDate, selectedShift, storeName, selectedCategory, categoryGroups, currentStep, completedSteps]);
+
+  // === STATUS: Fetch shift/station status for selected date ===
+  useEffect(() => {
+    if (!selectedDate) return;
+    setIsLoadingStatus(true);
+    fetch(`/api/get-day-data?date=${selectedDate}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.grouped) {
+          const status: Record<string, string[]> = {};
+          Object.keys(data.grouped).forEach(shift => {
+            status[shift] = (data.grouped[shift] || []).map((entry: any) => entry.station?.toUpperCase());
+          });
+          setShiftStationStatus(status);
+        } else {
+          setShiftStationStatus({});
+        }
+      })
+      .catch(() => setShiftStationStatus({}))
+      .finally(() => setIsLoadingStatus(false));
+  }, [selectedDate]);
 
   const form = useForm<WasteItem>({
     resolver: zodResolver(insertIndividualProductWithFilesSchema),
@@ -1100,6 +1220,51 @@ export default function ProductDestruction() {
                       <strong>Penting:</strong> Tanggal ini akan menentukan nama sheet di Google Spreadsheet. Pilih tanggal hari kerja yang sesuai untuk menghindari data masuk ke sheet yang salah.
                     </p>
                   </div>
+
+                  {/* Status Shift & Station yang sudah input */}
+                  {selectedDate && (
+                    <div className="bg-slate-900/50 border border-cyan-800/30 rounded-lg p-3 sm:p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="w-4 h-4 text-cyan-400" />
+                        <h4 className="text-sm font-semibold text-cyan-300">Status Input Tanggal Ini</h4>
+                        {isLoadingStatus && (
+                          <div className="w-3 h-3 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                        )}
+                      </div>
+                      {Object.keys(shiftStationStatus).length === 0 && !isLoadingStatus ? (
+                        <p className="text-xs text-muted-foreground">Belum ada data yang diinput untuk tanggal ini.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {SHIFTS.map((shift) => {
+                            const stations = shiftStationStatus[shift.id] || [];
+                            const allStations = ['NOODLE', 'DIMSUM', 'BAR', 'PRODUKSI'];
+                            return (
+                              <div key={shift.id} className="flex items-start gap-2">
+                                <span className={`text-xs font-bold min-w-[70px] px-2 py-0.5 rounded ${stations.length > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-slate-800/50 text-slate-500'}`}>
+                                  {shift.label}
+                                </span>
+                                <div className="flex flex-wrap gap-1">
+                                  {allStations.map(st => {
+                                    const done = stations.includes(st);
+                                    return (
+                                      <span key={st} className={`text-[10px] px-1.5 py-0.5 rounded ${done ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/40' : 'bg-slate-800/30 text-slate-600 border border-slate-700/30'}`}>
+                                        {done ? '✅' : '⬜'} {st}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {Object.keys(shiftStationStatus).length > 0 && (
+                            <p className="text-[10px] text-emerald-400/70 mt-2 pt-2 border-t border-slate-700/30">
+                              ✅ = Sudah diinput | ⬜ = Belum diinput — Lengkapi semua untuk generate PDF
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1562,12 +1727,18 @@ export default function ProductDestruction() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setCurrentStep("date");
-                  setCompletedSteps([]);
-                  setSelectedCategory(null);
-                  setCategoryGroups([]);
-                  setEditingIndex(null);
-                  resetForm();
+                  const hasData = categoryGroups.some(g => g.items.length > 0) ||
+                    itemRows.some(r => r.namaProduk.trim() !== '');
+                  if (hasData) {
+                    setShowResetConfirm(true);
+                  } else {
+                    setCurrentStep("date");
+                    setCompletedSteps([]);
+                    setSelectedCategory(null);
+                    setCategoryGroups([]);
+                    setEditingIndex(null);
+                    resetForm();
+                  }
                 }}
                 className="w-full flex items-center justify-center gap-2 min-h-[48px] text-base sm:text-sm bg-red-950/30 hover:bg-red-950/50 text-red-400 border border-red-800/40 hover:border-red-700/60 transition-all duration-200"
               >
@@ -1633,7 +1804,9 @@ export default function ProductDestruction() {
                 setSelectedCategory(null);
                 setCategoryGroups([]);
                 setShowPdfButton(false);
+                setItemRows([{ ...emptyItemRow }]);
                 resetForm();
+                localStorage.removeItem('waste_form_cache');
               }}
               className="flex-1 h-11 sm:h-10 text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 transition-all duration-200"
             >
@@ -1643,6 +1816,47 @@ export default function ProductDestruction() {
         </DialogContent>
       </Dialog>
       
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent className="max-w-sm mx-4">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 bg-red-950/40 border border-red-500/30 rounded-full flex items-center justify-center mb-3" style={{boxShadow: '0 0 20px rgba(239,68,68,0.2)'}}>
+              <AlertTriangle className="w-6 h-6 text-red-400" />
+            </div>
+            <DialogTitle className="text-center text-lg">Reset Semua Data?</DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Semua data yang sudah diinput akan dihapus dan tidak bisa dikembalikan. Yakin mau reset?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowResetConfirm(false)}
+              className="flex-1 h-11"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={() => {
+                setShowResetConfirm(false);
+                setCurrentStep("date");
+                setCompletedSteps([]);
+                setSelectedCategory(null);
+                setCategoryGroups([]);
+                setEditingIndex(null);
+                setItemRows([{ ...emptyItemRow }]);
+                resetForm();
+                localStorage.removeItem('waste_form_cache');
+                toast({ title: "🗑️ Data Direset", description: "Semua data berhasil direset" });
+              }}
+              className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white"
+            >
+              Ya, Reset
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
