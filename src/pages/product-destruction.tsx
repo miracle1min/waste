@@ -1215,11 +1215,18 @@ export default function ProductDestruction() {
                     </Select>
                   </div>
 
-                  <div className="bg-amber-950/20 border border-amber-700/30 rounded-lg p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm text-amber-300">
-                      <strong>Penting:</strong> Tanggal ini akan menentukan nama sheet di Google Spreadsheet. Pilih tanggal hari kerja yang sesuai untuk menghindari data masuk ke sheet yang salah.
-                    </p>
-                  </div>
+                  {/* Button Selanjutnya - di atas status */}
+                  {selectedDate && selectedShift && storeName && (
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={nextStep}
+                        className="flex items-center justify-center gap-2 min-h-[48px] px-8 text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium transition-all duration-200 w-full sm:w-auto"
+                      >
+                        Selanjutnya
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Status Shift & Station yang sudah input */}
                   {selectedDate && (
