@@ -993,17 +993,23 @@ export default function ProductDestruction() {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
 
-      // Left: Diketahui Oleh AM/RM
-      doc.text('Diketahui Oleh : AM/RM', margin, startY);
+      // Left: Diketahui Oleh
+      doc.text('Diketahui Oleh :', margin, startY);
       doc.line(margin, startY + 15, margin + 50, startY + 15);
+      doc.setFont('helvetica', 'normal');
+      doc.text('AM/RM', margin + 12, startY + 20);
+      doc.setFont('helvetica', 'bold');
 
-      // Right: Dilaporkan oleh QC
+      // Right: Dilaporkan oleh
       const rightX = pageWidth - margin - 60;
-      doc.text(`Dilaporkan oleh : ${loggedInQC}`, rightX, startY);
+      doc.text('Dilaporkan oleh :', rightX, startY);
       if (qcSigImg) {
         doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
       }
       doc.line(rightX, startY + 15, rightX + 55, startY + 15);
+      doc.setFont('helvetica', 'normal');
+      doc.text(loggedInQC, rightX + 5, startY + 20);
+      doc.setFont('helvetica', 'bold');
 
       // Save locally
       const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
