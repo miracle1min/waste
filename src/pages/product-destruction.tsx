@@ -1201,14 +1201,9 @@ export default function ProductDestruction() {
                   <div ref={productFormRef} className="space-y-3 max-w-full md:max-w-2xl mx-auto">
                     {itemRows.map((row, rowIndex) => (
                       <div key={rowIndex} className="border border-cyan-900/30 rounded-md p-3 space-y-2 bg-slate-900/40 relative">
-                        {/* Row header: number + delete */}
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-muted-foreground">#{rowIndex + 1}</span>
-                          {itemRows.length > 1 && (
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItemRow(rowIndex)} className="h-6 w-6 p-0 text-red-500 hover:text-red-700">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
+                        {/* Row header */}
+                        <div className="mb-1">
+                          <span className="text-xs font-semibold text-muted-foreground">Input Produk</span>
                         </div>
 
                         {/* Nama Produk */}
@@ -1281,12 +1276,55 @@ export default function ProductDestruction() {
                       </div>
                     ))}
 
-                    {/* Add Item button - right below items */}
+                    {/* Add Item button - adds current item to queue and resets form */}
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={addItemRow}
+                      onClick={() => {
+                        const row = itemRows[0];
+                        if (!row || !row.namaProduk.trim() || !row.kodeProduk.trim() || !(typeof row.jumlahProduk === 'number' ? row.jumlahProduk > 0 : parseInt(String(row.jumlahProduk)) > 0) || !row.unit.trim() || !row.metodePemusnahan.trim()) {
+                          toast({ title: "\u26a0\ufe0f Data Belum Lengkap", description: "Lengkapi semua field sebelum menambahkan item", variant: "destructive" });
+                          return;
+                        }
+                        if (!selectedCategory) return;
+                        const jamValue = form.getValues('jamTanggalPemusnahan');
+                        const newItem: WasteItem = {
+                          tanggal: selectedDate,
+                          kategoriInduk: selectedCategory,
+                          namaProduk: row.namaProduk,
+                          kodeProduk: row.kodeProduk,
+                          jumlahProduk: typeof row.jumlahProduk === 'string' ? parseInt(row.jumlahProduk) || 1 : row.jumlahProduk,
+                          unit: row.unit,
+                          metodePemusnahan: row.metodePemusnahan,
+                          alasanPemusnahan: row.alasanPemusnahan,
+                          alasanPemusnahanManual: row.alasanPemusnahanManual,
+                          jamTanggalPemusnahan: jamValue,
+                          parafQCName: '',
+                          parafManagerName: '',
+                          dokumentasiUrl: '',
+                          dokumentasiFile: undefined,
+                          dokumentasiFiles: undefined,
+                        };
+                        setCategoryGroups(prev => {
+                          const existingGroup = prev.find(g => g.kategoriInduk === selectedCategory);
+                          if (existingGroup) {
+                            return prev.map(group =>
+                              group.kategoriInduk === selectedCategory
+                                ? { ...group, items: [...group.items, newItem] }
+                                : group
+                            );
+                          } else {
+                            return [...prev, { kategoriInduk: selectedCategory, items: [newItem] }];
+                          }
+                        });
+                        setItemRows([{ ...emptyItemRow }]);
+                        toast({
+                          title: "\u2705 Produk Ditambahkan",
+                          description: `${row.namaProduk} masuk ke antrian ${selectedCategory}`,
+                        });
+                      }}
                       className="w-full h-10 border-dashed border-2 border-green-400 dark:border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 text-sm font-medium"
+                      disabled={!itemRows[0] || !itemRows[0].namaProduk.trim() || !itemRows[0].kodeProduk.trim() || !(typeof itemRows[0].jumlahProduk === 'number' ? itemRows[0].jumlahProduk > 0 : parseInt(String(itemRows[0].jumlahProduk)) > 0) || !itemRows[0].unit.trim() || !itemRows[0].metodePemusnahan.trim()}
                     >
                       + Tambah Item
                     </Button>
@@ -1308,16 +1346,7 @@ export default function ProductDestruction() {
                       />
                     </Form>
 
-                    {/* Add All button */}
-                    <Button
-                      type="button"
-                      onClick={addAllItemsToCurrentGroup}
-                      className="w-full h-11 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
-                      disabled={!allItemRowsValid}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Tambah {itemRows.length > 1 ? `Semua (${itemRows.length} item)` : "ke"} {selectedCategory}
-                    </Button>
+
                   </div>
                 )}
 
