@@ -142,6 +142,7 @@ export default function ProductDestruction() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [shiftStationStatus, setShiftStationStatus] = useState<Record<string, string[]>>({});
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [statusRefreshTrigger, setStatusRefreshTrigger] = useState(0);
   const cacheRestoredRef = useRef(false);
 
   // Auto-scroll to product form when entering products step
@@ -268,7 +269,7 @@ export default function ProductDestruction() {
       })
       .catch(() => setShiftStationStatus({}))
       .finally(() => setIsLoadingStatus(false));
-  }, [selectedDate]);
+  }, [selectedDate, statusRefreshTrigger]);
 
   const form = useForm<WasteItem>({
     resolver: zodResolver(insertIndividualProductWithFilesSchema),
@@ -1851,6 +1852,8 @@ export default function ProductDestruction() {
                 setItemRows([{ ...emptyItemRow }]);
                 resetForm();
                 localStorage.removeItem('waste_form_cache');
+                // Force refresh status input
+                setStatusRefreshTrigger(prev => prev + 1);
               }}
               className="flex-1 h-11 sm:h-10 text-base sm:text-sm bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 transition-all duration-200"
             >
@@ -1892,6 +1895,8 @@ export default function ProductDestruction() {
                 resetForm();
                 localStorage.removeItem('waste_form_cache');
                 toast({ title: "🗑️ Data Direset", description: "Semua data berhasil direset" });
+                // Force refresh status input
+                setStatusRefreshTrigger(prev => prev + 1);
               }}
               className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white"
             >
