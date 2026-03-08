@@ -1339,7 +1339,7 @@ export default function ProductDestruction() {
                             </FormItem>
                           )}
                         />
-                        <FormField control={form.control} name="kodeProduk" render={({ field }) => (<FormItem><FormLabel>Kode Lot/Exp</FormLabel><FormControl><Input placeholder="Contoh: 010825.01" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="kodeProduk" render={({ field }) => (<FormItem><FormLabel>Kode Lot/Exp</FormLabel><FormControl><Input type="date" className="text-base min-h-[44px]" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="jumlahProduk" render={({ field }) => (<FormItem><FormLabel>Jumlah Produk</FormLabel><FormControl><Input type="number" min={1} placeholder="0" className="text-base min-h-[44px]" {...field} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage /></FormItem>)} />
@@ -1407,7 +1407,7 @@ export default function ProductDestruction() {
 
                         {/* Kode + Jumlah + Unit in one row */}
                         <div className="grid grid-cols-[1fr_0.6fr_0.6fr] gap-2">
-                          <Input placeholder="Kode Lot/Exp" className="h-10 text-sm" value={row.kodeProduk} onChange={(e) => updateItemRow(rowIndex, 'kodeProduk', e.target.value)} />
+                          <Input type="date" className="h-10 text-sm" value={row.kodeProduk} onChange={(e) => updateItemRow(rowIndex, 'kodeProduk', e.target.value)} />
                           <Input type="number" min={1} placeholder="Jml" className="h-10 text-sm" value={row.jumlahProduk} onChange={(e) => updateItemRow(rowIndex, 'jumlahProduk', e.target.value)} />
                           <Select onValueChange={(value) => updateItemRow(rowIndex, 'unit', value)} value={row.unit}>
                             <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Unit" /></SelectTrigger>
