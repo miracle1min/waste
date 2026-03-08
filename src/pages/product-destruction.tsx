@@ -1100,21 +1100,21 @@ export default function ProductDestruction() {
     <div className="min-h-screen bg-cyber-dark cyber-grid-bg flex flex-col">
       {/* Header - Cyberpunk */}
       <div className="bg-cyber-header backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3">
+        <div className="max-w-6xl mx-auto px-4 py-1.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex-shrink-0 relative">
                 <img 
                   src={wasteLogo} 
                   alt="WASTE Logo" 
-                  className="h-10 w-auto sm:h-12 md:h-14 lg:h-16 rounded-lg cyber-border"
+                  className="h-8 w-auto sm:h-9 rounded-lg cyber-border"
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-heading font-bold heading-gradient truncate tracking-wider">
+                <h1 className="text-sm sm:text-base font-heading font-bold heading-gradient truncate tracking-wider leading-tight">
                   BA WASTE
                 </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate leading-tight">
                   V.3.1.1 | Made With ☕ By{' '}
                   <a 
                     href="https://www.facebook.com/hipnotismagic" 
@@ -1149,11 +1149,11 @@ export default function ProductDestruction() {
             
             {/* Step 1: Date Selection */}
             {currentStep === "date" && (
-              <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
+              <div className="space-y-3 sm:space-y-4">
                 <div className="text-center">
-                  <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
-                  <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">Pilih Tanggal Hari Kerja</h2>
-                  <p className="text-sm sm:text-base text-muted-foreground px-4">Pilih tanggal untuk pencatatan pemusnahan produk (menentukan sheet di Spreadsheet)</p>
+                  <Calendar className="w-6 h-6 text-cyan-400 inline-block mr-2 align-middle" />
+                  <h2 className="text-lg sm:text-xl font-heading font-bold mb-1 inline align-middle">Pilih Tanggal Hari Kerja</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Pilih tanggal pencatatan pemusnahan</p>
                 </div>
                 
                 <div className="max-w-sm sm:max-w-md mx-auto space-y-4 sm:space-y-6">
@@ -1271,11 +1271,11 @@ export default function ProductDestruction() {
 
             {/* Step 2: Category Selection */}
             {currentStep === "category" && (
-              <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
+              <div className="space-y-3 sm:space-y-4">
                 <div className="text-center">
-                  <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
-                  <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">Pilih Station</h2>
-                  <p className="text-sm sm:text-base text-muted-foreground px-4">Pilih station yang akan dimusnahkan</p>
+                  <FileText className="w-6 h-6 text-cyan-400 inline-block mr-2 align-middle" />
+                  <h2 className="text-lg sm:text-xl font-heading font-bold mb-1 inline align-middle">Pilih Station</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Pilih station yang akan dimusnahkan</p>
                 </div>
                 
                 <CategorySelector 
@@ -1295,13 +1295,13 @@ export default function ProductDestruction() {
 
             {/* Step 3: Product Details */}
             {currentStep === "products" && selectedCategory && (
-              <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
+              <div className="space-y-3 sm:space-y-4">
                 <div className="text-center">
-                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
-                  <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2">
+                  <Upload className="w-6 h-6 text-cyan-400 inline-block mr-2 align-middle" />
+                  <h2 className="text-lg sm:text-xl font-heading font-bold mb-1 inline align-middle">
                     {editingIndex !== null ? `Edit Produk - ${selectedCategory}` : `Detail Produk - ${selectedCategory}`}
                   </h2>
-                  <p className="text-sm sm:text-base text-muted-foreground px-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     {editingIndex !== null ? 'Edit detail produk yang akan dimusnahkan' : 'Masukkan detail produk yang akan dimusnahkan'}
                   </p>
                 </div>
@@ -1578,9 +1578,9 @@ export default function ProductDestruction() {
             {currentStep === "files" && selectedCategory && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center px-2 sm:px-0">
-                  <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-cyan-400 mb-3 sm:mb-4" />
+                  <Upload className="w-6 h-6 text-cyan-400 inline-block mr-2 align-middle" />
                   <h2 className="text-xl sm:text-2xl font-bold mb-2">Upload Dokumen</h2>
-                  <p className="text-sm sm:text-base text-muted-foreground">Upload paraf dan dokumentasi (opsional)</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Upload paraf dan dokumentasi (opsional)</p>
                 </div>
 
                 <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
@@ -1623,11 +1623,11 @@ export default function ProductDestruction() {
 
             {/* Step 5: Review */}
             {currentStep === "review" && selectedCategory && currentGroup && (
-              <div className="space-y-4 sm:space-y-6">{/* Reduced spacing for mobile */}
+              <div className="space-y-3 sm:space-y-4">
                 <div className="text-center">
                   <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-emerald-400 mb-3 sm:mb-4" />
-                  <h2 className="text-xl sm:text-2xl font-bold mb-2">Review Data</h2>
-                  <p className="text-sm sm:text-base text-muted-foreground px-4">Periksa kembali data sebelum mengirim</p>
+                  <h2 className="text-lg sm:text-xl font-bold mb-1 inline align-middle">Review Data</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Periksa kembali data sebelum mengirim</p>
                 </div>
 
                 <div className="max-w-full sm:max-w-3xl mx-auto space-y-3 sm:space-y-4">
