@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseForm, fileToBuffer } from './lib/parse-form.js';
-import { uploadToCloudinary } from './lib/cloudinary.js';
+import { uploadToR2 } from './lib/r2.js';
 import { appendGroupedToGoogleSheets } from './lib/google-sheets.js';
 
 export const config = { api: { bodyParser: false } };
@@ -34,7 +34,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       jamTanggalPemusnahan: fields.jamTanggalPemusnahan,
     };
 
-    const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
     const imageUrls: Record<string, string> = {};
 
     // Upload paraf QC
@@ -42,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (qcFile && !Array.isArray(qcFile) && qcFile.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(qcFile);
-        imageUrls.parafQC = await uploadToCloudinary(buffer, name, type, 'waste-management/paraf-qc', CLOUDINARY_CLOUD_NAME!, CLOUDINARY_API_KEY!, CLOUDINARY_API_SECRET!);
+        imageUrls.parafQC = await uploadToR2(buffer, name, type, 'waste-management/paraf-qc');
       } catch (e) { console.error('QC upload error:', e); }
     }
 
@@ -51,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (mgrFile && !Array.isArray(mgrFile) && mgrFile.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(mgrFile);
-        imageUrls.parafManager = await uploadToCloudinary(buffer, name, type, 'waste-management/paraf-manager', CLOUDINARY_CLOUD_NAME!, CLOUDINARY_API_KEY!, CLOUDINARY_API_SECRET!);
+        imageUrls.parafManager = await uploadToR2(buffer, name, type, 'waste-management/paraf-manager');
       } catch (e) { console.error('Manager upload error:', e); }
     }
 
@@ -62,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (file && !Array.isArray(file) && file.size > 0) {
         try {
           const { buffer, name, type } = await fileToBuffer(file);
-          const url = await uploadToCloudinary(buffer, name, type, 'waste-management/dokumentasi', CLOUDINARY_CLOUD_NAME!, CLOUDINARY_API_KEY!, CLOUDINARY_API_SECRET!);
+          const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi');
           dokumentasiUrls.push(url);
         } catch (e) { console.error(`Docs upload error ${i}:`, e); }
       }
@@ -72,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (singleDoc && !Array.isArray(singleDoc) && singleDoc.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(singleDoc);
-        const url = await uploadToCloudinary(buffer, name, type, 'waste-management/dokumentasi', CLOUDINARY_CLOUD_NAME!, CLOUDINARY_API_KEY!, CLOUDINARY_API_SECRET!);
+        const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi');
         dokumentasiUrls.push(url);
       } catch (e) { console.error('Single docs upload error:', e); }
     }

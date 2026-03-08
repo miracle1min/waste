@@ -9,9 +9,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
-  // Only allow Cloudinary URLs for security
-  if (!url.includes('res.cloudinary.com')) {
-    return res.status(403).json({ error: 'Only Cloudinary URLs are allowed' });
+  // Allow Cloudinary URLs and R2 URLs for security
+  const isCloudinary = url.includes('res.cloudinary.com');
+  const isR2 = url.includes('.r2.dev') || url.includes('.r2.cloudflarestorage.com');
+  
+  if (!isCloudinary && !isR2) {
+    return res.status(403).json({ error: 'Only Cloudinary and R2 URLs are allowed' });
   }
 
   try {
