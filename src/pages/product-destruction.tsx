@@ -1002,7 +1002,7 @@ export default function ProductDestruction() {
 
       // Right: Dilaporkan oleh
       const rightX = pageWidth - margin - 60;
-      doc.text('Dilaporkan oleh :', rightX, startY);
+      doc.text('Dilaporkan oleh : QC', rightX, startY);
       if (qcSigImg) {
         doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
       }
