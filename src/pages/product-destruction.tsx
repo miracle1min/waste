@@ -885,11 +885,38 @@ export default function ProductDestruction() {
       }
       doc.line(rightX, startY + 15, rightX + 55, startY + 15);
 
-      // Save
+      // Save locally
       const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
       doc.save(fileName);
       
       toast({ title: "PDF Generated!", description: `File ${fileName} berhasil didownload` });
+
+      // Backup to Google Drive
+      try {
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const driveRes = await fetch('/api/upload-to-drive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName, pdfBase64 }),
+        });
+        const driveData = await driveRes.json();
+        if (driveData.success) {
+          toast({
+            title: "☁️ Backup Google Drive Berhasil!",
+            description: `PDF tersimpan di Google Drive`,
+          });
+        } else {
+          console.warn('Google Drive backup warning:', driveData.error);
+          toast({
+            title: "⚠️ Backup Google Drive Gagal",
+            description: driveData.error || "PDF tetap terdownload secara lokal",
+            variant: "destructive",
+          });
+        }
+      } catch (driveErr) {
+        console.warn('Google Drive backup error:', driveErr);
+        // Non-blocking: PDF sudah terdownload lokal, backup Drive optional
+      }
     } catch (error) {
       console.error('PDF generation error:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
