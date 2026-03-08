@@ -82,7 +82,7 @@ export function CategorySelector({ selectedCategory, onSelect, className }: Cate
               isSelected && "selected"
             )}
           >
-            <div className="flex items-center space-x-3 sm:space-x-4 p-4 sm:p-5">
+            <div className="flex items-center space-x-3 p-3 sm:p-4">
               <div className={cn(
                 "p-2.5 sm:p-3 rounded-lg flex-shrink-0 transition-all duration-200",
                 isSelected 

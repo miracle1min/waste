@@ -1156,7 +1156,7 @@ export default function ProductDestruction() {
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">Pilih tanggal pencatatan pemusnahan</p>
                 </div>
                 
-                <div className="max-w-sm sm:max-w-md mx-auto space-y-4 sm:space-y-6">
+                <div className="w-full space-y-4 sm:space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="date-input" className="text-base sm:text-lg font-medium">Tanggal Hari Kerja</Label>
                     <Input
@@ -1288,7 +1288,7 @@ export default function ProductDestruction() {
                       form.setValue("namaProduk", "");
                     }
                   }}
-                  className="max-w-lg sm:max-w-2xl mx-auto"
+                  className="w-full"
                 />
               </div>
             )}
@@ -1309,7 +1309,7 @@ export default function ProductDestruction() {
                 {/* Edit mode: single item form using react-hook-form */}
                 {editingIndex !== null ? (
                   <Form {...form}>
-                    <form ref={productFormRef} className="space-y-6 max-w-full md:max-w-2xl mx-auto">
+                    <form ref={productFormRef} className="space-y-6 w-full">
                       <div className="bg-cyan-950/20 border border-cyan-700/30 rounded-lg p-3 text-center text-sm text-cyan-300 font-medium">
                         ✏️ Mode Edit — Mengedit item yang sudah ditambahkan
                       </div>
@@ -1363,7 +1363,7 @@ export default function ProductDestruction() {
                   </Form>
                 ) : (
                   /* Multi-item add mode - compact layout */
-                  <div ref={productFormRef} className="space-y-3 max-w-full md:max-w-2xl mx-auto">
+                  <div ref={productFormRef} className="space-y-3 w-full">
                     {itemRows.map((row, rowIndex) => (
                       <div key={rowIndex} className="border border-cyan-900/30 rounded-md p-3 space-y-2 bg-slate-900/40 relative">
                         {/* Row header */}
@@ -1583,7 +1583,7 @@ export default function ProductDestruction() {
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">Upload paraf dan dokumentasi (opsional)</p>
                 </div>
 
-                <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
+                <div className="w-full space-y-4 sm:space-y-6">
                   <ParafSelector
                     label="Paraf QC"
                     description="Pilih nama untuk paraf QC"
@@ -1630,7 +1630,7 @@ export default function ProductDestruction() {
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">Periksa kembali data sebelum mengirim</p>
                 </div>
 
-                <div className="max-w-full sm:max-w-3xl mx-auto space-y-3 sm:space-y-4">
+                <div className="w-full space-y-3 sm:space-y-4">
                   <div className="bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-cyan-900/30">{/* Review summary */}
                     <h3 className="text-lg font-semibold mb-4 text-cyan-300">Ringkasan Pengiriman</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
