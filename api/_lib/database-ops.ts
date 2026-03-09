@@ -1,4 +1,8 @@
-import pg from "pg";
+/**
+ * Database failover operations — test, seed, switch
+ * Uses @neondatabase/serverless (HTTP driver, no pg needed)
+ */
+import { neon } from "@neondatabase/serverless";
 
 const TABLES_DDL = [
   `CREATE TABLE IF NOT EXISTS tenants (
@@ -48,63 +52,57 @@ const TABLES_DDL = [
 const DATA_TABLES = ["tenants", "users", "tenant_configs", "personnel"];
 
 export async function testConnection(dbUrl: string): Promise<{ ok: boolean; message: string; tables?: string[] }> {
-  const pool = new pg.Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 10000 });
   try {
-    const r = await pool.query("SELECT version()");
-    const tables = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name");
+    const sql = neon(dbUrl);
+    const r = await sql`SELECT version()`;
+    const tables = await sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`;
     return {
       ok: true,
-      message: `Koneksi berhasil! PostgreSQL ${r.rows[0].version.split(" ")[1]}`,
-      tables: tables.rows.map((t: any) => t.table_name),
+      message: `Koneksi berhasil! ${r[0].version.split(" on ")[0]}`,
+      tables: tables.map((t: any) => t.table_name),
     };
   } catch (err: any) {
     return { ok: false, message: `Gagal konek: ${err.message}` };
-  } finally {
-    await pool.end();
   }
 }
 
 export async function seedDatabase(sourceUrl: string, targetUrl: string): Promise<{ ok: boolean; message: string; details?: any }> {
-  const srcPool = new pg.Pool({ connectionString: sourceUrl, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 10000 });
-  const tgtPool = new pg.Pool({ connectionString: targetUrl, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 10000 });
+  const srcSql = neon(sourceUrl);
+  const tgtSql = neon(targetUrl);
   const details: Record<string, number> = {};
 
   try {
     // 1. Create tables in target
     for (const ddl of TABLES_DDL) {
-      await tgtPool.query(ddl);
+      await tgtSql(ddl);
     }
 
     // 2. Clear target tables (reverse order for FK)
     for (const table of [...DATA_TABLES].reverse()) {
-      await tgtPool.query(`DELETE FROM ${table}`);
+      await tgtSql(`DELETE FROM ${table}`);
     }
 
-    // 3. Copy data table by table (order matters for FK)
+    // 3. Copy data table by table
     for (const table of DATA_TABLES) {
-      const src = await srcPool.query(`SELECT * FROM ${table}`);
-      if (src.rows.length === 0) { details[table] = 0; continue; }
+      const src = await srcSql(`SELECT * FROM ${table}`);
+      if (src.length === 0) { details[table] = 0; continue; }
 
-      for (const row of src.rows) {
+      for (const row of src) {
         const keys = Object.keys(row);
         const vals = Object.values(row);
         const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
-        // Use ON CONFLICT DO NOTHING to handle duplicates
         const idCol = table === "tenants" ? "id" : table === "users" ? "username" : table === "tenant_configs" ? "tenant_id" : "id";
-        await tgtPool.query(
-          `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders}) ON CONFLICT (${idCol}) DO NOTHING`,
-          vals
-        );
+        await tgtSql(`INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders}) ON CONFLICT (${idCol}) DO NOTHING`, vals);
       }
 
       // Reset sequences for serial columns
       if (table !== "tenants") {
         try {
-          await tgtPool.query(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1))`);
+          await tgtSql(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1))`);
         } catch (_) { /* no sequence */ }
       }
 
-      details[table] = src.rows.length;
+      details[table] = src.length;
     }
 
     const total = Object.values(details).reduce((a, b) => a + b, 0);
@@ -115,9 +113,6 @@ export async function seedDatabase(sourceUrl: string, targetUrl: string): Promis
     };
   } catch (err: any) {
     return { ok: false, message: `Seed gagal: ${err.message}` };
-  } finally {
-    await srcPool.end();
-    await tgtPool.end();
   }
 }
 
