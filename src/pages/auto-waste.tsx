@@ -161,7 +161,7 @@ export default function AutoWaste() {
     async function fetchPersonnel() {
       setPersonnelLoading(true);
       try {
-        const tenantId = localStorage.getItem("tenant_id") || "";
+        const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
         const res = await apiFetch(`/api/signatures?tenant_id=${tenantId}`);
         const data = await res.json();
         if (data.success && data.personnel) {

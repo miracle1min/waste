@@ -1002,7 +1002,7 @@ export default function ProductDestruction() {
       // Fetch QC signature from API (dynamic per tenant)
       let qcSigImg: string | null = null;
       try {
-        const tenantId = localStorage.getItem("tenant_id") || "";
+        const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
         const sigRes = await fetch(`/api/signatures?tenant_id=${tenantId}&name=${encodeURIComponent(loggedInQC)}`);
         const sigData = await sigRes.json();
         if (sigData.success && sigData.url) {

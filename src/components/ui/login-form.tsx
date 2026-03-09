@@ -186,19 +186,19 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   const handleConfirmLogin = () => {
-    const { user, tenant } = loginResult;
+    const { user } = loginResult;
     onLogin(
       user.username,
       user.role,
       user.tenant_id === "ALL" ? "" : user.tenant_id,
-      tenant?.name || "",
-      tenant?.store_code || ""
+      user.tenant_name || "",
+      ""
     );
   };
 
   /* ── Confirmation Screen ── */
   if (showConfirm && loginResult) {
-    const { user, tenant } = loginResult;
+    const { user } = loginResult;
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950 p-4 overflow-hidden">
         <CyberBackground />
@@ -231,12 +231,12 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   <p className="text-xs font-mono text-cyan-500/60">
                     Role: <span className="text-cyan-300">{user.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin Store'}</span>
                   </p>
-                  {tenant && (
+                  {user.tenant_name && (
                     <p className="text-xs font-mono text-cyan-500/60">
-                      Store: <span className="text-cyan-300">{tenant.name}</span>
+                      Resto: <span className="text-cyan-300">{user.tenant_name}</span>
                     </p>
                   )}
-                  {user.role === 'super_admin' && !tenant && (
+                  {user.role === 'super_admin' && !user.tenant_name && (
                     <p className="text-xs font-mono text-cyan-500/60">
                       Akses: <span className="text-cyan-300">Semua Store</span>
                     </p>

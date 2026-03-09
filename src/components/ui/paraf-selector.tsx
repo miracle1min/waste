@@ -37,7 +37,7 @@ export function ParafSelector({
     async function fetchQC() {
       setListLoading(true);
       try {
-        const tenantId = localStorage.getItem("tenant_id") || "";
+        const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
         const res = await apiFetch(`/api/signatures?tenant_id=${tenantId}&role=qc`);
         const data = await res.json();
         if (data.success && data.personnel) {

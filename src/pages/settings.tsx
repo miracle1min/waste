@@ -339,8 +339,8 @@ function UsersTab() {
               <label className="text-[10px] font-mono text-cyan-600 uppercase">Store</label>
               <select value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
                 className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                <option value="">— Pilih Store —</option>
-                <option value="ALL">Semua Store (Super Admin)</option>
+                <option value="">— Pilih Resto —</option>
+                <option value="ALL">Semua Resto (Super Admin)</option>
                 {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
@@ -378,7 +378,7 @@ function UsersTab() {
             <thead>
               <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">USERNAME</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">STORE</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">RESTO</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">ROLE</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">DIBUAT</th>
                 <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
@@ -795,7 +795,7 @@ function ConfigsTab() {
               <table className="w-full text-sm font-mono">
                 <thead>
                   <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
-                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">STORE</th>
+                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">RESTO</th>
                     <th className="text-left px-4 py-3 text-cyan-500 text-xs">SHEET ID</th>
                     <th className="text-left px-4 py-3 text-cyan-500 text-xs">R2 BUCKET</th>
                     <th className="text-left px-4 py-3 text-cyan-500 text-xs">UPDATED</th>
