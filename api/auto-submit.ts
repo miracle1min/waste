@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseForm, fileToBuffer } from './_lib/parse-form.js';
 import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -79,11 +80,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       imageUrls.dokumentasi = dokumentasiUrls.join('\n');
     }
 
-    // Submit to Google Sheets
-    const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
-    if (GOOGLE_SHEETS_CREDENTIALS && GOOGLE_SPREADSHEET_ID) {
+    // Submit to Google Sheets (multi-tenant)
+    const tenantId = extractTenantId(req);
+    const creds = await resolveTenantCredentials(tenantId);
+    if (creds.googleCredentials && creds.googleSpreadsheetId) {
       try {
-        await appendGroupedToGoogleSheets(GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID, data, imageUrls, shift, storeName);
+        await appendGroupedToGoogleSheets(creds.googleCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
       } catch (e) {
         console.error('Google Sheets error:', e);
         return res.status(500).json({ success: false, message: 'Gagal menyimpan ke Google Sheets: ' + (e instanceof Error ? e.message : String(e)) });

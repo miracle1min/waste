@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, ClipboardEdit, LogOut, BarChart3 } from "lucide-react";
+import { Zap, ClipboardEdit, LogOut, BarChart3, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Footer } from "@/components/ui/footer";
@@ -7,7 +7,7 @@ import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 export default function ModeSelector() {
   const [, setLocation] = useLocation();
-  const { logout, isLoggingOut } = useAuth();
+  const { logout, isLoggingOut, isSuperAdmin, tenantName, qcName } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -27,8 +27,23 @@ export default function ModeSelector() {
               </h1>
               <p className="text-[10px] text-slate-500">Aplikasi Waste Always Simple</p>
             </div>
+            {/* User info */}
+            <div className="hidden sm:flex items-center gap-2 ml-3 px-2 py-1 rounded-lg bg-cyan-500/5 border border-cyan-900/30">
+              <span className="text-[10px] font-mono text-cyan-500">{qcName}</span>
+              {tenantName && <span className="text-[10px] font-mono text-cyan-700">| {tenantName}</span>}
+              {isSuperAdmin && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">👑</span>}
+            </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/settings")}
+              className="p-2 w-10 h-10 text-slate-400 hover:text-yellow-400 border border-transparent hover:border-yellow-800/50"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
             <Button
               variant="outline"
               size="sm"

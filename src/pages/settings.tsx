@@ -1,0 +1,578 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
+
+// ===== Types =====
+interface Tenant { id: string; name: string; store_code: string; status: string; created_at: string; }
+interface UserItem { id: string; tenant_id: string; username: string; role: string; created_at: string; }
+interface TenantConfig { tenant_id: string; google_sheet_id: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
+
+// ===== API Helpers =====
+async function api(url: string, method = "GET", body?: any) {
+  const opts: RequestInit = {
+    method,
+    headers: { "Content-Type": "application/json", "x-user-role": "super_admin" },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ===== Tabs =====
+type TabKey = "tenants" | "users" | "configs";
+const TABS: { key: TabKey; label: string; icon: any }[] = [
+  { key: "tenants", label: "Store / Tenant", icon: Store },
+  { key: "users", label: "User Management", icon: Users },
+  { key: "configs", label: "Config & Env", icon: Database },
+];
+
+export default function Settings() {
+  const [, navigate] = useLocation();
+  const { isSuperAdmin, userRole } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabKey>("tenants");
+
+  // Redirect kalo bukan super admin
+  useEffect(() => {
+    if (userRole && !isSuperAdmin) navigate("/");
+  }, [userRole, isSuperAdmin]);
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-cyan-100">
+      {/* Header */}
+      <div className="border-b border-cyan-900/30 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+          <button onClick={() => navigate("/")} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+            <ArrowLeft className="h-4 w-4 text-cyan-400" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+              ⚙️ Settings — Control Panel
+            </h1>
+            <p className="text-xs font-mono text-cyan-600">Kelola store, user, dan konfigurasi</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <div className="flex gap-2 border-b border-cyan-900/30 pb-0">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 font-mono text-sm rounded-t-lg border-b-2 transition-all ${
+                  isActive
+                    ? "border-cyan-400 text-cyan-200 bg-cyan-500/10"
+                    : "border-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-500/5"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {activeTab === "tenants" && <TenantsTab />}
+        {activeTab === "users" && <UsersTab />}
+        {activeTab === "configs" && <ConfigsTab />}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// TENANTS TAB
+// ==========================================
+function TenantsTab() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", store_code: "", status: "active" });
+  const [saving, setSaving] = useState(false);
+
+  const loadTenants = async () => {
+    setLoading(true);
+    const data = await api("/api/settings/tenants");
+    setTenants(data.tenants || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadTenants(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    if (editingId) {
+      await api("/api/settings/tenants", "PUT", { id: editingId, ...form });
+    } else {
+      await api("/api/settings/tenants", "POST", form);
+    }
+    setSaving(false);
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ name: "", store_code: "", status: "active" });
+    loadTenants();
+  };
+
+  const handleEdit = (t: Tenant) => {
+    setEditingId(t.id);
+    setForm({ name: t.name, store_code: t.store_code, status: t.status });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yakin mau hapus store ini?")) return;
+    await api(`/api/settings/tenants?id=${id}`, "DELETE");
+    loadTenants();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-mono text-cyan-500">Daftar Store ({tenants.length})</h2>
+        <div className="flex gap-2">
+          <button onClick={loadTenants} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+            <RefreshCw className="h-4 w-4 text-cyan-400" />
+          </button>
+          <button
+            onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", store_code: "", status: "active" }); }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all"
+          >
+            <Plus className="h-4 w-4" /> Tambah Store
+          </button>
+        </div>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
+          <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit Store" : "Tambah Store Baru"}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Store</label>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="GCK Bekasi Kp Bulu" />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Kode Store</label>
+              <input value={form.store_code} onChange={(e) => setForm({ ...form, store_code: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="BKS-KB" />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Status</label>
+              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button onClick={handleSave} disabled={saving || !form.name || !form.store_code}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
+            </button>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
+              <X className="h-4 w-4" /> Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>
+      ) : tenants.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
+          <Store className="h-8 w-8 text-cyan-800 mx-auto" /><p className="text-sm font-mono text-cyan-700 mt-2">Belum ada store. Tambahin dulu yuk!</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
+          <table className="w-full text-sm font-mono">
+            <thead>
+              <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">NAMA</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">KODE</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">STATUS</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">DIBUAT</th>
+                <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tenants.map((t) => (
+                <tr key={t.id} className="border-b border-cyan-900/20 hover:bg-cyan-500/5 transition-colors">
+                  <td className="px-4 py-3 text-cyan-200">{t.name}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-xs">{t.store_code}</span></td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs ${t.status === "active" ? "bg-green-500/10 text-green-300" : "bg-red-500/10 text-red-300"}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-cyan-600 text-xs">{new Date(t.created_at).toLocaleDateString("id-ID")}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => handleEdit(t)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+                        <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                      </button>
+                      <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// USERS TAB
+// ==========================================
+function UsersTab() {
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ tenant_id: "", username: "", password: "", role: "admin" });
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const [ud, td] = await Promise.all([api("/api/settings/users"), api("/api/settings/tenants")]);
+    setUsers(ud.users || []);
+    setTenants(td.tenants || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const getTenantName = (tid: string) => {
+    if (tid === "ALL") return "Semua Store";
+    return tenants.find((t) => t.id === tid)?.name || tid;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    if (editingId) {
+      const payload: any = { id: editingId, tenant_id: form.tenant_id, username: form.username, role: form.role };
+      if (form.password) payload.password = form.password;
+      await api("/api/settings/users", "PUT", payload);
+    } else {
+      await api("/api/settings/users", "POST", form);
+    }
+    setSaving(false);
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ tenant_id: "", username: "", password: "", role: "admin" });
+    load();
+  };
+
+  const handleEdit = (u: UserItem) => {
+    setEditingId(u.id);
+    setForm({ tenant_id: u.tenant_id, username: u.username, password: "", role: u.role });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yakin mau hapus user ini?")) return;
+    await api(`/api/settings/users?id=${id}`, "DELETE");
+    load();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-mono text-cyan-500">Daftar User ({users.length})</h2>
+        <div className="flex gap-2">
+          <button onClick={load} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+            <RefreshCw className="h-4 w-4 text-cyan-400" />
+          </button>
+          <button
+            onClick={() => { setShowForm(true); setEditingId(null); setForm({ tenant_id: "", username: "", password: "", role: "admin" }); }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all"
+          >
+            <Plus className="h-4 w-4" /> Tambah User
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
+          <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit User" : "Tambah User Baru"}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Username</label>
+              <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="johndoe" />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Password {editingId && "(kosongkan kalau ga mau ganti)"}</label>
+              <input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} type="password"
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="••••••••" />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Store</label>
+              <select value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+                <option value="">— Pilih Store —</option>
+                <option value="ALL">Semua Store (Super Admin)</option>
+                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.store_code})</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Role</label>
+              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+                <option value="admin">Admin Store</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button onClick={handleSave} disabled={saving || !form.username || (!editingId && !form.password) || !form.tenant_id}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
+            </button>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
+              <X className="h-4 w-4" /> Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>
+      ) : users.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
+          <Users className="h-8 w-8 text-cyan-800 mx-auto" /><p className="text-sm font-mono text-cyan-700 mt-2">Belum ada user.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
+          <table className="w-full text-sm font-mono">
+            <thead>
+              <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">USERNAME</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">STORE</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">ROLE</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">DIBUAT</th>
+                <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} className="border-b border-cyan-900/20 hover:bg-cyan-500/5 transition-colors">
+                  <td className="px-4 py-3 text-cyan-200">{u.username}</td>
+                  <td className="px-4 py-3 text-cyan-300 text-xs">{getTenantName(u.tenant_id)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs ${u.role === "super_admin" ? "bg-purple-500/10 text-purple-300" : "bg-blue-500/10 text-blue-300"}`}>
+                      {u.role === "super_admin" ? "👑 Super Admin" : "👤 Admin"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-cyan-600 text-xs">{new Date(u.created_at).toLocaleDateString("id-ID")}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => handleEdit(u)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+                        <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                      </button>
+                      <button onClick={() => handleDelete(u.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// CONFIGS TAB
+// ==========================================
+function ConfigsTab() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [configs, setConfigs] = useState<TenantConfig[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [form, setForm] = useState({
+    google_sheet_id: "",
+    r2_account_id: "",
+    r2_access_key_id: "",
+    r2_secret_access_key: "",
+    r2_bucket_name: "",
+    r2_public_url: "",
+  });
+
+  const load = async () => {
+    setLoading(true);
+    const [td, cd] = await Promise.all([api("/api/settings/tenants"), api("/api/settings/configs")]);
+    setTenants(td.tenants || []);
+    setConfigs(cd.configs || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSelectTenant = (tid: string) => {
+    setSelectedTenant(tid);
+    const existing = configs.find((c) => c.tenant_id === tid);
+    if (existing) {
+      setForm({
+        google_sheet_id: existing.google_sheet_id || "",
+        r2_account_id: existing.r2_account_id || "",
+        r2_access_key_id: existing.r2_access_key_id || "",
+        r2_secret_access_key: existing.r2_secret_access_key || "",
+        r2_bucket_name: existing.r2_bucket_name || "",
+        r2_public_url: existing.r2_public_url || "",
+      });
+    } else {
+      setForm({ google_sheet_id: "", r2_account_id: "", r2_access_key_id: "", r2_secret_access_key: "", r2_bucket_name: "", r2_public_url: "" });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedTenant) return;
+    setSaving(true);
+    await api("/api/settings/configs", "POST", { tenant_id: selectedTenant, ...form });
+    await load();
+    setSaving(false);
+  };
+
+  const toggleSecret = (key: string) => {
+    setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const configFields = [
+    { key: "google_sheet_id", label: "Google Spreadsheet ID", placeholder: "1ABC...xyz", secret: false, desc: "ID dari Google Sheet khusus store ini" },
+    { key: "r2_account_id", label: "R2 Account ID", placeholder: "abc123...", secret: true, desc: "Cloudflare Account ID" },
+    { key: "r2_access_key_id", label: "R2 Access Key ID", placeholder: "abc123...", secret: true, desc: "R2 API Token Access Key" },
+    { key: "r2_secret_access_key", label: "R2 Secret Access Key", placeholder: "abc123...", secret: true, desc: "R2 API Token Secret" },
+    { key: "r2_bucket_name", label: "R2 Bucket Name", placeholder: "ba-waste", secret: false, desc: "Nama bucket R2" },
+    { key: "r2_public_url", label: "R2 Public URL", placeholder: "https://pub-xxx.r2.dev", secret: false, desc: "URL publik bucket R2" },
+  ];
+
+  if (loading) {
+    return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-mono text-cyan-500">Konfigurasi per-Store</h2>
+        <button onClick={load} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+          <RefreshCw className="h-4 w-4 text-cyan-400" />
+        </button>
+      </div>
+
+      {tenants.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
+          <Database className="h-8 w-8 text-cyan-800 mx-auto" />
+          <p className="text-sm font-mono text-cyan-700 mt-2">Bikin store dulu di tab Tenant, baru bisa isi config</p>
+        </div>
+      ) : (
+        <>
+          {/* Tenant Selector */}
+          <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4">
+            <label className="text-[10px] font-mono text-cyan-600 uppercase">Pilih Store</label>
+            <select value={selectedTenant} onChange={(e) => handleSelectTenant(e.target.value)}
+              className="w-full h-10 px-3 mt-1 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+              <option value="">— Pilih store dulu —</option>
+              {tenants.map((t) => {
+                const hasConfig = configs.some((c) => c.tenant_id === t.id);
+                return <option key={t.id} value={t.id}>{t.name} ({t.store_code}) {hasConfig ? "✅" : "⚠️ belum"}</option>;
+              })}
+            </select>
+          </div>
+
+          {/* Config Form */}
+          {selectedTenant && (
+            <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-4">
+              <h3 className="text-sm font-mono text-cyan-300">
+                Config: {tenants.find((t) => t.id === selectedTenant)?.name}
+              </h3>
+
+              <div className="space-y-3">
+                {configFields.map((field) => (
+                  <div key={field.key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">{field.label}</label>
+                      {field.secret && (
+                        <button onClick={() => toggleSecret(field.key)} className="text-[10px] font-mono text-cyan-600 hover:text-cyan-400 flex items-center gap-1">
+                          {showSecrets[field.key] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {showSecrets[field.key] ? "Hide" : "Show"}
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type={field.secret && !showSecrets[field.key] ? "password" : "text"}
+                      value={(form as any)[field.key]}
+                      onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                      className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none"
+                      placeholder={field.placeholder}
+                    />
+                    <p className="text-[10px] font-mono text-cyan-800 mt-0.5">{field.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan Config"}
+              </button>
+            </div>
+          )}
+
+          {/* Overview configs */}
+          {!selectedTenant && configs.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
+              <table className="w-full text-sm font-mono">
+                <thead>
+                  <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
+                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">STORE</th>
+                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">SHEET ID</th>
+                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">R2 BUCKET</th>
+                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">UPDATED</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {configs.map((c) => {
+                    const tenant = tenants.find((t) => t.id === c.tenant_id);
+                    return (
+                      <tr key={c.tenant_id} onClick={() => handleSelectTenant(c.tenant_id)}
+                        className="border-b border-cyan-900/20 hover:bg-cyan-500/5 cursor-pointer transition-colors">
+                        <td className="px-4 py-3 text-cyan-200">{tenant?.name || c.tenant_id}</td>
+                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.google_sheet_id ? c.google_sheet_id.substring(0, 15) + "..." : "—"}</td>
+                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.r2_bucket_name || "—"}</td>
+                        <td className="px-4 py-3 text-cyan-600 text-xs">{c.updated_at ? new Date(c.updated_at).toLocaleDateString("id-ID") : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

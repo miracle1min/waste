@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 
 /**
  * Signature lookup API.
@@ -22,11 +23,13 @@ const SIGNATURE_MAP: Record<string, string> = {
   AQIL: 'signatures/aqil.jpg',
 };
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed' });
 
-  const publicUrl = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
+  const tenantId = extractTenantId(req);
+  const tenantCreds = await resolveTenantCredentials(tenantId);
+  const publicUrl = (tenantCreds.r2PublicUrl || process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
   if (!publicUrl) {
     return res.status(500).json({ success: false, message: 'R2_PUBLIC_URL not configured' });
   }

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import crypto from 'crypto';
 
 function base64url(input: string | Buffer): string {
@@ -60,17 +61,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { startDate, endDate } = req.query;
 
   try {
-    const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
-    if (!GOOGLE_SHEETS_CREDENTIALS || !GOOGLE_SPREADSHEET_ID) {
+    const tenantId = extractTenantId(req);
+    const tenantCreds = await resolveTenantCredentials(tenantId);
+    if (!tenantCreds.googleCredentials || !tenantCreds.googleSpreadsheetId) {
       return res.status(500).json({ error: 'Missing config' });
     }
 
-    const credentials = JSON.parse(GOOGLE_SHEETS_CREDENTIALS);
+    const credentials = JSON.parse(tenantCreds.googleCredentials);
     const accessToken = await getAccessToken(credentials);
+    const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
 
     // 1. Get all sheet tabs
     const spreadsheet = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     ).then(r => r.json()) as any;
 
@@ -114,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const batch = filteredTabs.slice(i, i + 5);
       const ranges = batch.map((tab: string) => `${encodeURIComponent(tab)}!A2:V1000`).join('&ranges=');
       
-      const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}/values:batchGet?ranges=${ranges}&valueRenderOption=UNFORMATTED_VALUE`;
+      const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${ranges}&valueRenderOption=UNFORMATTED_VALUE`;
       const batchRes = await fetch(batchUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then(r => r.json()) as any;

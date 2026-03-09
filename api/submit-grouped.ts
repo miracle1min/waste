@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseForm, fileToBuffer } from './_lib/parse-form.js';
 import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -42,7 +43,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (qcFile && !Array.isArray(qcFile) && qcFile.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(qcFile);
-        imageUrls.parafQC = await uploadToR2(buffer, name, type, 'waste-management/paraf-qc');
+        const tenantCreds = await resolveTenantCredentials(extractTenantId(req));
+        imageUrls.parafQC = await uploadToR2(buffer, name, type, 'waste-management/paraf-qc', {
+          accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
+          secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
+        });
       } catch (e) { console.error('QC upload error:', e); }
     }
 
@@ -78,11 +83,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (dokumentasiUrls.length > 0) imageUrls.dokumentasi = dokumentasiUrls.join('\n');
 
-    // Submit to Google Sheets
-    const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
-    if (GOOGLE_SHEETS_CREDENTIALS && GOOGLE_SPREADSHEET_ID) {
+    // Submit to Google Sheets (multi-tenant)
+    const tenantId = extractTenantId(req);
+    const creds = await resolveTenantCredentials(tenantId);
+    if (creds.googleCredentials && creds.googleSpreadsheetId) {
       try {
-        await appendGroupedToGoogleSheets(GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID, data, imageUrls, shift, storeName);
+        await appendGroupedToGoogleSheets(creds.googleCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
       } catch (e) { console.error('Google Sheets error:', e); }
     }
 

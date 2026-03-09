@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import crypto from 'crypto';
 
 // Reuse JWT auth from google-sheets lib
@@ -56,17 +57,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
-    if (!GOOGLE_SHEETS_CREDENTIALS || !GOOGLE_SPREADSHEET_ID) {
+    const tenantId = extractTenantId(req);
+    const tenantCreds = await resolveTenantCredentials(tenantId);
+    if (!tenantCreds.googleCredentials || !tenantCreds.googleSpreadsheetId) {
       return res.status(500).json({ error: 'Missing Google Sheets config' });
     }
 
-    const credentials = JSON.parse(GOOGLE_SHEETS_CREDENTIALS);
+    const credentials = JSON.parse(tenantCreds.googleCredentials);
     const accessToken = await getAccessToken(credentials);
     const tabName = formatDateToTab(date as string);
 
     // Try to read the tab data
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:C`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${tenantCreds.googleSpreadsheetId}/values/${encodeURIComponent(tabName)}!A:C`;
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     });

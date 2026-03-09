@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch, withTenantParam } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 // Theme is always dark (cyberpunk)
 import { StepWizard } from "@/components/ui/step-wizard";
@@ -691,7 +692,7 @@ export default function ProductDestruction() {
     setIsCheckingDuplicate(true);
     setDuplicateWarning(null);
     try {
-      const res = await fetch(`/api/check-duplicate?date=${selectedDate}&shift=${selectedShift}&station=${selectedCategory}`);
+      const res = await apiFetch(`/api/check-duplicate?date=${selectedDate}&shift=${selectedShift}&station=${selectedCategory}`);
       const data = await res.json();
       if (data.isDuplicate) {
         setDuplicateWarning(`Data untuk shift ${selectedShift} - station ${selectedCategory} pada tanggal ini sudah ada!`);

@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LoginForm } from "@/components/ui/login-form";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -13,6 +12,7 @@ import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
 import AutoWaste from "@/pages/auto-waste";
 import Dashboard from "@/pages/dashboard";
+import Settings from "@/pages/settings";
 
 function Router() {
   return (
@@ -21,6 +21,7 @@ function Router() {
       <Route path="/manual-waste" component={ProductDestruction} />
       <Route path="/auto-waste" component={AutoWaste} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -44,7 +45,7 @@ function App() {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="product-destruction-theme">
         <div className="min-h-screen flex items-center justify-center bg-background">
-          <LoadingSpinner size="lg" text="Memuat aplikasi..." />
+          <LoadingSpinner size="lg" text="Lagi loading..." />
         </div>
       </ThemeProvider>
     );

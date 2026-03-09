@@ -137,7 +137,7 @@ export default function AutoWaste() {
     async function fetchSignatures() {
       setIsLoadingSignatures(true);
       try {
-        const res = await fetch("/api/signatures");
+        const res = await apiFetch("/api/signatures");
         const data = await res.json();
         if (data.success) {
           setSignatureUrls(data.signatures);
@@ -204,7 +204,7 @@ export default function AutoWaste() {
         formData.append(`dokumentasi_${idx}`, file);
       });
 
-      const res = await fetch("/api/auto-submit", {
+      const res = await apiFetch("/api/auto-submit", {
         method: "POST",
         body: formData,
       });

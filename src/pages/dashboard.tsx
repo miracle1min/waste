@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-client";
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { 
@@ -180,7 +181,7 @@ async function generatePdfForDate(
     if (!url || url === '-' || !url.startsWith('http')) return null;
     if (sigCache[url]) return sigCache[url];
     try {
-      const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
       if (!proxyRes.ok) return null;
       const data = await proxyRes.json();
       if (data.success && data.dataUrl) {
@@ -333,7 +334,7 @@ async function generatePdfForDate(
   let qcSigImg: string | null = null;
   if (pelaporSigUrl) {
     try {
-      const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(pelaporSigUrl)}`);
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(pelaporSigUrl)}`);
       if (proxyRes.ok) {
         const data = await proxyRes.json();
         if (data.success && data.dataUrl) qcSigImg = data.dataUrl;
@@ -445,7 +446,7 @@ export default function Dashboard() {
       const params = new URLSearchParams();
       if (dateRange.startDate) params.set("startDate", dateRange.startDate);
       if (dateRange.endDate) params.set("endDate", dateRange.endDate);
-      const res = await fetch(`/api/dashboard-data?${params}`);
+      const res = await apiFetch(`/api/dashboard-data?${params}`);
       const json = await res.json();
       if (json.success) {
         setData(json);

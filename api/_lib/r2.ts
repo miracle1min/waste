@@ -1,62 +1,76 @@
 /**
- * Cloudflare R2 upload helper using AWS S3-compatible API.
- * Replaces Cloudinary for image/file storage.
+ * Cloudflare R2 upload helper — sekarang support tenant-specific credentials.
  */
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
-let r2Client: S3Client | null = null;
+interface R2Credentials {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+  publicUrl: string;
+}
 
-function getR2Client(): S3Client {
-  if (!r2Client) {
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+function createR2Client(creds: R2Credentials): S3Client {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${creds.accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId: creds.accessKeyId, secretAccessKey: creds.secretAccessKey },
+  });
+}
 
-    if (!accountId || !accessKeyId || !secretAccessKey) {
-      throw new Error('R2 credentials not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.');
-    }
-
-    r2Client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
-    });
+function getDefaultR2Credentials(): R2Credentials {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error('R2 credentials not configured.');
   }
-  return r2Client;
+  return {
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucketName: process.env.R2_BUCKET_NAME || 'ba-waste',
+    publicUrl: process.env.R2_PUBLIC_URL || '',
+  };
 }
 
 /**
- * Upload a file buffer to Cloudflare R2.
- * Returns the public URL of the uploaded file.
+ * Upload file ke R2. Kalau r2Creds dikasih, pakai credentials tenant itu.
  */
 export async function uploadToR2(
   fileBuffer: Buffer,
   fileName: string,
   mimeType: string,
-  folder: string
+  folder: string,
+  r2Creds?: Partial<R2Credentials>
 ): Promise<string> {
-  const client = getR2Client();
-  const bucketName = process.env.R2_BUCKET_NAME || 'ba-waste';
-  const publicUrl = process.env.R2_PUBLIC_URL;
+  const defaults = getDefaultR2Credentials();
+  const creds: R2Credentials = {
+    accountId: r2Creds?.accountId || defaults.accountId,
+    accessKeyId: r2Creds?.accessKeyId || defaults.accessKeyId,
+    secretAccessKey: r2Creds?.secretAccessKey || defaults.secretAccessKey,
+    bucketName: r2Creds?.bucketName || defaults.bucketName,
+    publicUrl: r2Creds?.publicUrl || defaults.publicUrl,
+  };
 
-  if (!publicUrl) {
-    throw new Error('R2_PUBLIC_URL not configured. Set it to your R2 bucket public URL (e.g. https://pub-xxxxx.r2.dev)');
+  if (!creds.publicUrl) {
+    throw new Error('R2_PUBLIC_URL not configured.');
   }
 
-  // Generate unique key: folder/timestamp-randomhex-filename
+  const client = createR2Client(creds);
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const key = `${folder}/${timestamp}-${random}-${safeName}`;
 
   await client.send(new PutObjectCommand({
-    Bucket: bucketName,
+    Bucket: creds.bucketName,
     Key: key,
     Body: fileBuffer,
     ContentType: mimeType,
   }));
 
-  // Return public URL (trailing slash on publicUrl is handled)
-  const baseUrl = publicUrl.replace(/\/$/, '');
+  const baseUrl = creds.publicUrl.replace(/\/$/, '');
   return `${baseUrl}/${key}`;
 }
