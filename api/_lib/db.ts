@@ -9,6 +9,13 @@ function getSQL() {
   return neon(url);
 }
 
+// Generic query helper for raw SQL with parameters
+export async function query(sql: string, params: any[] = []): Promise<any[]> {
+  const db = getSQL();
+  const result = await db(sql, params);
+  return result as any[];
+}
+
 // ==================== TENANTS ====================
 export interface Tenant {
   id: string;
