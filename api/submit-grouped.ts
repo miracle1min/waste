@@ -86,9 +86,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Submit to Google Sheets (multi-tenant)
     const tenantId = extractTenantId(req);
     const creds = await resolveTenantCredentials(tenantId);
-    if (creds.googleCredentials && creds.googleSpreadsheetId) {
+    if (creds.googleSheetsCredentials && creds.googleSpreadsheetId) {
       try {
-        await appendGroupedToGoogleSheets(creds.googleCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
+        await appendGroupedToGoogleSheets(creds.googleSheetsCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
       } catch (e) { console.error('Google Sheets error:', e); }
     }
 

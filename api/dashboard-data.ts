@@ -63,11 +63,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const tenantId = extractTenantId(req);
     const tenantCreds = await resolveTenantCredentials(tenantId);
-    if (!tenantCreds.googleCredentials || !tenantCreds.googleSpreadsheetId) {
+    if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
       return res.status(500).json({ error: 'Missing config' });
     }
 
-    const credentials = JSON.parse(tenantCreds.googleCredentials);
+    const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
     const accessToken = await getAccessToken(credentials);
     const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
 
@@ -193,7 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const entryTime = tabDate.getTime();
               if (entryTime >= lastEntryTime) {
                 lastEntryTime = entryTime;
-                const prevQc = lastEntryInfo?.qc || '';
+                const prevQc: string = (lastEntryInfo as any)?.qc || '';
                 lastEntryInfo = { date: tab, qc: qcName || prevQc, station, shift };
               }
             }
