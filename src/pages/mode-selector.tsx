@@ -35,6 +35,7 @@ export default function ModeSelector() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {isSuperAdmin && (
             <Button
               variant="outline"
               size="sm"
@@ -44,6 +45,7 @@ export default function ModeSelector() {
             >
               <Settings className="w-4 h-4" />
             </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

@@ -348,7 +348,7 @@ function UsersTab() {
               <label className="text-[10px] font-mono text-cyan-600 uppercase">Role</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                <option value="admin">Admin Store</option>
+                <option value="admin">QC / Quality Control</option>
                 <option value="super_admin">Super Admin</option>
               </select>
             </div>
@@ -391,7 +391,7 @@ function UsersTab() {
                   <td className="px-4 py-3 text-cyan-300 text-xs">{getTenantName(u.tenant_id)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${u.role === "super_admin" ? "bg-purple-500/10 text-purple-300" : "bg-blue-500/10 text-blue-300"}`}>
-                      {u.role === "super_admin" ? "👑 Super Admin" : "👤 Admin"}
+                      {u.role === "super_admin" ? "👑 Super Admin" : "🔍 QC"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-cyan-600 text-xs">{new Date(u.created_at).toLocaleDateString("id-ID")}</td>

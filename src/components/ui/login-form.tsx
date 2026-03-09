@@ -229,9 +229,9 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 </p>
                 <div className="mt-3 space-y-1">
                   <p className="text-xs font-mono text-cyan-500/60">
-                    Role: <span className="text-cyan-300">{user.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin Store'}</span>
+                    Role: <span className="text-cyan-300">{user.role === 'super_admin' ? '👑 Super Admin' : '🔍 QC / Quality Control'}</span>
                   </p>
-                  {user.tenant_name && (
+                  {(
                     <p className="text-xs font-mono text-cyan-500/60">
                       Resto: <span className="text-cyan-300">{user.tenant_name}</span>
                     </p>
