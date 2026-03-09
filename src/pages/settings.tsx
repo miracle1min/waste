@@ -22,12 +22,12 @@ async function api(url: string, method = "GET", body?: any) {
 
 // ===== Tabs =====
 type TabKey = "tenants" | "users" | "configs" | "personnel" | "database";
-const TABS: { key: TabKey; label: string; icon: any }[] = [
-  { key: "tenants", label: "Store / Tenant", icon: Store },
-  { key: "users", label: "User Management", icon: Users },
-  { key: "configs", label: "Config & Env", icon: Database },
-  { key: "personnel", label: "QC & Manajer", icon: UserCheck },
-  { key: "database", label: "Database", icon: HardDrive },
+const TABS: { key: TabKey; label: string; shortLabel: string; icon: any }[] = [
+  { key: "tenants", label: "Store / Tenant", shortLabel: "Store", icon: Store },
+  { key: "users", label: "User Management", shortLabel: "User", icon: Users },
+  { key: "configs", label: "Config & Env", shortLabel: "Config", icon: Database },
+  { key: "personnel", label: "QC & Manajer", shortLabel: "QC", icon: UserCheck },
+  { key: "database", label: "Database", shortLabel: "DB", icon: HardDrive },
 ];
 
 export default function Settings() {
@@ -44,22 +44,22 @@ export default function Settings() {
     <div className="min-h-screen bg-gray-950 text-cyan-100">
       {/* Header */}
       <div className="border-b border-cyan-900/30 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
-          <button onClick={() => navigate("/")} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-4">
+          <button onClick={() => navigate("/")} className="p-1.5 sm:p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all flex-shrink-0">
             <ArrowLeft className="h-4 w-4 text-cyan-400" />
           </button>
-          <div>
-            <h1 className="text-lg font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 truncate">
               ⚙️ Settings — Control Panel
             </h1>
-            <p className="text-xs font-mono text-cyan-600">Kelola store, user, dan konfigurasi</p>
+            <p className="text-[10px] sm:text-xs font-mono text-cyan-600">Kelola store, user, dan konfigurasi</p>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="max-w-6xl mx-auto px-4 pt-4">
-        <div className="flex gap-2 border-b border-cyan-900/30 pb-0">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-3 sm:pt-4">
+        <div className="flex overflow-x-auto scrollbar-hide gap-1 sm:gap-2 border-b border-cyan-900/30 pb-0 -mx-2 px-2 sm:mx-0 sm:px-0">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -67,14 +67,15 @@ export default function Settings() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 font-mono text-sm rounded-t-lg border-b-2 transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 font-mono text-xs sm:text-sm rounded-t-lg border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
                   isActive
                     ? "border-cyan-400 text-cyan-200 bg-cyan-500/10"
                     : "border-transparent text-cyan-600 hover:text-cyan-400 hover:bg-cyan-500/5"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
             );
           })}
@@ -82,7 +83,7 @@ export default function Settings() {
       </div>
 
       {/* Tab Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {activeTab === "tenants" && <TenantsTab />}
         {activeTab === "users" && <UsersTab />}
         {activeTab === "configs" && <ConfigsTab />}
