@@ -123,6 +123,8 @@ export function useIntersectionObserver(
   const [isIntersecting, setIsIntersecting] = useState<boolean>(false);
   const [hasIntersected, setHasIntersected] = useState<boolean>(false);
 
+  // BUG-029 fix: Memoize options to prevent observer re-creation on every render
+  const { threshold, root, rootMargin } = options;
   useEffect(() => {
     const element = elementRef.current;
     if (!element) return;
@@ -131,10 +133,10 @@ export function useIntersectionObserver(
       const isIntersectingNow = entry.isIntersecting;
       setIsIntersecting(isIntersectingNow);
       
-      if (isIntersectingNow && !hasIntersected) {
+      if (isIntersectingNow) {
         setHasIntersected(true);
       }
-    }, options);
+    }, { threshold, root, rootMargin });
 
     observer.observe(element);
 
@@ -142,7 +144,7 @@ export function useIntersectionObserver(
       observer.unobserve(element);
       observer.disconnect();
     };
-  }, [elementRef, hasIntersected, options]);
+  }, [elementRef, threshold, root, rootMargin]);
 
   return { isIntersecting, hasIntersected };
 }

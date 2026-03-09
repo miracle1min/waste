@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { query } from '../_lib/db.js';
+import { requireRole, handleAuthError } from '../_lib/auth.js';
 
 /**
  * Personnel CRUD API (admin only)
@@ -10,6 +11,13 @@ import { query } from '../_lib/db.js';
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  try {
+    // BUG-012 fix: Add authorization check — was completely missing
+    requireRole(req, "super_admin", "admin_store");
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
 
   try {
     switch (req.method) {
@@ -73,7 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ success: false, message: 'Method not allowed' });
     }
   } catch (err: any) {
+    // BUG-008 fix: Don't leak internal errors
     console.error('Personnel API error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Server error' });
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
   }
 }

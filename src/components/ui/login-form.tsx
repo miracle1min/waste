@@ -186,13 +186,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   const handleConfirmLogin = () => {
-    const { user } = loginResult;
+    const { user, token } = loginResult;
     onLogin(
       user.username,
       user.role,
       user.tenant_id === "ALL" ? "" : user.tenant_id,
       user.tenant_name || "",
-      ""
+      "",
+      token || ""
     );
   };
 

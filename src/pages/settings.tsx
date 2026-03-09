@@ -10,11 +10,16 @@ interface Personnel { id: number; tenant_id: string; name: string; full_name: st
 interface TenantConfig { tenant_id: string; google_spreadsheet_id: string; google_sheets_credentials: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
 
 // ===== API Helpers =====
+// BUG-004 fix: Use JWT token from localStorage instead of hardcoded x-user-role
 async function api(url: string, method = "GET", body?: any) {
-  const opts: RequestInit = {
-    method,
-    headers: { "Content-Type": "application/json", "x-user-role": "super_admin" },
+  const token = localStorage.getItem("waste_app_token") || "";
+  const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
   };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (tenantId) headers["x-tenant-id"] = tenantId;
+  const opts: RequestInit = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
   return res.json();

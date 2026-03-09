@@ -1,22 +1,22 @@
 /**
  * Google Sheets integration using fetch + JWT (Node.js compatible).
- * Uses crypto module for JWT signing — works natively on Vercel Node runtime.
+ * BUG-030 fix: Centralized auth functions — exported for reuse.
  */
 import crypto from 'crypto';
 
-// ===== JWT Auth =====
+// ===== JWT Auth (EXPORTED — BUG-030 fix) =====
 
 function base64url(input: string | Buffer): string {
   const buf = typeof input === 'string' ? Buffer.from(input) : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-function createJWT(credentials: { client_email: string; private_key: string }): string {
+function createGoogleJWT(credentials: { client_email: string; private_key: string }, scope: string): string {
   const header = { alg: 'RS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const claimSet = {
     iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    scope,
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
     iat: now,
@@ -33,14 +33,32 @@ function createJWT(credentials: { client_email: string; private_key: string }): 
   return `${signatureInput}.${signature}`;
 }
 
-async function getAccessToken(credentials: { client_email: string; private_key: string }): Promise<string> {
-  const jwt = createJWT(credentials);
+/**
+ * Get Google access token. Exported for reuse by other API files.
+ * BUG-030 fix: Single source of truth for auth.
+ * @param scope - 'readwrite' (default) or 'readonly'
+ */
+export async function getGoogleAccessToken(
+  credentials: { client_email: string; private_key: string },
+  scope: 'readwrite' | 'readonly' = 'readwrite'
+): Promise<string> {
+  const scopeUrl = scope === 'readonly'
+    ? 'https://www.googleapis.com/auth/spreadsheets.readonly'
+    : 'https://www.googleapis.com/auth/spreadsheets';
+
+  const jwt = createGoogleJWT(credentials, scopeUrl);
+
+  // BUG-031 fix: Add timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
@@ -49,6 +67,11 @@ async function getAccessToken(credentials: { client_email: string; private_key: 
 
   const data = (await tokenResponse.json()) as { access_token: string };
   return data.access_token;
+}
+
+// Keep backward compat alias (internal use)
+async function getAccessToken(credentials: { client_email: string; private_key: string }): Promise<string> {
+  return getGoogleAccessToken(credentials, 'readwrite');
 }
 
 // ===== Sheets API Helpers =====
@@ -64,16 +87,23 @@ const HEADERS = [
 ];
 
 async function sheetsRequest(accessToken: string, url: string, method = 'GET', body?: any): Promise<any> {
+  // BUG-031 fix: Add timeout to all sheets requests
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
   const options: RequestInit = {
     method,
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
+    signal: controller.signal,
   };
   if (body) options.body = JSON.stringify(body);
 
   const response = await fetch(url, options);
+  clearTimeout(timeout);
+
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Sheets API error ${response.status}: ${errorText}`);
@@ -91,7 +121,6 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
     });
     const newSheetId = addSheetResponse.replies?.[0]?.addSheet?.properties?.sheetId || 0;
 
-    // Write header values
     await sheetsRequest(
       accessToken,
       `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A1:V1?valueInputOption=RAW`,
@@ -99,7 +128,6 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
       { values: [HEADERS] }
     );
 
-    // Format header row: Bold, centered, dark background with white text, freeze row
     await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
       requests: [
         {
@@ -130,21 +158,20 @@ async function ensureSheetTab(accessToken: string, spreadsheetId: string, tabNam
             fields: 'pixelSize'
           }
         },
-        // Column widths: SHIFT(A), STORE(B), STATION(C), NAMA PRODUK(D), KODE PRODUK(E), JUMLAH(F), UNIT(G), METODE(H), ALASAN(I), JAM(J), QC(K), MANAJER(L), DOK 1-10(M-V)
         ...[
-          { start: 0, end: 1, size: 100 },   // A: SHIFT
-          { start: 1, end: 2, size: 180 },   // B: STORE
-          { start: 2, end: 3, size: 120 },   // C: STATION
-          { start: 3, end: 4, size: 200 },   // D: NAMA PRODUK
-          { start: 4, end: 5, size: 130 },   // E: KODE PRODUK
-          { start: 5, end: 6, size: 100 },   // F: JUMLAH PRODUK
-          { start: 6, end: 7, size: 80 },    // G: UNIT
-          { start: 7, end: 8, size: 180 },   // H: METODE PEMUSNAHAN
-          { start: 8, end: 9, size: 160 },   // I: ALASAN PEMUSNAHAN
-          { start: 9, end: 10, size: 160 },  // J: JAM & TGL
-          { start: 10, end: 11, size: 100 }, // K: PARAF QC
-          { start: 11, end: 12, size: 100 }, // L: PARAF MANAJER
-          { start: 12, end: 22, size: 100 }, // M-V: DOKUMENTASI 1-10
+          { start: 0, end: 1, size: 100 },
+          { start: 1, end: 2, size: 180 },
+          { start: 2, end: 3, size: 120 },
+          { start: 3, end: 4, size: 200 },
+          { start: 4, end: 5, size: 130 },
+          { start: 5, end: 6, size: 100 },
+          { start: 6, end: 7, size: 80 },
+          { start: 7, end: 8, size: 180 },
+          { start: 8, end: 9, size: 160 },
+          { start: 9, end: 10, size: 160 },
+          { start: 10, end: 11, size: 100 },
+          { start: 11, end: 12, size: 100 },
+          { start: 12, end: 22, size: 100 },
         ].map(col => ({
           updateDimensionProperties: {
             range: { sheetId: newSheetId, dimension: 'COLUMNS', startIndex: col.start, endIndex: col.end },
@@ -172,10 +199,23 @@ async function getSheetId(accessToken: string, spreadsheetId: string, tabName: s
   return sheet?.properties?.sheetId || 0;
 }
 
+// BUG-032 fix: Sanitize URLs before embedding in IMAGE formulas
+function sanitizeUrlForFormula(url: string): string {
+  // Remove any double quotes and potentially dangerous characters
+  return url.replace(/["\\]/g, '').trim();
+}
+
+function buildImageFormula(url: string): string {
+  if (!url) return '';
+  const safeUrl = sanitizeUrlForFormula(url);
+  if (!safeUrl) return '';
+  return `=IMAGE("${safeUrl}"; 4; 90; 90)`;
+}
+
 function buildDokumentasiColumns(dokumentasiUrl: string): string[] {
   const urls = dokumentasiUrl ? dokumentasiUrl.split('\n').filter((u: string) => u.trim()) : [];
   return Array.from({ length: 10 }, (_, i) =>
-    i < urls.length ? `=IMAGE("${urls[i].trim()}"; 4; 90; 90)` : ''
+    i < urls.length ? buildImageFormula(urls[i].trim()) : ''
   );
 }
 
@@ -194,24 +234,18 @@ function formatWIBForSheetTab(date?: Date | string): string {
 
 // ===== Public API =====
 
-/**
- * Convert datetime-local string to "HH:MM WIB" text format.
- * This prevents Google Sheets from auto-converting to serial numbers.
- */
 function formatJamForStorage(datetimeLocal: string): string {
   if (!datetimeLocal || datetimeLocal === '-') return '-';
-  // datetime-local format "2026-03-08T23:28"
   const match = datetimeLocal.match(/T(\d{2}:\d{2})/);
   if (match) return `${match[1]} WIB`;
-  // Already has WIB
   if (datetimeLocal.includes('WIB')) return datetimeLocal;
-  // Just time "23:28"
   if (/^\d{2}:\d{2}/.test(datetimeLocal)) return `${datetimeLocal.substring(0,5)} WIB`;
   return datetimeLocal;
 }
 
+// BUG-023 fix: Added SHIFT and STORE columns to appendToGoogleSheets
 export async function appendToGoogleSheets(
-  credentialsString: string, spreadsheetId: string, data: any, imageUrls: any
+  credentialsString: string, spreadsheetId: string, data: any, imageUrls: any, shift?: string, storeName?: string
 ): Promise<void> {
   const credentials = JSON.parse(credentialsString);
   const accessToken = await getAccessToken(credentials);
@@ -220,6 +254,8 @@ export async function appendToGoogleSheets(
 
   const dokumentasiCols = buildDokumentasiColumns(imageUrls.dokumentasi || '');
   const rowData = [
+    (shift || 'OPENING').toUpperCase(),
+    (storeName || '').toUpperCase(),
     data.kategoriInduk,
     data.namaProduk,
     data.kodeProduk,
@@ -227,12 +263,11 @@ export async function appendToGoogleSheets(
     data.unit,
     data.metodePemusnahan,
     data.alasanPemusnahan || '',
-    // Format jam per-item (join with newline like other fields)
-    (data.jamTanggalPemusnahanList 
+    (data.jamTanggalPemusnahanList
       ? data.jamTanggalPemusnahanList.map((j: string) => formatJamForStorage(j)).join('\n')
       : formatJamForStorage(data.jamTanggalPemusnahan)),
-    imageUrls.parafQC ? `=IMAGE("${imageUrls.parafQC}"; 4; 90; 90)` : '',
-    imageUrls.parafManager ? `=IMAGE("${imageUrls.parafManager}"; 4; 90; 90)` : '',
+    buildImageFormula(imageUrls.parafQC || ''),
+    buildImageFormula(imageUrls.parafManager || ''),
     ...dokumentasiCols
   ];
 
@@ -253,11 +288,13 @@ export async function appendGroupToGoogleSheets(
   await ensureSheetTab(accessToken, spreadsheetId, tabName);
 
   const rowNumber = await getRowCount(accessToken, spreadsheetId, tabName);
-  const categoryHeaderRow = [kategoriInduk.toUpperCase(), ...Array(19).fill('')];
+  const categoryHeaderRow = [kategoriInduk.toUpperCase(), ...Array(21).fill('')];
 
   const itemRows = items.map((item: any) => {
     const dokumentasiCols = buildDokumentasiColumns(item.dokumentasiUrl || '');
     return [
+      '',
+      '',
       '',
       item.namaProduk.toUpperCase(),
       item.kodeProduk.toUpperCase(),
@@ -266,8 +303,8 @@ export async function appendGroupToGoogleSheets(
       item.metodePemusnahan.toUpperCase(),
       item.alasanPemusnahan || '',
       formatJamForStorage(item.jamTanggalPemusnahan),
-      item.parafQCUrl ? `=IMAGE("${item.parafQCUrl}"; 4; 90; 90)` : '❌ Tidak ada',
-      item.parafManagerUrl ? `=IMAGE("${item.parafManagerUrl}"; 4; 90; 90)` : '❌ Tidak ada',
+      buildImageFormula(item.parafQCUrl || ''),
+      buildImageFormula(item.parafManagerUrl || ''),
       ...dokumentasiCols
     ];
   });
@@ -331,8 +368,8 @@ export async function appendGroupedToGoogleSheets(
     data.kategoriInduk.toUpperCase(),
     productNames, productCodes, quantities, units, methods, reasons,
     formatJamForStorage(data.jamTanggalPemusnahan),
-    imageUrls.parafQC ? `=IMAGE("${imageUrls.parafQC}"; 4; 90; 90)` : '❌ Tidak ada',
-    imageUrls.parafManager ? `=IMAGE("${imageUrls.parafManager}"; 4; 90; 90)` : '❌ Tidak ada',
+    buildImageFormula(imageUrls.parafQC || ''),
+    buildImageFormula(imageUrls.parafManager || ''),
     ...dokumentasiCols
   ];
 

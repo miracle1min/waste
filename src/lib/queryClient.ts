@@ -7,14 +7,28 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// BUG-019 fix: Include tenant_id and auth token headers in all API requests
+function getDefaultHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const tenantId = localStorage.getItem("waste_app_tenant_id");
+  const token = localStorage.getItem("waste_app_token");
+  if (tenantId) headers["x-tenant-id"] = tenantId;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const defaultHeaders = getDefaultHeaders();
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...defaultHeaders,
+      ...(data ? { "Content-Type": "application/json" } : {}),
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +43,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const defaultHeaders = getDefaultHeaders();
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: defaultHeaders,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -47,12 +63,16 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (cache time)
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error instanceof Error && error.message.includes('4')) {
-          return false;
+        // BUG-020 fix: Properly check for 4xx status codes instead of just character '4'
+        if (error instanceof Error) {
+          const match = error.message.match(/^(\d{3}):/);
+          if (match) {
+            const statusCode = parseInt(match[1]);
+            if (statusCode >= 400 && statusCode < 500) return false;
+          }
         }
         return failureCount < 3;
       },
@@ -60,9 +80,13 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error instanceof Error && error.message.includes('4')) {
-          return false;
+        // BUG-020 fix: Same proper status code check
+        if (error instanceof Error) {
+          const match = error.message.match(/^(\d{3}):/);
+          if (match) {
+            const statusCode = parseInt(match[1]);
+            if (statusCode >= 400 && statusCode < 500) return false;
+          }
         }
         return failureCount < 2;
       },

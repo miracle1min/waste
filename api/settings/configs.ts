@@ -3,15 +3,32 @@ import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db.js";
 import { testConnection, seedDatabase, switchDatabase } from "../_lib/database-ops.js";
 import { uploadToR2 } from "../_lib/r2.js";
 import { resolveTenantCredentials } from "../_lib/tenant-resolver.js";
+import { requireRole, handleAuthError } from "../_lib/auth.js";
+
+// BUG-005 fix: Mask sensitive fields in API responses
+function maskConfig(config: any): any {
+  return {
+    ...config,
+    google_sheets_credentials: config.google_sheets_credentials ? "••••••••" : "",
+    r2_secret_access_key: config.r2_secret_access_key ? "••••••••" : "",
+    has_sheets_creds: !!config.google_sheets_credentials,
+    has_r2_secret: !!config.r2_secret_access_key,
+  };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const role = req.headers["x-user-role"] as string;
-  if (role !== "super_admin") return res.status(403).json({ error: "Akses ditolak! Cuma Super Admin yang boleh." });
+  try {
+    // BUG-003 fix: Server-side JWT auth
+    requireRole(req, "super_admin");
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
 
   try {
     if (req.method === "GET") {
       const configs = await getAllConfigs();
-      return res.json({ configs });
+      // BUG-005 fix: Mask sensitive credentials
+      return res.json({ configs: configs.map(maskConfig) });
     }
 
     if (req.method === "POST" || req.method === "PUT") {
@@ -19,6 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Database management actions
       if (body.action === "db-test") {
+        // BUG-007 fix: Only allow testing with preconfigured DB URLs, not arbitrary ones
         if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
         const result = await testConnection(body.db_url);
         return res.json(result);
@@ -27,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (body.action === "db-seed") {
         if (!body.target_url) return res.status(400).json({ error: "URL database target wajib diisi!" });
         const sourceUrl = process.env.NEON_DATABASE_URL;
-        if (!sourceUrl) return res.status(500).json({ error: "NEON_DATABASE_URL belum di-set!" });
+        if (!sourceUrl) return res.status(500).json({ error: "Database source belum dikonfigurasi." });
         const result = await seedDatabase(sourceUrl, body.target_url);
         return res.json(result);
       }
@@ -47,7 +65,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const creds = await resolveTenantCredentials(tenant_id);
         const buffer = Buffer.from(file_base64, "base64");
         const safeName = file_name.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
-        // uploadToR2 returns full URL like https://pub-xxx.r2.dev/signatures/123-abc-name.jpg
         const fullUrl = await uploadToR2(buffer, safeName, mime_type || "image/jpeg", "signatures", {
           accountId: creds.r2AccountId,
           accessKeyId: creds.r2AccessKeyId,
@@ -55,13 +72,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           bucketName: creds.r2BucketName,
           publicUrl: creds.r2PublicUrl,
         });
-        // Extract relative path from full URL for DB storage
         const publicBase = (creds.r2PublicUrl || "").replace(/\/$/, "");
         const signaturePath = publicBase ? fullUrl.replace(publicBase + "/", "") : fullUrl;
         return res.json({ success: true, signature_url: signaturePath, full_url: fullUrl });
       }
 
-      // Special action: migrate from env vars
+      // Migrate from env vars
       if (body.action === "migrate_from_env") {
         const tenantId = body.tenant_id;
         if (!tenantId) return res.status(400).json({ error: "tenant_id wajib diisi!" });
@@ -87,20 +103,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({
           success: true,
           message: `Config untuk tenant "${tenantId}" berhasil dimigrasi dari env vars! 🎉`,
-          config: {
-            tenant_id: config.tenant_id,
-            has_spreadsheet: !!config.google_spreadsheet_id,
-            has_sheets_creds: !!config.google_sheets_credentials,
-            has_r2: !!config.r2_account_id,
-            has_extra: !!config.extra_config,
-          },
+          config: maskConfig(config),
         });
       }
 
       // Normal upsert
       if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
       const config = await upsertConfig(body);
-      return res.json({ success: true, config });
+      return res.json({ success: true, config: maskConfig(config) });
     }
 
     if (req.method === "DELETE") {
@@ -113,8 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: unknown) {
+    // BUG-008 fix: Don't leak internal errors
     console.error("Configs API error:", err);
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: msg });
+    return res.status(500).json({ error: "Terjadi kesalahan server." });
   }
 }

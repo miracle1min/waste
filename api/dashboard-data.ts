@@ -1,42 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
-import crypto from 'crypto';
-
-function base64url(input: string | Buffer): string {
-  const buf = typeof input === 'string' ? Buffer.from(input) : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function createJWT(credentials: { client_email: string; private_key: string }): string {
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const claimSet = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  };
-  const encodedHeader = base64url(JSON.stringify(header));
-  const encodedClaimSet = base64url(JSON.stringify(claimSet));
-  const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
-  const sign = crypto.createSign('RSA-SHA256');
-  sign.update(signatureInput);
-  const signature = base64url(sign.sign(credentials.private_key));
-  return `${signatureInput}.${signature}`;
-}
-
-async function getAccessToken(credentials: { client_email: string; private_key: string }): Promise<string> {
-  const jwt = createJWT(credentials);
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  });
-  if (!res.ok) throw new Error(`Token error: ${res.status}`);
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
+import { getGoogleAccessToken } from './_lib/google-sheets.js';
 
 // Parse tab name "DD/MM/YY" to Date
 function parseTabToDate(tab: string): Date | null {
@@ -46,12 +10,12 @@ function parseTabToDate(tab: string): Date | null {
   return new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
 }
 
-// Format Date to tab name
-function dateToTab(d: Date): string {
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear().toString().slice(-2);
-  return `${day}/${month}/${year}`;
+// BUG-018 fix: Safe date conversion that handles null
+function tabToISODate(tab: string): string {
+  const d = parseTabToDate(tab);
+  if (!d) return tab;
+  const iso = d.toISOString();
+  return iso ? iso.split('T')[0] : tab;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -68,14 +32,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
-    const accessToken = await getAccessToken(credentials);
+    // BUG-030 fix: Use shared auth function
+    const accessToken = await getGoogleAccessToken(credentials, 'readonly');
     const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
+
+    // BUG-031 fix: Add timeout
+    const controller = new AbortController();
+    const spreadsheetTimeout = setTimeout(() => controller.abort(), 20000);
 
     // 1. Get all sheet tabs
     const spreadsheet = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal }
     ).then(r => r.json()) as any;
+    clearTimeout(spreadsheetTimeout);
 
     const allTabs = (spreadsheet.sheets || [])
       .map((s: any) => s.properties?.title)
@@ -112,15 +82,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let totalItems = 0;
     let totalQty = 0;
 
-    // Fetch in batches of 5 to avoid rate limit
     for (let i = 0; i < filteredTabs.length; i += 5) {
       const batch = filteredTabs.slice(i, i + 5);
       const ranges = batch.map((tab: string) => `${encodeURIComponent(tab)}!A2:V1000`).join('&ranges=');
-      
+
+      const batchController = new AbortController();
+      const batchTimeout = setTimeout(() => batchController.abort(), 20000);
+
       const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${ranges}&valueRenderOption=UNFORMATTED_VALUE`;
       const batchRes = await fetch(batchUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
+        signal: batchController.signal,
       }).then(r => r.json()) as any;
+      clearTimeout(batchTimeout);
 
       const valueRanges = batchRes.valueRanges || [];
 
@@ -128,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const tab = batch[j];
         const rows = valueRanges[j]?.values || [];
         const tabDate = parseTabToDate(tab);
-        
+
         let dayItems = 0;
         let dayQty = 0;
         const dayStations: Record<string, number> = {};
@@ -142,10 +116,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const unitStr = (row[6] || '').toString().toUpperCase();
           const qcName = (row[10] || '').toString().trim();
 
-          // Skip empty rows or category headers
           if (!productName || !station) continue;
 
-          // Handle multiline values (grouped entries)
           const products = productName.split('\n').filter((p: string) => p.trim());
           const quantities = qtyStr.split('\n').filter((q: string) => q.trim());
           const units = unitStr.split('\n').filter((u: string) => u.trim());
@@ -154,61 +126,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const pName = products[k].trim().toUpperCase();
             const qty = parseFloat(quantities[k]) || 1;
             const unit = (units[k] || units[0] || 'PCS').trim().toUpperCase();
-            
+
             totalItems++;
             totalQty += qty;
             dayItems++;
             dayQty += qty;
 
-            // Station totals
             if (station) {
               stationTotals[station] = (stationTotals[station] || 0) + qty;
               dayStations[station] = (dayStations[station] || 0) + qty;
             }
-
-            // Shift totals
             if (shift) {
               shiftTotals[shift] = (shiftTotals[shift] || 0) + qty;
               dayShifts[shift] = (dayShifts[shift] || 0) + qty;
             }
-
-            // Product counts
             if (pName) {
               if (!productCounts[pName]) productCounts[pName] = { count: 0, qty: 0 };
               productCounts[pName].count++;
               productCounts[pName].qty += qty;
             }
-
-            // Track station items by unit
             if (!stationItemsByUnit[station]) stationItemsByUnit[station] = {};
             if (!stationItemsByUnit[station][unit]) stationItemsByUnit[station][unit] = {};
-            const productKey = pName;
-            if (!stationItemsByUnit[station][unit][productKey]) {
-              stationItemsByUnit[station][unit][productKey] = 0;
-            }
-            stationItemsByUnit[station][unit][productKey] += qty;
+            stationItemsByUnit[station][unit][pName] = (stationItemsByUnit[station][unit][pName] || 0) + qty;
 
-            // Track last entry
             if (tabDate) {
               const entryTime = tabDate.getTime();
               if (entryTime >= lastEntryTime) {
                 lastEntryTime = entryTime;
-                const prevQc: string = (lastEntryInfo as any)?.qc || '';
+                const prevQc: string = lastEntryInfo?.qc || '';
                 const cleanQc = (qcName && !qcName.includes('#REF') && !qcName.includes('Please use')) ? qcName : prevQc;
                 lastEntryInfo = { date: tab, qc: cleanQc || '-', station, shift };
               }
             }
 
-            // Track QC names (filter out #REF! errors from broken formulas)
             if (qcName && !qcName.includes('#REF') && !qcName.includes('Please use') && !allQcNames.has(qcName)) allQcNames.add(qcName);
 
-            // Collect daily items for period breakdown  
-            allItems.push({ date: tabDate?.toISOString().split('T')[0] || tab, station, product: pName, qty, unit, shift });
+            // BUG-018 fix: Use safe tabToISODate
+            allItems.push({ date: tabToISODate(tab), station, product: pName, qty, unit, shift });
           }
         }
 
         dailyData.push({
-          date: tabDate?.toISOString().split('T')[0] || tab,
+          date: tabToISODate(tab),
           tab,
           items: dayItems,
           qty: dayQty,
@@ -218,27 +177,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Sort daily data by date
     dailyData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Top 10 products
     const topProducts = Object.entries(productCounts)
       .sort((a, b) => b[1].qty - a[1].qty)
       .slice(0, 10)
       .map(([name, data]) => ({ name, ...data }));
 
-    // Build station breakdown by unit (sorted by qty desc)
     const stationBreakdown: Record<string, { unit: string; items: { name: string; qty: number }[]; totalQty: number }[]> = {};
     for (const [station, unitMap] of Object.entries(stationItemsByUnit)) {
       stationBreakdown[station] = Object.entries(unitMap).map(([unit, products]) => {
-        const items = Object.entries(products)
-          .map(([name, qty]) => ({ name, qty }))
-          .sort((a, b) => b.qty - a.qty);
+        const items = Object.entries(products).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
         return { unit, items, totalQty: items.reduce((s, i) => s + i.qty, 0) };
       }).sort((a, b) => b.totalQty - a.totalQty);
     }
 
-    // Build period breakdowns (daily=today, weekly=last 7 days, monthly=last 30 days)
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];

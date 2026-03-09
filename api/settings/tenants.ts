@@ -1,9 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../_lib/db.js";
+import { requireRole, handleAuthError } from "../_lib/auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const role = req.headers["x-user-role"] as string;
-  if (role !== "super_admin") return res.status(403).json({ error: "Akses ditolak! Cuma Super Admin yang boleh." });
+  try {
+    // BUG-003 fix: Server-side JWT auth instead of trusting x-user-role header
+    requireRole(req, "super_admin");
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
 
   try {
     if (req.method === "GET") {
@@ -33,7 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: unknown) {
     console.error("Tenants API error:", err);
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: msg });
+    return res.status(500).json({ error: "Terjadi kesalahan server." });
   }
 }

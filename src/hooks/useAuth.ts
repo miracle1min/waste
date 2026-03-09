@@ -57,13 +57,15 @@ export function useAuth() {
     try {
       const authenticated = localStorage.getItem("waste_app_authenticated");
       const loginTime = localStorage.getItem("waste_app_login_time");
+      // BUG-002 fix: Check for JWT token existence
+      const token = localStorage.getItem("waste_app_token");
       const storedQcName = localStorage.getItem("waste_app_qc_name");
       const storedRole = localStorage.getItem("waste_app_role");
       const storedTenantId = localStorage.getItem("waste_app_tenant_id");
       const storedTenantName = localStorage.getItem("waste_app_tenant_name");
       const storedStoreCode = localStorage.getItem("waste_app_store_code");
 
-      if (authenticated === "true" && loginTime) {
+      if (authenticated === "true" && loginTime && token) {
         const loginTimestamp = parseInt(loginTime);
         const currentTime = Date.now();
         const sessionDuration = 8 * 60 * 60 * 1000;
@@ -87,9 +89,13 @@ export function useAuth() {
     }
   };
 
-  const login = (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string) => {
+  // BUG-002 fix: Store JWT token on login
+  const login = (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string, token?: string) => {
     localStorage.setItem("waste_app_authenticated", "true");
     localStorage.setItem("waste_app_login_time", Date.now().toString());
+    if (token) {
+      localStorage.setItem("waste_app_token", token);
+    }
     localStorage.setItem("waste_app_qc_name", name);
     localStorage.setItem("waste_app_role", role || "admin");
     localStorage.setItem("waste_app_tenant_id", tenant_id || "");
@@ -107,6 +113,7 @@ export function useAuth() {
     setIsLoggingOut(true);
     localStorage.removeItem("waste_app_authenticated");
     localStorage.removeItem("waste_app_login_time");
+    localStorage.removeItem("waste_app_token");
     localStorage.removeItem("waste_app_qc_name");
     localStorage.removeItem("waste_app_role");
     localStorage.removeItem("waste_app_tenant_id");

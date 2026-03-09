@@ -1,49 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
-import crypto from 'crypto';
+import { getGoogleAccessToken } from './_lib/google-sheets.js';
 
-function base64url(input: string | Buffer): string {
-  const buf = typeof input === 'string' ? Buffer.from(input) : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function createJWT(credentials: { client_email: string; private_key: string }): string {
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const claimSet = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  };
-  const encodedHeader = base64url(JSON.stringify(header));
-  const encodedClaimSet = base64url(JSON.stringify(claimSet));
-  const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
-  const sign = crypto.createSign('RSA-SHA256');
-  sign.update(signatureInput);
-  const signature = base64url(sign.sign(credentials.private_key));
-  return `${signatureInput}.${signature}`;
-}
-
-async function getAccessToken(credentials: { client_email: string; private_key: string }): Promise<string> {
-  const jwt = createJWT(credentials);
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  });
-  if (!tokenResponse.ok) throw new Error(`Token error: ${tokenResponse.status}`);
-  const data = (await tokenResponse.json()) as { access_token: string };
-  return data.access_token;
-}
-
+// BUG-016 fix: Parse date string manually
 function formatDateToTab(dateStr: string): string {
-  const d = new Date(dateStr);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear().toString().slice(-2);
-  return `${day}/${month}/${year}`;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) {
+    const d = new Date(dateStr);
+    const day = d.getUTCDate().toString().padStart(2, '0');
+    const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = d.getUTCFullYear().toString().slice(-2);
+    return `${day}/${month}/${year}`;
+  }
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y.slice(-2)}`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -56,7 +26,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Resolve per-tenant credentials
     const tenantId = extractTenantId(req);
     const tenantCreds = await resolveTenantCredentials(tenantId);
 
@@ -66,14 +35,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
     const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
-    const accessToken = await getAccessToken(credentials);
+    // BUG-030 fix: Use shared auth function
+    const accessToken = await getGoogleAccessToken(credentials, 'readonly');
     const tabName = formatDateToTab(date as string);
 
-    // Read all data from the tab
+    // BUG-031 fix: Add timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:V?valueRenderOption=FORMULA`;
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       return res.json({ success: true, data: [], storeName: '', date: date, grouped: {} });
@@ -81,12 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sheetData = (await response.json()) as { values?: string[][] };
     const rows = sheetData.values || [];
-
-    // Skip header row
     const dataRows = rows.slice(1);
 
-    // Parse rows into structured data
-    // Columns: SHIFT(0) | STORE(1) | STATION(2) | NAMA PRODUK(3) | KODE PRODUK(4) | JUMLAH(5) | UNIT(6) | METODE(7) | ALASAN(8) | JAM(9) | QC(10) | MANAJER(11) | DOK1-10(12-21)
     const entries = dataRows.map(row => ({
       shift: row[0] || '',
       store: row[1] || '',
@@ -103,14 +74,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       dokumentasi: Array.from({ length: 10 }, (_, i) => row[12 + i] || '').filter(d => d),
     }));
 
-    // Get store name from first entry
     const storeName = entries.find(e => e.store)?.store || '';
 
-    // Group by shift
     const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];
     const grouped: Record<string, typeof entries> = {};
     shifts.forEach(s => { grouped[s] = []; });
-    
+
     entries.forEach(entry => {
       const shift = entry.shift.toUpperCase();
       if (grouped[shift]) {
@@ -128,8 +97,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       grouped: grouped,
       raw: entries,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get day data error:', error);
+    if (error.name === 'AbortError') {
+      return res.status(504).json({ error: 'Request timeout' });
+    }
     return res.status(500).json({ error: 'Failed to fetch data' });
   }
 }

@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import crypto from "crypto";
 import { getAllUsers, createUser, updateUser, deleteUser } from "../_lib/db.js";
+import { requireRole, hashPassword, handleAuthError } from "../_lib/auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const role = req.headers["x-user-role"] as string;
-  if (role !== "super_admin") return res.status(403).json({ error: "Akses ditolak! Cuma Super Admin yang boleh." });
+  try {
+    // BUG-003 fix: Server-side JWT auth instead of trusting x-user-role header
+    requireRole(req, "super_admin");
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
 
   try {
     if (req.method === "GET") {
@@ -15,7 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === "POST") {
       const { username, password, display_name, role: userRole, tenant_id } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: "Username & password wajib diisi!" });
-      const hash = crypto.createHash("sha256").update(password).digest("hex");
+      // BUG-001 fix: Use scrypt instead of SHA-256
+      const hash = hashPassword(password);
       const user = await createUser({
         username,
         password_hash: hash,
@@ -30,7 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { id, password, ...data } = req.body || {};
       if (!id) return res.status(400).json({ error: "User ID wajib!" });
       if (password) {
-        data.password_hash = crypto.createHash("sha256").update(password).digest("hex");
+        // BUG-001 fix: Use scrypt instead of SHA-256
+        data.password_hash = hashPassword(password);
       }
       const user = await updateUser(Number(id), data);
       if (!user) return res.status(404).json({ error: "User ga ketemu!" });
@@ -46,8 +52,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: unknown) {
+    // BUG-008 fix: Don't leak internal errors
     console.error("Users API error:", err);
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: msg });
+    return res.status(500).json({ error: "Terjadi kesalahan server." });
   }
 }

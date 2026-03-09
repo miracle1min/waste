@@ -6,6 +6,16 @@ import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolve
 
 export const config = { api: { bodyParser: false } };
 
+// BUG-013 fix: Safe JSON parse with error handling
+function safeJsonParse(input: string | undefined, fallback: any[] = []): any[] {
+  if (!input) return fallback;
+  try {
+    return JSON.parse(input);
+  } catch {
+    throw new Error(`Format data tidak valid: "${input.substring(0, 50)}..."`);
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed' });
@@ -13,12 +23,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { fields, files } = await parseForm(req);
 
-    const productList = JSON.parse(fields.productList || '[]');
-    const kodeProdukList = JSON.parse(fields.kodeProdukList || '[]');
-    const jumlahProdukList = JSON.parse(fields.jumlahProdukList || '[]');
-    const unitList = JSON.parse(fields.unitList || '[]');
-    const metodePemusnahanList = JSON.parse(fields.metodePemusnahanList || '[]');
-    const alasanPemusnahanList = JSON.parse(fields.alasanPemusnahanList || '[]');
+    const productList = safeJsonParse(fields.productList);
+    const kodeProdukList = safeJsonParse(fields.kodeProdukList);
+    const jumlahProdukList = safeJsonParse(fields.jumlahProdukList);
+    const unitList = safeJsonParse(fields.unitList);
+    const metodePemusnahanList = safeJsonParse(fields.metodePemusnahanList);
+    const alasanPemusnahanList = safeJsonParse(fields.alasanPemusnahanList);
+
+    // BUG-025 fix: Validate required fields
+    if (!fields.tanggal) {
+      return res.status(400).json({ success: false, message: 'Tanggal wajib diisi!' });
+    }
+    if (!fields.kategoriInduk) {
+      return res.status(400).json({ success: false, message: 'Kategori/Station wajib diisi!' });
+    }
+    if (productList.length === 0) {
+      return res.status(400).json({ success: false, message: 'Minimal 1 produk harus diisi!' });
+    }
 
     const shift = fields.shift || 'OPENING';
     const storeName = fields.storeName || 'BEKASI KP. BULU';
@@ -33,31 +54,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       metodePemusnahanList,
       alasanPemusnahanList,
       jamTanggalPemusnahan: fields.jamTanggalPemusnahan,
-      jamTanggalPemusnahanList: fields.jamTanggalPemusnahanList ? JSON.parse(fields.jamTanggalPemusnahanList) : null,
+      jamTanggalPemusnahanList: fields.jamTanggalPemusnahanList ? safeJsonParse(fields.jamTanggalPemusnahanList) : null,
     };
 
     const imageUrls: Record<string, string> = {};
+    const warnings: string[] = [];
 
-    // Upload paraf QC
+    // Upload paraf QC — BUG-015 fix: Track upload failures
+    const tenantId = extractTenantId(req);
+    const tenantCreds = await resolveTenantCredentials(tenantId);
     const qcFile = files.parafQC;
     if (qcFile && !Array.isArray(qcFile) && qcFile.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(qcFile);
-        const tenantCreds = await resolveTenantCredentials(extractTenantId(req));
         imageUrls.parafQC = await uploadToR2(buffer, name, type, 'waste-management/paraf-qc', {
           accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
           secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
         });
-      } catch (e) { console.error('QC upload error:', e); }
+      } catch (e) {
+        console.error('QC upload error:', e);
+        warnings.push('Gagal upload paraf QC');
+      }
     }
 
-    // Upload paraf Manager
+    // Upload paraf Manager — BUG-021 fix: Pass tenant credentials (was using default)
     const mgrFile = files.parafManager;
     if (mgrFile && !Array.isArray(mgrFile) && mgrFile.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(mgrFile);
-        imageUrls.parafManager = await uploadToR2(buffer, name, type, 'waste-management/paraf-manager');
-      } catch (e) { console.error('Manager upload error:', e); }
+        imageUrls.parafManager = await uploadToR2(buffer, name, type, 'waste-management/paraf-manager', {
+          accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
+          secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
+        });
+      } catch (e) {
+        console.error('Manager upload error:', e);
+        warnings.push('Gagal upload paraf Manager');
+      }
     }
 
     // Upload multiple dokumentasi files
@@ -67,32 +99,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (file && !Array.isArray(file) && file.size > 0) {
         try {
           const { buffer, name, type } = await fileToBuffer(file);
-          const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi');
+          const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi', {
+            accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
+            secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
+          });
           dokumentasiUrls.push(url);
-        } catch (e) { console.error(`Docs upload error ${i}:`, e); }
+        } catch (e) {
+          console.error(`Docs upload error ${i}:`, e);
+          warnings.push(`Gagal upload dokumentasi ${i + 1}`);
+        }
       }
     }
-    // Also check non-indexed
     const singleDoc = files.dokumentasi;
     if (singleDoc && !Array.isArray(singleDoc) && singleDoc.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(singleDoc);
-        const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi');
+        const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi', {
+          accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
+          secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
+        });
         dokumentasiUrls.push(url);
-      } catch (e) { console.error('Single docs upload error:', e); }
+      } catch (e) {
+        console.error('Single docs upload error:', e);
+        warnings.push('Gagal upload dokumentasi');
+      }
     }
     if (dokumentasiUrls.length > 0) imageUrls.dokumentasi = dokumentasiUrls.join('\n');
 
-    // Submit to Google Sheets (multi-tenant)
-    const tenantId = extractTenantId(req);
-    const creds = await resolveTenantCredentials(tenantId);
+    // Submit to Google Sheets — BUG-014 fix: Don't silently swallow errors
+    const creds = tenantCreds;
     if (creds.googleSheetsCredentials && creds.googleSpreadsheetId) {
-      try {
-        await appendGroupedToGoogleSheets(creds.googleSheetsCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
-      } catch (e) { console.error('Google Sheets error:', e); }
+      await appendGroupedToGoogleSheets(creds.googleSheetsCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
+    } else {
+      return res.status(500).json({ success: false, message: 'Google Sheets belum dikonfigurasi untuk tenant ini.' });
     }
 
-    res.json({ success: true, message: `Data kategori ${data.kategoriInduk} berhasil disimpan`, data });
+    const response: any = { success: true, message: `Data kategori ${data.kategoriInduk} berhasil disimpan`, data };
+    // BUG-015 fix: Report warnings for failed uploads
+    if (warnings.length > 0) {
+      response.warnings = warnings;
+      response.message += ` (⚠️ ${warnings.length} file gagal diupload)`;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Submit-grouped error:', error);
     res.status(400).json({ success: false, message: error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan data' });
