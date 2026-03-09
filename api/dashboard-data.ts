@@ -193,7 +193,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const entryTime = tabDate.getTime();
               if (entryTime >= lastEntryTime) {
                 lastEntryTime = entryTime;
-                lastEntryInfo = { date: tab, qc: qcName || lastEntryInfo?.qc || '', station, shift };
+                const prevQc = lastEntryInfo?.qc || '';
+                lastEntryInfo = { date: tab, qc: qcName || prevQc, station, shift };
               }
             }
 
