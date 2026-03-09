@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db.js";
+import { testConnection, seedDatabase, switchDatabase } from "../_lib/database-ops.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const role = req.headers["x-user-role"] as string;
@@ -13,6 +14,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === "POST" || req.method === "PUT") {
       const body = req.body || {};
+
+      // Database management actions
+      if (body.action === "db-test") {
+        if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
+        const result = await testConnection(body.db_url);
+        return res.json(result);
+      }
+
+      if (body.action === "db-seed") {
+        if (!body.target_url) return res.status(400).json({ error: "URL database target wajib diisi!" });
+        const sourceUrl = process.env.NEON_DATABASE_URL;
+        if (!sourceUrl) return res.status(500).json({ error: "NEON_DATABASE_URL belum di-set!" });
+        const result = await seedDatabase(sourceUrl, body.target_url);
+        return res.json(result);
+      }
+
+      if (body.action === "db-switch") {
+        if (!body.new_url) return res.status(400).json({ error: "URL database baru wajib diisi!" });
+        const result = await switchDatabase(body.new_url);
+        return res.json(result);
+      }
 
       // Special action: migrate from env vars
       if (body.action === "migrate_from_env") {

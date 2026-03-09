@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap } from "lucide-react";
 
 // ===== Types =====
 interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
@@ -21,12 +21,13 @@ async function api(url: string, method = "GET", body?: any) {
 }
 
 // ===== Tabs =====
-type TabKey = "tenants" | "users" | "configs" | "personnel";
+type TabKey = "tenants" | "users" | "configs" | "personnel" | "database";
 const TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: "tenants", label: "Store / Tenant", icon: Store },
   { key: "users", label: "User Management", icon: Users },
   { key: "configs", label: "Config & Env", icon: Database },
   { key: "personnel", label: "QC & Manajer", icon: UserCheck },
+  { key: "database", label: "Database", icon: HardDrive },
 ];
 
 export default function Settings() {
@@ -86,6 +87,7 @@ export default function Settings() {
         {activeTab === "users" && <UsersTab />}
         {activeTab === "configs" && <ConfigsTab />}
         {activeTab === "personnel" && <PersonnelTab />}
+        {activeTab === "database" && <DatabaseTab />}
       </div>
     </div>
   );
@@ -820,6 +822,212 @@ function ConfigsTab() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+
+// ===== DATABASE TAB =====
+function DatabaseTab() {
+  const [newDbUrl, setNewDbUrl] = useState("");
+  const [showUrl, setShowUrl] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string; tables?: string[] } | null>(null);
+  const [seedResult, setSeedResult] = useState<{ ok: boolean; message: string; details?: any } | null>(null);
+  const [switchResult, setSwitchResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const { token } = useAuth();
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    "x-user-role": "super_admin",
+  };
+
+  async function handleTest() {
+    if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/settings/configs", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "db-test", db_url: newDbUrl }),
+      });
+      const data = await res.json();
+      setTestResult(data);
+    } catch (err: any) {
+      setTestResult({ ok: false, message: err.message });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleSeed() {
+    if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
+    if (!testResult?.ok) return alert("Test koneksi dulu sebelum seed!");
+    if (!confirm("Yakin mau transfer SEMUA data ke database baru? Data lama di target bakal di-replace.")) return;
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch("/api/settings/configs", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "db-seed", target_url: newDbUrl }),
+      });
+      const data = await res.json();
+      setSeedResult(data);
+    } catch (err: any) {
+      setSeedResult({ ok: false, message: err.message });
+    } finally {
+      setSeeding(false);
+    }
+  }
+
+  async function handleSwitch() {
+    if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
+    if (!seedResult?.ok) return alert("Seed data dulu sebelum switch!");
+    if (!confirm("⚠️ PERHATIAN! Ini bakal ganti database utama aplikasi.\n\nPastikan seed udah berhasil sebelum switch.\n\nLanjut?")) return;
+    setSwitching(true);
+    setSwitchResult(null);
+    try {
+      const res = await fetch("/api/settings/configs", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "db-switch", new_url: newDbUrl }),
+      });
+      const data = await res.json();
+      setSwitchResult(data);
+    } catch (err: any) {
+      setSwitchResult({ ok: false, message: err.message });
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <HardDrive className="w-5 h-5 text-purple-400" /> Database Failover
+        </h3>
+        <p className="text-sm text-zinc-400 mt-1">
+          Kalo Neon utama lagi tidur atau limit, pindahin data ke database baru biar app tetep jalan! 💪
+        </p>
+      </div>
+
+      {/* Step 1: Input URL */}
+      <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50 space-y-3">
+        <h4 className="font-semibold text-white flex items-center gap-2">
+          <span className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">1</span>
+          Masukkan URL Database Baru
+        </h4>
+        <div className="relative">
+          <input
+            type={showUrl ? "text" : "password"}
+            className="w-full bg-zinc-900 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white pr-10 font-mono"
+            placeholder="postgresql://user:pass@host/dbname?sslmode=require"
+            value={newDbUrl}
+            onChange={(e) => { setNewDbUrl(e.target.value); setTestResult(null); setSeedResult(null); setSwitchResult(null); }}
+          />
+          <button onClick={() => setShowUrl(!showUrl)} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white">
+            {showUrl ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500">Format: postgresql://user:password@host/database?sslmode=require</p>
+      </div>
+
+      {/* Step 2: Test Connection */}
+      <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50 space-y-3">
+        <h4 className="font-semibold text-white flex items-center gap-2">
+          <span className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">2</span>
+          Test Koneksi
+        </h4>
+        <button
+          onClick={handleTest}
+          disabled={testing || !newDbUrl.trim()}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+        >
+          {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+          {testing ? "Testing..." : "Test Koneksi"}
+        </button>
+        {testResult && (
+          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${testResult.ok ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}>
+            {testResult.ok ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+            <div>
+              <p>{testResult.message}</p>
+              {testResult.tables && testResult.tables.length > 0 && (
+                <p className="text-xs mt-1 opacity-70">Tables: {testResult.tables.join(", ")}</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Step 3: Seed Data */}
+      <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50 space-y-3">
+        <h4 className="font-semibold text-white flex items-center gap-2">
+          <span className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">3</span>
+          Seed / Transfer Data
+        </h4>
+        <p className="text-xs text-zinc-400">Transfer semua data (tenants, users, configs, personnel) dari DB aktif ke DB baru.</p>
+        <button
+          onClick={handleSeed}
+          disabled={seeding || !testResult?.ok}
+          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+        >
+          {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {seeding ? "Seeding..." : "Seed Data"}
+        </button>
+        {seedResult && (
+          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${seedResult.ok ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}>
+            {seedResult.ok ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+            <div>
+              <p>{seedResult.message}</p>
+              {seedResult.details && (
+                <div className="text-xs mt-1 opacity-70 space-y-0.5">
+                  {Object.entries(seedResult.details).map(([table, count]) => (
+                    <p key={table}>• {table}: {count as number} records</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Step 4: Switch */}
+      <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50 space-y-3">
+        <h4 className="font-semibold text-white flex items-center gap-2">
+          <span className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">4</span>
+          Switch Database
+        </h4>
+        <p className="text-xs text-zinc-400">⚠️ Ini bakal ganti database utama dan trigger redeploy. Pastikan seed udah berhasil!</p>
+        <button
+          onClick={handleSwitch}
+          disabled={switching || !seedResult?.ok}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+        >
+          {switching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+          {switching ? "Switching..." : "Switch ke DB Baru"}
+        </button>
+        {switchResult && (
+          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${switchResult.ok ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}>
+            {switchResult.ok ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+            <p>{switchResult.message}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-700/30 text-xs text-zinc-500 space-y-1">
+        <p>💡 <strong>Tips:</strong></p>
+        <p>• Bikin Neon project baru di <a href="https://neon.tech" target="_blank" className="text-purple-400 hover:underline">neon.tech</a> (gratis!)</p>
+        <p>• Copy connection string dari Neon dashboard</p>
+        <p>• Pastikan pake <code>?sslmode=require</code> dan JANGAN pake <code>channel_binding=require</code></p>
+        <p>• Setelah switch, app bakal redeploy otomatis (~30 detik)</p>
+      </div>
     </div>
   );
 }
