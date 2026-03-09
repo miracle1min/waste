@@ -1126,8 +1126,10 @@ export default function ProductDestruction() {
         return currentGroup && currentGroup.items.length > 0 && currentGroup.items.every(item => 
           item.namaProduk && item.kodeProduk && item.jumlahProduk && item.unit && item.metodePemusnahan
         );
-      case "files":
-        return true; // Files are optional
+      case "files": {
+        const docs = form.watch("dokumentasiFiles");
+        return docs && docs.length > 0; // Foto dokumentasi wajib
+      }
       case "review":
         return true;
       default:
@@ -1665,8 +1667,8 @@ export default function ProductDestruction() {
                   />
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Dokumentasi</label>
-                    <p className="text-xs text-muted-foreground">Upload foto dokumentasi pemusnahan (maksimal 10 file)</p>
+                    <label className="text-sm font-medium text-foreground">Dokumentasi <span className="text-red-400">*wajib</span></label>
+                    <p className="text-xs text-muted-foreground">Upload minimal 1 foto dokumentasi pemusnahan (maks 10 file)</p>
                     <MultiFileUpload
                       files={form.watch("dokumentasiFiles") || []}
                       onFilesSelect={(files) => {
@@ -1676,6 +1678,11 @@ export default function ProductDestruction() {
                       maxFiles={10}
                       label="Upload Dokumentasi"
                     />
+                    {(!form.watch("dokumentasiFiles") || form.watch("dokumentasiFiles")?.length === 0) ? (
+                      <p className="text-xs text-red-400 flex items-center gap-1 mt-1">⚠️ Minimal 1 foto dokumentasi harus diupload untuk lanjut</p>
+                    ) : (
+                      <p className="text-xs text-green-400 flex items-center gap-1 mt-1">✅ {form.watch("dokumentasiFiles")?.length} foto siap</p>
+                    )}
                   </div>
                 </div>
               </div>

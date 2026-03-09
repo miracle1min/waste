@@ -164,6 +164,14 @@ export default function AutoWaste() {
   // Submit data
   const handleSubmit = useCallback(async () => {
     if (!parsedItems.length || !selectedStation || !selectedShift || !selectedQC || !selectedManajer) return;
+    if (dokumentasiFiles.length === 0) {
+      toast({
+        title: "📸 Foto Dokumentasi Wajib",
+        description: "Upload minimal 1 foto dokumentasi pemusnahan sebelum submit",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -598,13 +606,18 @@ Contoh:
 
             {/* Documentation photos */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">📸 Foto Dokumentasi (opsional)</label>
+              <label className="text-sm font-medium text-slate-300">📸 Foto Dokumentasi <span className="text-red-400">*wajib</span></label>
               <MultiFileUpload
                 onFilesSelect={setDokumentasiFiles}
                 maxFiles={10}
                 accept="image/*"
                 label="Foto Dokumentasi"
               />
+              {dokumentasiFiles.length === 0 ? (
+                <p className="text-xs text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto dokumentasi harus diupload</p>
+              ) : (
+                <p className="text-xs text-green-400 flex items-center gap-1">✅ {dokumentasiFiles.length} foto siap diupload</p>
+              )}
             </div>
 
             {/* Action buttons */}
@@ -618,7 +631,7 @@ Contoh:
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || dokumentasiFiles.length === 0}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
               >
                 {isSubmitting ? (
