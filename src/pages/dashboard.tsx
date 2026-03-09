@@ -6,10 +6,11 @@ import {
 } from "recharts";
 import { 
   ArrowLeft, TrendingUp, Package, Calendar, BarChart3, 
-  Loader2, RefreshCw, ChevronDown
+  Loader2, RefreshCw, ChevronDown, FileText, Download, CheckSquare, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/ui/footer";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardData {
   success: boolean;
@@ -52,8 +53,298 @@ const PIE_COLORS = ["#06b6d4", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4
 
 type RangeOption = "7" | "14" | "30" | "all" | "custom";
 
+// ==================== PDF GENERATION LOGIC ====================
+const parseJamValue = (raw: string): string => {
+  if (!raw || raw === '-') return '-';
+  if (raw.includes('WIB')) return raw;
+  if (raw.includes('\n')) {
+    return raw.split('\n').map(line => parseJamValue(line.trim())).join('\n');
+  }
+  const num = parseFloat(raw);
+  if (!isNaN(num) && num > 40000) {
+    const timeFraction = num % 1;
+    const totalMinutes = Math.round(timeFraction * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+    const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes} WIB`;
+  }
+  const dtMatch = raw.match(/T(\d{2}:\d{2})/);
+  if (dtMatch) return `${dtMatch[1]} WIB`;
+  const timeMatch = raw.match(/^(\d{2}:\d{2})/);
+  if (timeMatch) return `${timeMatch[1]} WIB`;
+  return raw;
+};
+
+const extractImageUrl = (val: string): string => {
+  if (!val) return '';
+  const match = val.match(/=IMAGE\(["']([^"']+)["']/i);
+  return match ? match[1] : (val.startsWith('http') ? val : '');
+};
+
+async function generatePdfForDate(
+  date: string,
+  storeName: string,
+  onProgress?: (msg: string) => void
+): Promise<{ blob: Blob; fileName: string } | null> {
+  onProgress?.(`Mengambil data ${date}...`);
+  
+  const res = await fetch(`/api/get-day-data?date=${date}`);
+  const dayData = await res.json();
+  if (!dayData.success || !dayData.grouped) return null;
+
+  onProgress?.(`Membuat PDF ${date}...`);
+
+  const { default: jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 10;
+
+  // Logo
+  let logoImg: string | null = null;
+  try {
+    const logoRes = await fetch('/logo-ppa.png');
+    if (logoRes.ok) {
+      const blob = await logoRes.blob();
+      logoImg = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {}
+
+  // Header
+  if (logoImg) doc.addImage(logoImg, 'PNG', margin, 7, 18, 18);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PT. PESTA PORA ABADI', pageWidth / 2, 12, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text('FORM PEMUSNAHAN PRODUK', pageWidth / 2, 19, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Dok.No. PPA/FORM/OPS-STORE/016', pageWidth - margin, 10, { align: 'right' });
+
+  // Info line
+  const dateObj = new Date(date + 'T00:00:00');
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const dayName = days[dateObj.getDay()];
+  const dateDisplay = `${dateObj.getDate().toString().padStart(2,'0')}/${(dateObj.getMonth()+1).toString().padStart(2,'0')}/${dateObj.getFullYear()}`;
+  
+  doc.setFontSize(9);
+  const infoY = 28;
+  doc.text(`Hari: ${dayName}`, margin, infoY);
+  doc.text(`Tanggal: ${dateDisplay}`, margin + 50, infoY);
+  doc.text(`Store: ${dayData.storeName || storeName}`, margin + 110, infoY);
+
+  // Tables
+  const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];
+  const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
+  let startY = 33;
+
+  // Signature cache
+  const sigCache: Record<string, string> = {};
+  const fetchSigImage = async (url: string): Promise<string | null> => {
+    if (!url || url === '-' || !url.startsWith('http')) return null;
+    if (sigCache[url]) return sigCache[url];
+    try {
+      const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) return null;
+      const data = await proxyRes.json();
+      if (data.success && data.dataUrl) {
+        sigCache[url] = data.dataUrl;
+        return data.dataUrl;
+      }
+      return null;
+    } catch { return null; }
+  };
+
+  for (let shiftIdx = 0; shiftIdx < shifts.length; shiftIdx++) {
+    const shift = shifts[shiftIdx];
+    const shiftData = dayData.grouped[shift] || [];
+
+    doc.setFillColor(200, 200, 200);
+    doc.rect(margin, startY, pageWidth - 2 * margin, 6, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
+    startY += 7;
+
+    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
+
+    // Pre-fetch sigs
+    for (const station of stationOrder) {
+      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+      if (entry) {
+        const qcUrl = extractImageUrl(entry.parafQC);
+        const mgrUrl = extractImageUrl(entry.parafManager);
+        if (qcUrl) await fetchSigImage(qcUrl);
+        if (mgrUrl) await fetchSigImage(mgrUrl);
+      }
+    }
+
+    type RowEntry = { entry: any | null; stationIdx: number };
+    const rowEntries: RowEntry[] = [];
+    const rows: string[][] = [];
+    const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/12W36gW1ma3Df2-zftIYkX-z6c0m_X1KV8C1ISDw8PtI/edit';
+
+    stationOrder.forEach((station, idx) => {
+      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+      if (entry) {
+        const namaProduk = String(entry.namaProduk || '-').replace(/,\s*/g, '\n');
+        const kodeProduk = String(entry.kodeProduk || '-').replace(/,\s*/g, '\n');
+        const jumlahProduk = String(entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+        const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
+        const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
+        const hasDocs = entry.dokumentasi?.some((d: string) => {
+          if (!d || d === '-') return false;
+          return d.includes('http') || d.includes('IMAGE');
+        });
+        rowEntries.push({ entry, stationIdx: idx });
+        rows.push([
+          (idx + 1).toString(), namaProduk, kodeProduk, jumlahProduk,
+          metode, alasan, parseJamValue(entry.jamTanggalPemusnahan || '-'),
+          '', '', hasDocs ? '' : '-',
+        ]);
+      } else {
+        rowEntries.push({ entry: null, stationIdx: idx });
+        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+      }
+    });
+
+    autoTable(doc, {
+      head: headers, body: rows, startY,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 8, valign: 'middle' },
+      headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 9, halign: 'center', valign: 'middle' },
+        1: { cellWidth: 45 }, 2: { cellWidth: 28 },
+        3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 25 },
+        5: { cellWidth: 35 }, 6: { cellWidth: 35 },
+        7: { cellWidth: 25, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' },
+        9: { cellWidth: 31, halign: 'center' },
+      },
+      tableWidth: 'wrap', theme: 'grid',
+      didDrawCell: (data: any) => {
+        if (data.section !== 'body') return;
+        const rowIdx = data.row.index;
+        const colIdx = data.column.index;
+        const rowEntry = rowEntries[rowIdx];
+        if (!rowEntry?.entry) return;
+        const cellX = data.cell.x;
+        const cellY = data.cell.y;
+        const cellW = data.cell.width;
+        const cellH = data.cell.height;
+
+        if (colIdx === 7) {
+          const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
+          if (qcUrl && sigCache[qcUrl]) {
+            try {
+              const imgH = Math.min(cellH - 2, 14);
+              const imgW = Math.min(cellW - 2, imgH * 2);
+              doc.addImage(sigCache[qcUrl], 'PNG', cellX + (cellW - imgW) / 2, cellY + (cellH - imgH) / 2, imgW, imgH);
+            } catch {}
+          }
+        }
+        if (colIdx === 8) {
+          const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
+          if (mgrUrl && sigCache[mgrUrl]) {
+            try {
+              const imgH = Math.min(cellH - 2, 14);
+              const imgW = Math.min(cellW - 2, imgH * 2);
+              doc.addImage(sigCache[mgrUrl], 'PNG', cellX + (cellW - imgW) / 2, cellY + (cellH - imgH) / 2, imgW, imgH);
+            } catch {}
+          }
+        }
+        if (colIdx === 9) {
+          const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => {
+            if (!d || d === '-') return false;
+            return d.includes('http') || d.includes('IMAGE');
+          });
+          if (hasDocs) {
+            doc.setTextColor(0, 0, 255);
+            doc.setFontSize(7);
+            const linkText = 'Lihat Foto';
+            const textWidth = doc.getTextWidth(linkText);
+            const linkX = cellX + (cellW - textWidth) / 2;
+            const linkY = cellY + cellH / 2 + 1;
+            doc.text(linkText, linkX, linkY);
+            doc.setDrawColor(0, 0, 255);
+            doc.setLineWidth(0.2);
+            doc.line(linkX, linkY + 0.5, linkX + textWidth, linkY + 0.5);
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.1);
+            doc.link(linkX, linkY - 3, textWidth, 5, { url: spreadsheetUrl });
+            doc.setTextColor(0, 0, 0);
+          }
+        }
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 3;
+    if (startY > pageHeight - 30 && shiftIdx < shifts.length - 1) {
+      doc.addPage();
+      startY = 15;
+    }
+  }
+
+  // Footer
+  if (startY > pageHeight - 45) {
+    doc.addPage();
+    startY = 15;
+  }
+  startY += 8;
+
+  const loggedInQC = localStorage.getItem('waste_app_qc_name') || 'QC';
+  const qcSigMap: Record<string, string> = {
+    'JOHAN CLAUS THENU': 'johan-claus-thenu',
+    'M. RIZKI RAMDANI': 'm-rizki-ramdani',
+    'LUISA RIKE FERNANDA': 'luisa-rike-fernanda',
+    'PAJAR HIDAYAT': 'pajar-hidayat',
+  };
+
+  let qcSigImg: string | null = null;
+  const sigFileName = qcSigMap[loggedInQC];
+  if (sigFileName) {
+    try {
+      const sigRes = await fetch(`/signatures/qc/${sigFileName}.jpeg`);
+      if (sigRes.ok) {
+        const blob = await sigRes.blob();
+        qcSigImg = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch {}
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Diketahui Oleh :', margin, startY);
+  doc.line(margin, startY + 15, margin + 50, startY + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.text('AM/RM', margin + 12, startY + 20);
+
+  const rightX = pageWidth - margin - 60;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Dilaporkan oleh : QC', rightX, startY);
+  if (qcSigImg) doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
+  doc.line(rightX, startY + 15, rightX + 55, startY + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.text(loggedInQC, rightX + 5, startY + 20);
+
+  const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
+  return { blob: doc.output('blob'), fileName };
+}
+
+// ==================== DASHBOARD COMPONENT ====================
 export default function Dashboard() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +352,12 @@ export default function Dashboard() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [showRangeMenu, setShowRangeMenu] = useState(false);
+  
+  // Batch PDF states
+  const [selectedPdfDates, setSelectedPdfDates] = useState<Set<string>>(new Set());
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState("");
+  const [pdfProgressNum, setPdfProgressNum] = useState({ current: 0, total: 0 });
 
   const dateRange = useMemo(() => {
     if (range === "custom" && customStart && customEnd) {
@@ -90,7 +387,7 @@ export default function Dashboard() {
       } else {
         setError(json.error || "Gagal memuat data");
       }
-    } catch (e) {
+    } catch {
       setError("Gagal terhubung ke server");
     } finally {
       setLoading(false);
@@ -109,7 +406,6 @@ export default function Dashboard() {
     custom: "Custom Range",
   };
 
-  // Format daily data for line chart
   const lineData = data?.dailyData.map((d) => ({
     date: new Date(d.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
     fullDate: d.date,
@@ -117,26 +413,104 @@ export default function Dashboard() {
     qty: d.qty,
   })) || [];
 
-  // Station data for bar chart
   const stationData = Object.entries(data?.stationTotals || {}).map(([name, qty]) => ({
-    name,
-    qty,
-    fill: STATION_COLORS[name] || "#64748b",
+    name, qty, fill: STATION_COLORS[name] || "#64748b",
   }));
 
-  // Shift data for pie chart
   const shiftData = Object.entries(data?.shiftTotals || {}).map(([name, qty]) => ({
-    name,
-    value: qty,
+    name, value: qty,
   }));
 
-  // Station stacked data for line chart
   const stationLineData = data?.dailyData.map((d) => ({
     date: new Date(d.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
     ...d.stations,
   })) || [];
 
   const allStations = [...new Set(data?.dailyData.flatMap((d) => Object.keys(d.stations)) || [])];
+
+  // Batch PDF handlers
+  const availableDates = data?.availableDates || [];
+  
+  const togglePdfDate = (date: string) => {
+    setSelectedPdfDates(prev => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  };
+
+  const toggleAllPdfDates = () => {
+    if (selectedPdfDates.size === availableDates.length) {
+      setSelectedPdfDates(new Set());
+    } else {
+      setSelectedPdfDates(new Set(availableDates));
+    }
+  };
+
+  const handleBatchPdf = async () => {
+    if (selectedPdfDates.size === 0) return;
+    setPdfGenerating(true);
+    const dates = Array.from(selectedPdfDates).sort();
+    const storeName = localStorage.getItem('waste_app_store') || 'Store';
+    let successCount = 0;
+    let failCount = 0;
+
+    setPdfProgressNum({ current: 0, total: dates.length });
+
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      setPdfProgressNum({ current: i + 1, total: dates.length });
+      
+      try {
+        const result = await generatePdfForDate(date, storeName, (msg) => setPdfProgress(msg));
+        if (result) {
+          // Download individual file
+          const url = URL.createObjectURL(result.blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = result.fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          successCount++;
+
+          // Backup to Google Drive
+          try {
+            const reader = new FileReader();
+            const base64 = await new Promise<string>((resolve) => {
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                resolve(dataUrl.split(',')[1]);
+              };
+              reader.readAsDataURL(result.blob);
+            });
+            await fetch('/api/upload-to-drive', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileName: result.fileName, pdfBase64: base64 }),
+            });
+          } catch {}
+
+          // Delay between downloads so browser doesn't block
+          if (i < dates.length - 1) await new Promise(r => setTimeout(r, 1500));
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`PDF error for ${date}:`, err);
+        failCount++;
+      }
+    }
+
+    setPdfGenerating(false);
+    setPdfProgress("");
+    setPdfProgressNum({ current: 0, total: 0 });
+
+    toast({
+      title: `📄 Batch PDF Selesai!`,
+      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — juga di-backup ke Google Drive`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[hsl(220,45%,6%)] text-white flex flex-col">
@@ -224,7 +598,6 @@ export default function Dashboard() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-3 py-4 space-y-4">
-        {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mr-3" />
@@ -232,7 +605,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Error */}
         {error && !loading && (
           <div className="text-center py-20">
             <p className="text-red-400 mb-3">{error}</p>
@@ -242,7 +614,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Dashboard Content */}
         {data && !loading && (
           <>
             {/* Summary Cards */}
@@ -253,10 +624,7 @@ export default function Dashboard() {
                 { label: "Total Qty", value: data.summary.totalQty, icon: TrendingUp, color: "amber" },
                 { label: "Rata² Qty/Hari", value: data.summary.avgQtyPerDay, icon: BarChart3, color: "emerald" },
               ].map((card) => (
-                <div
-                  key={card.label}
-                  className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-3"
-                >
+                <div key={card.label} className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <card.icon className={`w-4 h-4 text-${card.color}-400`} />
                     <span className="text-[10px] text-slate-500 uppercase tracking-wider">{card.label}</span>
@@ -279,10 +647,7 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
                     <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }}
-                      labelStyle={{ color: "#06b6d4" }}
-                    />
+                    <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} labelStyle={{ color: "#06b6d4" }} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
                     <Line type="monotone" dataKey="qty" name="Quantity" stroke="#06b6d4" strokeWidth={2} dot={{ fill: "#06b6d4", r: 3 }} />
                     <Line type="monotone" dataKey="items" name="Items" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: "#8b5cf6", r: 3 }} />
@@ -295,7 +660,6 @@ export default function Dashboard() {
 
             {/* Station & Shift Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Station Bar Chart */}
               <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
                 <h2 className="text-sm font-semibold text-cyan-300 mb-3">📊 Waste per Station</h2>
                 {stationData.length > 0 ? (
@@ -304,9 +668,7 @@ export default function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
                       <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                       <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                      <Tooltip
-                        contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }}
-                      />
+                      <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
                       <Bar dataKey="qty" name="Quantity" radius={[6, 6, 0, 0]}>
                         {stationData.map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
@@ -319,7 +681,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Shift Pie Chart */}
               <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
                 <h2 className="text-sm font-semibold text-cyan-300 mb-3">🕐 Waste per Shift</h2>
                 {shiftData.length > 0 ? (
@@ -340,9 +701,7 @@ export default function Dashboard() {
                           <Cell key={i} fill={SHIFT_COLORS[entry.name] || PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }}
-                      />
+                      <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -351,7 +710,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Station Trend (Stacked) */}
+            {/* Station Trend */}
             <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
               <h2 className="text-sm font-semibold text-cyan-300 mb-3">📈 Tren per Station</h2>
               {stationLineData.length > 0 ? (
@@ -360,18 +719,10 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
                     <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }}
-                    />
+                    <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
                     {allStations.map((station) => (
-                      <Bar
-                        key={station}
-                        dataKey={station}
-                        name={station}
-                        stackId="a"
-                        fill={STATION_COLORS[station] || "#64748b"}
-                      />
+                      <Bar key={station} dataKey={station} name={station} stackId="a" fill={STATION_COLORS[station] || "#64748b"} />
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
@@ -380,7 +731,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Top Products Table */}
+            {/* Top Products */}
             <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
               <h2 className="text-sm font-semibold text-cyan-300 mb-3">🏆 Top 10 Produk Waste</h2>
               {data.topProducts.length > 0 ? (
@@ -407,10 +758,7 @@ export default function Dashboard() {
                             <td className="py-2 px-2 text-right text-amber-400 font-semibold">{p.qty}</td>
                             <td className="py-2 px-2 w-32">
                               <div className="w-full bg-slate-800 rounded-full h-2">
-                                <div
-                                  className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
-                                  style={{ width: `${pct}%` }}
-                                />
+                                <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
                               </div>
                             </td>
                           </tr>
@@ -421,6 +769,104 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <p className="text-center text-slate-500 py-10">Tidak ada data</p>
+              )}
+            </div>
+
+            {/* ==================== BATCH PDF SECTION ==================== */}
+            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Generate PDF BA WASTE
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500">
+                    {selectedPdfDates.size}/{availableDates.length} dipilih
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleAllPdfDates}
+                    className="text-[10px] text-cyan-400 hover:bg-cyan-950/50 px-2 h-7"
+                  >
+                    {selectedPdfDates.size === availableDates.length ? "Batal Semua" : "Pilih Semua"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Date grid */}
+              {availableDates.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4 max-h-64 overflow-y-auto pr-1">
+                    {availableDates.map((date) => {
+                      const isSelected = selectedPdfDates.has(date);
+                      const d = new Date(date + 'T00:00:00');
+                      const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][d.getDay()];
+                      const display = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
+                      return (
+                        <button
+                          key={date}
+                          onClick={() => togglePdfDate(date)}
+                          disabled={pdfGenerating}
+                          className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-all ${
+                            isSelected
+                              ? "border-cyan-500 bg-cyan-950/60 text-cyan-300"
+                              : "border-cyan-900/30 bg-[hsl(220,45%,8%)] text-slate-400 hover:border-cyan-700"
+                          } ${pdfGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                          ) : (
+                            <Square className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
+                          )}
+                          <div className="text-left">
+                            <div className="font-mono font-semibold">{display}</div>
+                            <div className="text-[9px] text-slate-500">{dayName}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Progress bar */}
+                  {pdfGenerating && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-cyan-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{pdfProgress}</span>
+                        <span className="ml-auto font-mono">
+                          {pdfProgressNum.current}/{pdfProgressNum.total}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                          style={{ width: `${pdfProgressNum.total > 0 ? (pdfProgressNum.current / pdfProgressNum.total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generate button */}
+                  <Button
+                    onClick={handleBatchPdf}
+                    disabled={selectedPdfDates.size === 0 || pdfGenerating}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-2 disabled:opacity-50"
+                  >
+                    {pdfGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating {pdfProgressNum.current}/{pdfProgressNum.total}...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Generate {selectedPdfDates.size} PDF{selectedPdfDates.size > 1 ? "s" : ""}
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-center text-slate-500 py-6">Tidak ada data tersedia untuk generate PDF</p>
               )}
             </div>
           </>
