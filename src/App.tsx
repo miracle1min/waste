@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { LoginForm } from "@/components/ui/login-form";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import NotFound from "@/pages/not-found";
 import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
@@ -81,6 +83,8 @@ function App() {
           ) : (
             <LoginForm onLogin={login} />
           )}
+          <Analytics />
+          <SpeedInsights />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
