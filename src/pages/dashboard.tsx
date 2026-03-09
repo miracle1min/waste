@@ -222,7 +222,7 @@ async function generatePdfForDate(
     doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
     startY += 7;
 
-    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
+    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
 
     // Pre-fetch sigs
     for (const station of stationOrder) {
@@ -246,6 +246,7 @@ async function generatePdfForDate(
         const namaProduk = String(entry.namaProduk || '-').replace(/,\s*/g, '\n');
         const kodeProduk = String(entry.kodeProduk || '-').replace(/,\s*/g, '\n');
         const jumlahProduk = String(entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+        const satuan = String(entry.unit || '-').replace(/,\s*/g, '\n');
         const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
         const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
         const hasDocs = entry.dokumentasi?.some((d: string) => {
@@ -254,13 +255,13 @@ async function generatePdfForDate(
         });
         rowEntries.push({ entry, stationIdx: idx });
         rows.push([
-          (idx + 1).toString(), namaProduk, kodeProduk, jumlahProduk,
+          (idx + 1).toString(), namaProduk, kodeProduk, jumlahProduk, satuan,
           metode, alasan, parseJamValue(entry.jamTanggalPemusnahan || '-'),
           '', '', hasDocs ? '' : '-',
         ]);
       } else {
         rowEntries.push({ entry: null, stationIdx: idx });
-        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
       }
     });
 
@@ -271,11 +272,11 @@ async function generatePdfForDate(
       headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle' },
       columnStyles: {
         0: { cellWidth: 9, halign: 'center', valign: 'middle' },
-        1: { cellWidth: 45 }, 2: { cellWidth: 28 },
-        3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 25 },
-        5: { cellWidth: 35 }, 6: { cellWidth: 35 },
-        7: { cellWidth: 25, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' },
-        9: { cellWidth: 31, halign: 'center' },
+        1: { cellWidth: 40 }, 2: { cellWidth: 24 },
+        3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 16, halign: 'center' },
+        5: { cellWidth: 22 }, 6: { cellWidth: 30 },
+        7: { cellWidth: 30 }, 8: { cellWidth: 22, halign: 'center' },
+        9: { cellWidth: 25, halign: 'center' }, 10: { cellWidth: 28, halign: 'center' },
       },
       tableWidth: 'wrap', theme: 'grid',
       didDrawCell: (data: any) => {
@@ -289,7 +290,7 @@ async function generatePdfForDate(
         const cellW = data.cell.width;
         const cellH = data.cell.height;
 
-        if (colIdx === 7) {
+        if (colIdx === 8) {
           const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
           if (qcUrl && sigCache[qcUrl]) {
             try {
@@ -299,7 +300,7 @@ async function generatePdfForDate(
             } catch {}
           }
         }
-        if (colIdx === 8) {
+        if (colIdx === 9) {
           const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
           if (mgrUrl && sigCache[mgrUrl]) {
             try {
@@ -309,7 +310,7 @@ async function generatePdfForDate(
             } catch {}
           }
         }
-        if (colIdx === 9) {
+        if (colIdx === 10) {
           const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => {
             if (!d || d === '-') return false;
             return d.includes('http') || d.includes('IMAGE');

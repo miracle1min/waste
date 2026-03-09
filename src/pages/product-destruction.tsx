@@ -824,7 +824,7 @@ export default function ProductDestruction() {
     };
 
         // Table headers
-        const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
+        const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
         
         // Helper: extract URL from =IMAGE("url"; ...) or =IMAGE("url", ...) formula
         const extractImageUrl = (val: string): string => {
@@ -873,6 +873,7 @@ export default function ProductDestruction() {
             const namaProduk = String(entry.namaProduk || '-').replace(/,\s*/g, '\n');
             const kodeProduk = String(entry.kodeProduk || '-').replace(/,\s*/g, '\n');
             const jumlahProduk = String(entry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+            const satuan = String(entry.unit || '-').replace(/,\s*/g, '\n');
             const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
             const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
             
@@ -888,6 +889,7 @@ export default function ProductDestruction() {
               namaProduk,
               kodeProduk,
               jumlahProduk,
+              satuan,
               metode,
               alasan,
               parseJamValue(entry.jamTanggalPemusnahan || '-'),
@@ -897,7 +899,7 @@ export default function ProductDestruction() {
             ]);
           } else {
             rowEntries.push({ entry: null, stationIdx: idx });
-            rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+            rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
           }
         });
 
@@ -912,15 +914,16 @@ export default function ProductDestruction() {
           headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle' },
           columnStyles: {
             0: { cellWidth: 9, halign: 'center', valign: 'middle' },
-            1: { cellWidth: 45 },
-            2: { cellWidth: 28 },
-            3: { cellWidth: 16, halign: 'center' },
-            4: { cellWidth: 25 },
-            5: { cellWidth: 35 },
-            6: { cellWidth: 35 },
-            7: { cellWidth: 25, halign: 'center' },
-            8: { cellWidth: 28, halign: 'center' },
-            9: { cellWidth: 31, halign: 'center' },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 24 },
+            3: { cellWidth: 14, halign: 'center' },
+            4: { cellWidth: 16, halign: 'center' },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 30 },
+            7: { cellWidth: 30 },
+            8: { cellWidth: 22, halign: 'center' },
+            9: { cellWidth: 25, halign: 'center' },
+            10: { cellWidth: 28, halign: 'center' },
           },
           tableWidth: 'wrap',
           theme: 'grid',
@@ -936,8 +939,8 @@ export default function ProductDestruction() {
             const cellW = data.cell.width;
             const cellH = data.cell.height;
 
-            // QC signature (col 7)
-            if (colIdx === 7) {
+            // QC signature (col 8)
+            if (colIdx === 8) {
               const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
               if (qcUrl && sigCache[qcUrl]) {
                 try {
@@ -950,8 +953,8 @@ export default function ProductDestruction() {
               }
             }
 
-            // Manajer signature (col 8)
-            if (colIdx === 8) {
+            // Manajer signature (col 9)
+            if (colIdx === 9) {
               const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
               if (mgrUrl && sigCache[mgrUrl]) {
                 try {
@@ -964,8 +967,8 @@ export default function ProductDestruction() {
               }
             }
 
-            // Dokumentasi link (col 9)
-            if (colIdx === 9) {
+            // Dokumentasi link (col 10)
+            if (colIdx === 10) {
               const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => {
                 if (!d || d === '-') return false;
                 return d.includes('http') || d.includes('IMAGE');
