@@ -999,30 +999,24 @@ export default function ProductDestruction() {
       // Get logged-in QC name from localStorage
       const loggedInQC = localStorage.getItem('waste_app_qc_name') || 'QC';
 
-      // Map QC name to signature filename
-      const qcSigMap: Record<string, string> = {
-        'JOHAN CLAUS THENU': 'johan-claus-thenu',
-        'M. RIZKI RAMDANI': 'm-rizki-ramdani',
-        'LUISA RIKE FERNANDA': 'luisa-rike-fernanda',
-        'PAJAR HIDAYAT': 'pajar-hidayat',
-      };
-
-      // Fetch QC signature image from public folder
+      // Fetch QC signature from API (dynamic per tenant)
       let qcSigImg: string | null = null;
-      const sigFileName = qcSigMap[loggedInQC];
-      if (sigFileName) {
-        try {
-          const sigRes = await fetch(`/signatures/qc/${sigFileName}.jpeg`);
-          if (sigRes.ok) {
-            const blob = await sigRes.blob();
+      try {
+        const tenantId = localStorage.getItem("tenant_id") || "";
+        const sigRes = await fetch(`/api/signatures?tenant_id=${tenantId}&name=${encodeURIComponent(loggedInQC)}`);
+        const sigData = await sigRes.json();
+        if (sigData.success && sigData.url) {
+          const imgRes = await fetch(sigData.url);
+          if (imgRes.ok) {
+            const blob = await imgRes.blob();
             qcSigImg = await new Promise<string>((resolve) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);
               reader.readAsDataURL(blob);
             });
           }
-        } catch {}
-      }
+        }
+      } catch {}
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');

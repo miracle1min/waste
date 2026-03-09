@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield } from "lucide-react";
 
 // ===== Types =====
 interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
 interface UserItem { id: string; tenant_id: string; username: string; role: string; created_at: string; }
+interface Personnel { id: number; tenant_id: string; name: string; full_name: string; role: string; signature_url: string; status: string; created_at: string; }
 interface TenantConfig { tenant_id: string; google_sheet_id: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
 
 // ===== API Helpers =====
@@ -20,11 +21,12 @@ async function api(url: string, method = "GET", body?: any) {
 }
 
 // ===== Tabs =====
-type TabKey = "tenants" | "users" | "configs";
+type TabKey = "tenants" | "users" | "configs" | "personnel";
 const TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: "tenants", label: "Store / Tenant", icon: Store },
   { key: "users", label: "User Management", icon: Users },
   { key: "configs", label: "Config & Env", icon: Database },
+  { key: "personnel", label: "QC & Manajer", icon: UserCheck },
 ];
 
 export default function Settings() {
@@ -83,6 +85,7 @@ export default function Settings() {
         {activeTab === "tenants" && <TenantsTab />}
         {activeTab === "users" && <UsersTab />}
         {activeTab === "configs" && <ConfigsTab />}
+        {activeTab === "personnel" && <PersonnelTab />}
       </div>
     </div>
   );
@@ -407,6 +410,241 @@ function UsersTab() {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+
+// ==========================================
+// PERSONNEL TAB (QC & Manager + TTD)
+// ==========================================
+function PersonnelTab() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" });
+  const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<"all" | "qc" | "manager">("all");
+
+  const load = async () => {
+    setLoading(true);
+    const td = await api("/api/settings/tenants");
+    setTenants(td.tenants || []);
+    setLoading(false);
+  };
+
+  const loadPersonnel = async (tid: string) => {
+    if (!tid) { setPersonnel([]); return; }
+    const data = await api(`/api/settings/personnel?tenant_id=${tid}`);
+    setPersonnel(data.personnel || []);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSelectTenant = (tid: string) => {
+    setSelectedTenant(tid);
+    setShowForm(false);
+    setEditingId(null);
+    loadPersonnel(tid);
+  };
+
+  const handleSave = async () => {
+    if (!selectedTenant) return;
+    setSaving(true);
+    if (editingId) {
+      await api(`/api/settings/personnel?id=${editingId}`, "PUT", form);
+    } else {
+      await api("/api/settings/personnel", "POST", { tenant_id: selectedTenant, ...form });
+    }
+    setSaving(false);
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" });
+    loadPersonnel(selectedTenant);
+  };
+
+  const handleEdit = (p: Personnel) => {
+    setEditingId(p.id);
+    setForm({ name: p.name, full_name: p.full_name || "", role: p.role, signature_url: p.signature_url || "", status: p.status });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Yakin mau hapus personil ini?")) return;
+    await api(`/api/settings/personnel?id=${id}`, "DELETE");
+    loadPersonnel(selectedTenant);
+  };
+
+  const filtered = filter === "all" ? personnel : personnel.filter((p) => p.role === filter);
+  const qcCount = personnel.filter((p) => p.role === "qc").length;
+  const mgrCount = personnel.filter((p) => p.role === "manager").length;
+
+  if (loading) {
+    return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-mono text-cyan-500">QC & Manajer per Store</h2>
+      </div>
+
+      {tenants.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
+          <UserCheck className="h-8 w-8 text-cyan-800 mx-auto" />
+          <p className="text-sm font-mono text-cyan-700 mt-2">Bikin store dulu di tab Tenant</p>
+        </div>
+      ) : (
+        <>
+          {/* Tenant Selector */}
+          <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4">
+            <label className="text-[10px] font-mono text-cyan-600 uppercase">Pilih Store</label>
+            <select value={selectedTenant} onChange={(e) => handleSelectTenant(e.target.value)}
+              className="w-full h-10 px-3 mt-1 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+              <option value="">— Pilih store dulu —</option>
+              {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+
+          {selectedTenant && (
+            <>
+              {/* Stats + Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex gap-2">
+                  <button onClick={() => setFilter("all")}
+                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "all" ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
+                    Semua ({personnel.length})
+                  </button>
+                  <button onClick={() => setFilter("qc")}
+                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "qc" ? "border-green-400/50 bg-green-500/10 text-green-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
+                    🔍 QC ({qcCount})
+                  </button>
+                  <button onClick={() => setFilter("manager")}
+                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "manager" ? "border-purple-400/50 bg-purple-500/10 text-purple-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
+                    👔 Manajer ({mgrCount})
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => loadPersonnel(selectedTenant)} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+                    <RefreshCw className="h-4 w-4 text-cyan-400" />
+                  </button>
+                  <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" }); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all">
+                    <Plus className="h-4 w-4" /> Tambah Personil
+                  </button>
+                </div>
+              </div>
+
+              {/* Form */}
+              {showForm && (
+                <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
+                  <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit Personil" : "Tambah Personil Baru"}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Singkat (key)</label>
+                      <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="PAJAR" />
+                      <p className="text-[10px] font-mono text-cyan-800 mt-0.5">Nama pendek, huruf kapital</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Lengkap</label>
+                      <input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="PAJAR HIDAYAT" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Role</label>
+                      <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+                        <option value="qc">🔍 QC</option>
+                        <option value="manager">👔 Manajer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Status</label>
+                      <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">TTD / Signature URL (path di R2)</label>
+                      <input value={form.signature_url} onChange={(e) => setForm({ ...form, signature_url: e.target.value })}
+                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="signatures/pajar.jpeg" />
+                      <p className="text-[10px] font-mono text-cyan-800 mt-0.5">Path relatif di R2 bucket (tanpa base URL)</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={handleSave} disabled={saving || !form.name || !form.role}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
+                    </button>
+                    <button onClick={() => { setShowForm(false); setEditingId(null); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
+                      <X className="h-4 w-4" /> Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Personnel List */}
+              {filtered.length === 0 ? (
+                <div className="text-center py-8 border border-dashed border-cyan-900/30 rounded-xl">
+                  <UserCheck className="h-8 w-8 text-cyan-800 mx-auto" />
+                  <p className="text-sm font-mono text-cyan-700 mt-2">{personnel.length === 0 ? "Belum ada personil. Tambahin dulu!" : "Ga ada data untuk filter ini"}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {filtered.map((p) => (
+                    <div key={p.id} className="rounded-xl border border-cyan-900/30 bg-gray-900/40 p-4 hover:border-cyan-500/30 transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          {/* TTD Preview */}
+                          <div className="w-16 h-12 rounded-lg border border-cyan-800/30 bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {p.signature_url ? (
+                              <img src={`/api/proxy-image?url=${encodeURIComponent(p.signature_url)}&tenant_id=${selectedTenant}`}
+                                alt="TTD" className="w-full h-full object-contain p-1"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <span className="text-[10px] font-mono text-cyan-800">No TTD</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${p.role === "qc" ? "bg-green-500/10 text-green-300" : "bg-purple-500/10 text-purple-300"}`}>
+                                {p.role === "qc" ? "🔍 QC" : "👔 MGR"}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${p.status === "active" ? "bg-cyan-500/10 text-cyan-300" : "bg-red-500/10 text-red-300"}`}>
+                                {p.status}
+                              </span>
+                            </div>
+                            <p className="text-sm font-mono text-cyan-200 mt-1 font-bold">{p.full_name || p.name}</p>
+                            <p className="text-[10px] font-mono text-cyan-600">key: {p.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleEdit(p)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+                            <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                      {p.signature_url && (
+                        <p className="text-[10px] font-mono text-cyan-800 mt-2 truncate">📎 {p.signature_url}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );

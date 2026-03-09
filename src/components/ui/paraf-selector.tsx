@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { CheckCircle, ChevronDown, Trash2, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, ChevronDown, Trash2, User, Loader2 } from "lucide-react";
 import { Button } from "./button";
 import { Label } from "./label";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api-client";
 
-const QC_SIGNATURES = [
-  { name: "JOHAN CLAUS THENU", file: "/signatures/qc/johan-claus-thenu.jpeg" },
-  { name: "M. RIZKI RAMDANI", file: "/signatures/qc/m-rizki-ramdani.jpeg" },
-  { name: "LUISA RIKE FERNANDA", file: "/signatures/qc/luisa-rike-fernanda.jpeg" },
-  { name: "PAJAR HIDAYAT", file: "/signatures/qc/pajar-hidayat.jpeg" },
-];
+interface QCSig {
+  name: string;
+  full_name: string;
+  url: string | null;
+}
 
 interface ParafSelectorProps {
   value?: File;
@@ -29,15 +29,38 @@ export function ParafSelector({
   const [selectedName, setSelectedName] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [qcList, setQcList] = useState<QCSig[]>([]);
+  const [listLoading, setListLoading] = useState(true);
 
-  const handleSelect = async (person: typeof QC_SIGNATURES[0]) => {
+  // Load QC list from API
+  useEffect(() => {
+    async function fetchQC() {
+      setListLoading(true);
+      try {
+        const tenantId = localStorage.getItem("tenant_id") || "";
+        const res = await apiFetch(`/api/signatures?tenant_id=${tenantId}&role=qc`);
+        const data = await res.json();
+        if (data.success && data.personnel) {
+          setQcList(data.personnel);
+        }
+      } catch (e) {
+        console.error("Failed to load QC list:", e);
+      } finally {
+        setListLoading(false);
+      }
+    }
+    fetchQC();
+  }, []);
+
+  const handleSelect = async (person: QCSig) => {
     setIsOpen(false);
+    if (!person.url) return;
     setLoading(true);
-    setSelectedName(person.name);
+    setSelectedName(person.full_name);
     try {
-      const response = await fetch(person.file);
+      const response = await fetch(person.url);
       const blob = await response.blob();
-      const fileName = person.file.split("/").pop() || "signature.jpeg";
+      const fileName = person.name.toLowerCase() + ".jpeg";
       const file = new File([blob], fileName, { type: "image/jpeg" });
       onValueChange(file);
     } catch (e) {
@@ -63,12 +86,13 @@ export function ParafSelector({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
+          disabled={listLoading}
           className="w-full flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 bg-card border border-border rounded-lg text-left hover:bg-accent/50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
+            {listLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
             <span className={cn("text-sm", selectedName ? "text-foreground" : "text-muted-foreground")}>
-              {selectedName || "Pilih nama QC..."}
+              {listLoading ? "Loading QC..." : selectedName || "Pilih nama QC..."}
             </span>
           </div>
           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
@@ -76,7 +100,7 @@ export function ParafSelector({
 
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-            {QC_SIGNATURES.map((person) => (
+            {qcList.map((person) => (
               <button
                 key={person.name}
                 type="button"
@@ -84,9 +108,13 @@ export function ParafSelector({
                 className="w-full flex items-center gap-3 px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-accent/50 transition-colors text-left"
               >
                 <div className="flex-shrink-0 w-10 h-7 sm:w-12 sm:h-8 bg-white border rounded overflow-hidden">
-                  <img src={person.file} alt={person.name} className="w-full h-full object-contain" />
+                  {person.url ? (
+                    <img src={person.url} alt={person.full_name} className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-[10px] text-gray-400 flex items-center justify-center h-full">No TTD</span>
+                  )}
                 </div>
-                <span className="text-sm font-medium">{person.name}</span>
+                <span className="text-sm font-medium">{person.full_name}</span>
               </button>
             ))}
           </div>

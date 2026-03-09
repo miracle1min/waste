@@ -18,8 +18,8 @@ type AutoStep = "config" | "paste" | "preview" | "success";
 
 const VALID_SHIFTS: Shift[] = ["OPENING", "MIDDLE", "CLOSING", "MIDNIGHT"];
 const VALID_STATIONS: Station[] = ["NOODLE", "DIMSUM", "BAR", "PRODUKSI"];
-const VALID_QC = ["PAJAR", "RIZKI", "JOHAN", "LUISA"];
-const VALID_MANAGERS = ["GISSEL", "ANISA", "HUTRI", "IMBRON", "AQIL"];
+// QC & Manager lists loaded dynamically from API
+
 const STORES = ["BEKASI KP. BULU", "BEKASI JATIASIH", "CIKARANG"];
 
 const STATION_ICONS: Record<Station, string> = {
@@ -114,6 +114,10 @@ export default function AutoWaste() {
   const [selectedDate, setSelectedDate] = useState(getCurrentWIBDateString());
   const [storeName, setStoreName] = useState("BEKASI KP. BULU");
   const [selectedShift, setSelectedShift] = useState<Shift | "">("");
+  // Dynamic QC & Manager lists from DB
+  const [validQC, setValidQC] = useState<string[]>([]);
+  const [validManagers, setValidManagers] = useState<string[]>([]);
+  const [personnelLoading, setPersonnelLoading] = useState(true);
   const [selectedQC, setSelectedQC] = useState<string>("");
   const [selectedManajer, setSelectedManajer] = useState<string>("");
   const [selectedStation, setSelectedStation] = useState<Station | "">("");
@@ -151,6 +155,28 @@ export default function AutoWaste() {
     }
     fetchSignatures();
   }, []);
+
+  // Fetch QC & Manager lists from DB
+  useEffect(() => {
+    async function fetchPersonnel() {
+      setPersonnelLoading(true);
+      try {
+        const tenantId = localStorage.getItem("tenant_id") || "";
+        const res = await apiFetch(`/api/signatures?tenant_id=${tenantId}`);
+        const data = await res.json();
+        if (data.success && data.personnel) {
+          setValidQC(data.personnel.filter((p: any) => p.role === "qc").map((p: any) => p.name));
+          setValidManagers(data.personnel.filter((p: any) => p.role === "manager").map((p: any) => p.name));
+        }
+      } catch (e) {
+        console.error("Failed to load personnel:", e);
+      } finally {
+        setPersonnelLoading(false);
+      }
+    }
+    fetchPersonnel();
+  }, []);
+
 
   // Parse items
   const handleParse = useCallback(() => {
@@ -388,7 +414,7 @@ export default function AutoWaste() {
                   className="w-full px-3 py-2.5 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none appearance-none"
                 >
                   <option value="" disabled>-- Pilih QC --</option>
-                  {VALID_QC.map(q => <option key={q} value={q}>{q}</option>)}
+                  {validQC.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
                 {selectedQC && signatureUrls[selectedQC] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-slate-800/50 border border-slate-700/30">
@@ -405,7 +431,7 @@ export default function AutoWaste() {
                   className="w-full px-3 py-2.5 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none appearance-none"
                 >
                   <option value="" disabled>-- Pilih Manajer --</option>
-                  {VALID_MANAGERS.map(m => <option key={m} value={m}>{m}</option>)}
+                  {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
                 {selectedManajer && signatureUrls[selectedManajer] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-slate-800/50 border border-slate-700/30">
