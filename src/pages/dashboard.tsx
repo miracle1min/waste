@@ -133,8 +133,19 @@ async function generatePdfForDate(
 
   onProgress?.(`Bikin PDF ${date}...`);
 
-  const { default: jsPDF } = await import('jspdf');
-  const autoTable = (await import('jspdf-autotable')).default;
+  let jsPDF: any;
+  let autoTable: any;
+  try {
+    jsPDF = (await import('jspdf')).default;
+    autoTable = (await import('jspdf-autotable')).default;
+  } catch (e: any) {
+    if (e?.message?.includes('dynamically imported module') || e?.message?.includes('Failed to fetch')) {
+      // Stale chunk after deployment — reload to get fresh assets
+      window.location.reload();
+      return null;
+    }
+    throw e;
+  }
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();

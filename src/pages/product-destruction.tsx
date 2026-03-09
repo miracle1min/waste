@@ -719,8 +719,18 @@ export default function ProductDestruction() {
         return;
       }
       // Dynamic import jspdf
-      const { default: jsPDF } = await import('jspdf');
-      const autoTable = (await import('jspdf-autotable')).default;
+      let jsPDF: any;
+      let autoTable: any;
+      try {
+        jsPDF = (await import('jspdf')).default;
+        autoTable = (await import('jspdf-autotable')).default;
+      } catch (e: any) {
+        if (e?.message?.includes('dynamically imported module') || e?.message?.includes('Failed to fetch')) {
+          window.location.reload();
+          return;
+        }
+        throw e;
+      }
       
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
