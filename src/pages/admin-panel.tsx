@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Store, Users, Database, UserCheck, HardDrive, LayoutDashboard,
   Plus, Pencil, Trash2, Save, X, Loader2, Eye, EyeOff, RefreshCw,
-  Shield, CheckCircle, AlertCircle, Zap, Upload, LogOut, Menu, ChevronLeft,
-  Building2, UserCog, KeyRound, Server
+  Shield, CheckCircle, AlertCircle, Zap, Upload, LogOut, Menu,
+  Building2, UserCog, KeyRound, Server, ChevronRight, MoreHorizontal
 } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
@@ -27,173 +27,317 @@ async function api(url: string, method = "GET", body?: any) {
   return res.json();
 }
 
+// ===== Shared Components =====
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`rounded-2xl border border-cyan-900/30 bg-gray-900/40 backdrop-blur-sm ${className}`}>{children}</div>;
+}
+
+function CardHeader({ children, className = "", action }: { children: React.ReactNode; className?: string; action?: React.ReactNode }) {
+  return (
+    <div className={`px-4 py-3 sm:px-5 sm:py-4 border-b border-cyan-900/20 flex items-center justify-between ${className}`}>
+      <div>{children}</div>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}
+
+function Badge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "success" | "warning" | "danger" | "purple" | "blue" }) {
+  const styles = {
+    default: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20",
+    success: "bg-green-500/10 text-green-300 border-green-500/20",
+    warning: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
+    danger: "bg-red-500/10 text-red-300 border-red-500/20",
+    purple: "bg-purple-500/10 text-purple-300 border-purple-500/20",
+    blue: "bg-blue-500/10 text-blue-300 border-blue-500/20",
+  };
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium border ${styles[variant]}`}>{children}</span>;
+}
+
+function Input({ label, hint, ...props }: { label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div>
+      <label className="block text-[11px] font-mono text-cyan-500 mb-1.5">{label}</label>
+      <input {...props} className={`w-full h-11 px-3.5 bg-black/30 border border-cyan-900/40 rounded-xl font-mono text-sm text-cyan-100 placeholder:text-cyan-800 focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20 focus:outline-none transition-all ${props.className || ""}`} />
+      {hint && <p className="text-[10px] font-mono text-cyan-700 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function Select({ label, hint, children, ...props }: { label: string; hint?: string; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div>
+      <label className="block text-[11px] font-mono text-cyan-500 mb-1.5">{label}</label>
+      <select {...props} className={`w-full h-11 px-3.5 bg-black/30 border border-cyan-900/40 rounded-xl font-mono text-sm text-cyan-100 focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20 focus:outline-none transition-all appearance-none ${props.className || ""}`}>
+        {children}
+      </select>
+      {hint && <p className="text-[10px] font-mono text-cyan-700 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function Btn({ children, variant = "primary", size = "md", ...props }: { children: React.ReactNode; variant?: "primary" | "secondary" | "danger" | "ghost" | "purple"; size?: "sm" | "md" } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const base = "inline-flex items-center justify-center gap-2 font-mono font-medium rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]";
+  const sizes = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2.5 text-sm" };
+  const variants = {
+    primary: "border border-cyan-400/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 hover:border-cyan-400/60",
+    secondary: "border border-cyan-800/40 bg-transparent text-cyan-400 hover:bg-cyan-500/5 hover:border-cyan-600/50",
+    danger: "border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20",
+    ghost: "border border-transparent text-cyan-500 hover:bg-cyan-500/5",
+    purple: "border border-purple-400/40 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 hover:border-purple-400/60",
+  };
+  return <button {...props} className={`${base} ${sizes[size]} ${variants[variant]} ${props.className || ""}`}>{children}</button>;
+}
+
+function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
+  return (
+    <div className="text-center py-16">
+      <div className="w-14 h-14 rounded-2xl border border-cyan-900/30 bg-cyan-500/5 flex items-center justify-center mx-auto mb-3">
+        <Icon className="h-6 w-6 text-cyan-700" />
+      </div>
+      <p className="text-sm font-mono text-cyan-600">{text}</p>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16">
+      <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+      <p className="text-xs font-mono text-cyan-600 mt-3">Loading...</p>
+    </div>
+  );
+}
+
+function RefreshBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="p-2 rounded-xl border border-cyan-800/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
+      <RefreshCw className="h-4 w-4 text-cyan-500" />
+    </button>
+  );
+}
+
 // ===== Menu Items =====
 type PageKey = "overview" | "tenants" | "users" | "personnel" | "configs" | "database";
-const MENU_ITEMS: { key: PageKey; label: string; icon: any; desc: string }[] = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard, desc: "Ringkasan sistem" },
-  { key: "tenants", label: "Store", icon: Building2, desc: "Kelola resto/store" },
-  { key: "users", label: "Users", icon: UserCog, desc: "Manajemen user" },
-  { key: "personnel", label: "QC & Manager", icon: UserCheck, desc: "Personil & TTD" },
-  { key: "configs", label: "Config", icon: KeyRound, desc: "Env & kredensial" },
-  { key: "database", label: "Database", icon: Server, desc: "DB management" },
+const MENU_ITEMS: { key: PageKey; label: string; shortLabel: string; icon: any; desc: string }[] = [
+  { key: "overview", label: "Overview", shortLabel: "Home", icon: LayoutDashboard, desc: "Ringkasan sistem" },
+  { key: "tenants", label: "Store", shortLabel: "Store", icon: Building2, desc: "Kelola resto/store" },
+  { key: "users", label: "Users", shortLabel: "Users", icon: UserCog, desc: "Manajemen user" },
+  { key: "personnel", label: "QC & Manager", shortLabel: "QC", icon: UserCheck, desc: "Personil & TTD" },
+  { key: "configs", label: "Config", shortLabel: "Config", icon: KeyRound, desc: "Env & kredensial" },
+  { key: "database", label: "Database", shortLabel: "DB", icon: Server, desc: "DB management" },
 ];
+
+// Mobile bottom nav shows first 4, rest in "More" menu
+const MOBILE_NAV = MENU_ITEMS.slice(0, 4);
+const MORE_NAV = MENU_ITEMS.slice(4);
 
 // ===== Main Admin Panel =====
 export default function AdminPanel() {
   const { qcName, logout, isLoggingOut } = useAuth();
   const [activePage, setActivePage] = useState<PageKey>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
-    logout();
-    setTimeout(() => window.location.reload(), 800);
-  };
+  const handleLogout = () => { logout(); setTimeout(() => window.location.reload(), 800); };
+  const handleNav = (key: PageKey) => { setActivePage(key); setSidebarOpen(false); setMoreOpen(false); };
 
-  const handleNav = (key: PageKey) => {
-    setActivePage(key);
-    setSidebarOpen(false);
-  };
+  // Close "more" popup on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-cyan-100 flex">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+    <div className="min-h-screen bg-gray-950 text-cyan-100">
+      {/* ====== Mobile overlay ====== */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-[hsl(220,50%,6%)] border-r border-cyan-900/30 flex flex-col transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-        {/* Logo */}
-        <div className="p-4 border-b border-cyan-900/30">
-          <div className="flex items-center gap-3">
-            <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-lg" />
-            <div>
-              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">AWAS</h1>
-              <p className="text-[10px] text-slate-600 font-mono">Control Panel</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {MENU_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activePage === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => handleNav(item.key)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 group ${
-                  isActive
-                    ? "bg-cyan-500/10 border border-cyan-500/30 text-cyan-200"
-                    : "border border-transparent text-cyan-600 hover:text-cyan-300 hover:bg-cyan-500/5"
-                }`}
-              >
-                <Icon className={`h-4.5 w-4.5 flex-shrink-0 ${isActive ? "text-cyan-400" : "text-cyan-700 group-hover:text-cyan-400"}`} />
-                <div className="min-w-0">
-                  <p className="text-sm font-mono font-medium truncate">{item.label}</p>
-                  <p className={`text-[10px] font-mono truncate ${isActive ? "text-cyan-500" : "text-cyan-800"}`}>{item.desc}</p>
-                </div>
-                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]" />}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* User / Logout */}
-        <div className="p-3 border-t border-cyan-900/30 space-y-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/5 border border-purple-900/30">
-            <Shield className="h-4 w-4 text-purple-400 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-mono text-purple-300 truncate">{qcName}</p>
-              <p className="text-[10px] font-mono text-purple-600">👑 Super Admin</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono text-red-400/70 hover:text-red-300 hover:bg-red-500/5 border border-transparent hover:border-red-900/30 transition-all"
-          >
-            {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-            {isLoggingOut ? "Keluar..." : "Logout"}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-          <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex">
+        {/* ====== Sidebar (desktop + mobile drawer) ====== */}
+        <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-gray-950 border-r border-cyan-900/20 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shrink-0`}>
+          {/* Logo area */}
+          <div className="p-5 border-b border-cyan-900/20">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-                <Menu className="h-4 w-4 text-cyan-400" />
-              </button>
+              <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl shadow-lg shadow-cyan-500/10" />
               <div>
-                <h2 className="text-base font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
-                  {MENU_ITEMS.find(m => m.key === activePage)?.label || "Admin"}
-                </h2>
-                <p className="text-[10px] font-mono text-cyan-700">
-                  {MENU_ITEMS.find(m => m.key === activePage)?.desc}
-                </p>
+                <h1 className="text-base font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight">AWAS</h1>
+                <p className="text-[10px] text-cyan-700 font-mono">Control Panel</p>
               </div>
             </div>
-            {/* Mobile user badge */}
-            <div className="lg:hidden flex items-center gap-2 px-2 py-1 rounded-lg bg-purple-500/5 border border-purple-900/30">
-              <Shield className="h-3 w-3 text-purple-400" />
-              <span className="text-[10px] font-mono text-purple-300">{qcName}</span>
-            </div>
           </div>
-        </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
-          <div className="max-w-6xl mx-auto">
-            {activePage === "overview" && <OverviewPage />}
-            {activePage === "tenants" && <TenantsPage />}
-            {activePage === "users" && <UsersPage />}
-            {activePage === "personnel" && <PersonnelPage />}
-            {activePage === "configs" && <ConfigsPage />}
-            {activePage === "database" && <DatabasePage />}
-          </div>
-        </main>
-
-        {/* Mobile Bottom Nav */}
-        <nav className="lg:hidden sticky bottom-0 border-t border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-          <div className="flex justify-around py-1.5">
-            {MENU_ITEMS.slice(0, 5).map((item) => {
+          {/* Navigation */}
+          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+            {MENU_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activePage === item.key;
               return (
                 <button
                   key={item.key}
                   onClick={() => handleNav(item.key)}
-                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all ${isActive ? "text-cyan-300" : "text-cyan-700"}`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 group ${
+                    isActive
+                      ? "bg-cyan-500/10 border border-cyan-500/25 text-cyan-100"
+                      : "border border-transparent text-cyan-500 hover:text-cyan-200 hover:bg-white/[0.02]"
+                  }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-[9px] font-mono">{item.label}</span>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                    isActive ? "bg-cyan-500/15" : "bg-white/[0.02] group-hover:bg-cyan-500/5"
+                  }`}>
+                    <Icon className={`h-[18px] w-[18px] ${isActive ? "text-cyan-400" : "text-cyan-600 group-hover:text-cyan-400"}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[13px] font-mono font-medium ${isActive ? "text-cyan-100" : ""}`}>{item.label}</p>
+                    <p className={`text-[10px] font-mono ${isActive ? "text-cyan-500" : "text-cyan-800"}`}>{item.desc}</p>
+                  </div>
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,255,255,0.5)] shrink-0" />}
                 </button>
               );
             })}
+          </nav>
+
+          {/* User / Logout */}
+          <div className="p-3 border-t border-cyan-900/20 space-y-2">
+            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-purple-500/5 border border-purple-900/20">
+              <Shield className="h-4 w-4 text-purple-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-mono text-purple-300 truncate">{qcName}</p>
+                <p className="text-[10px] font-mono text-purple-600">Super Admin</p>
+              </div>
+            </div>
             <button
-              onClick={() => handleNav("database")}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all ${activePage === "database" ? "text-cyan-300" : "text-cyan-700"}`}
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-mono text-red-400/60 hover:text-red-300 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all"
             >
-              <Server className="h-4 w-4" />
-              <span className="text-[9px] font-mono">DB</span>
+              {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+              {isLoggingOut ? "Keluar..." : "Logout"}
             </button>
           </div>
-        </nav>
+        </aside>
+
+        {/* ====== Main Content ====== */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+          {/* Top bar */}
+          <header className="sticky top-0 z-30 border-b border-cyan-900/20 bg-gray-950/90 backdrop-blur-xl">
+            <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-1 rounded-xl border border-cyan-800/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
+                  <Menu className="h-5 w-5 text-cyan-400" />
+                </button>
+                {/* Mobile logo */}
+                <img src={wasteLogo} alt="" className="w-7 h-7 rounded-lg lg:hidden" />
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+                    {MENU_ITEMS.find(m => m.key === activePage)?.label || "Admin"}
+                  </h2>
+                  <p className="text-[10px] font-mono text-cyan-700 hidden sm:block">
+                    {MENU_ITEMS.find(m => m.key === activePage)?.desc}
+                  </p>
+                </div>
+              </div>
+              <div className="lg:hidden flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/5 border border-purple-900/20">
+                  <Shield className="h-3 w-3 text-purple-400" />
+                  <span className="text-[10px] font-mono text-purple-300 max-w-[80px] truncate">{qcName}</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 p-4 sm:p-6 pb-20 lg:pb-6 overflow-y-auto">
+            <div className="max-w-5xl mx-auto">
+              {activePage === "overview" && <OverviewPage onNavigate={handleNav} />}
+              {activePage === "tenants" && <TenantsPage />}
+              {activePage === "users" && <UsersPage />}
+              {activePage === "personnel" && <PersonnelPage />}
+              {activePage === "configs" && <ConfigsPage />}
+              {activePage === "database" && <DatabasePage />}
+            </div>
+          </main>
+
+          {/* ====== Mobile Bottom Nav ====== */}
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-cyan-900/20 bg-gray-950/95 backdrop-blur-xl safe-area-bottom">
+            <div className="flex items-stretch">
+              {MOBILE_NAV.map((item) => {
+                const Icon = item.icon;
+                const isActive = activePage === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => handleNav(item.key)}
+                    className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${isActive ? "text-cyan-300" : "text-cyan-700 active:text-cyan-400"}`}
+                  >
+                    <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-cyan-500/10" : ""}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-[9px] font-mono font-medium">{item.shortLabel}</span>
+                    {isActive && <div className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]" />}
+                  </button>
+                );
+              })}
+              {/* More button */}
+              <div className="flex-1 relative" ref={moreRef}>
+                <button
+                  onClick={() => setMoreOpen(!moreOpen)}
+                  className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${MORE_NAV.some(m => m.key === activePage) ? "text-cyan-300" : "text-cyan-700 active:text-cyan-400"}`}
+                >
+                  <div className={`p-1 rounded-lg transition-all ${MORE_NAV.some(m => m.key === activePage) ? "bg-cyan-500/10" : ""}`}>
+                    <MoreHorizontal className="h-5 w-5" />
+                  </div>
+                  <span className="text-[9px] font-mono font-medium">More</span>
+                  {MORE_NAV.some(m => m.key === activePage) && <div className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]" />}
+                </button>
+                {/* More popup */}
+                {moreOpen && (
+                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-cyan-900/30 bg-gray-900/95 backdrop-blur-xl shadow-xl overflow-hidden">
+                    {MORE_NAV.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activePage === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => handleNav(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? "bg-cyan-500/10 text-cyan-200" : "text-cyan-500 hover:bg-cyan-500/5"}`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="text-sm font-mono">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                    {/* Logout in more menu */}
+                    <div className="border-t border-cyan-900/20">
+                      <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-400/70 hover:bg-red-500/5 transition-all"
+                      >
+                        {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                        <span className="text-sm font-mono">{isLoggingOut ? "Keluar..." : "Logout"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </nav>
+        </div>
       </div>
     </div>
   );
 }
 
+
 // ==========================================
 // OVERVIEW PAGE
 // ==========================================
-function OverviewPage() {
-  const [stats, setStats] = useState({ tenants: 0, users: 0, personnel: 0, configs: 0, tenantsWithDb: 0 });
+function OverviewPage({ onNavigate }: { onNavigate: (key: PageKey) => void }) {
+  const [stats, setStats] = useState({ tenants: 0, users: 0, configs: 0, tenantsWithDb: 0 });
   const [loading, setLoading] = useState(true);
   const [tenants, setTenants] = useState<Tenant[]>([]);
 
@@ -210,7 +354,6 @@ function OverviewPage() {
         setStats({
           tenants: tList.length,
           users: (ud.users || []).length,
-          personnel: 0, // loaded per-tenant
           configs: (cd.configs || []).length,
           tenantsWithDb: tList.filter((t: Tenant) => t.neon_database_url).length,
         });
@@ -219,91 +362,85 @@ function OverviewPage() {
     })();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
-      </div>
-    );
-  }
+  if (loading) return <LoadingState />;
 
   const cards = [
-    { label: "Total Store", value: stats.tenants, icon: Building2, color: "cyan", sub: `${stats.tenantsWithDb} punya DB sendiri` },
-    { label: "Total Users", value: stats.users, icon: UserCog, color: "blue", sub: "Semua store" },
-    { label: "Configs", value: stats.configs, icon: KeyRound, color: "green", sub: `dari ${stats.tenants} store` },
-    { label: "DB Isolated", value: stats.tenantsWithDb, icon: Server, color: "purple", sub: `dari ${stats.tenants} store` },
+    { label: "Store", value: stats.tenants, icon: Building2, color: "cyan" as const, sub: `${stats.tenantsWithDb} punya own DB`, page: "tenants" as PageKey },
+    { label: "Users", value: stats.users, icon: UserCog, color: "blue" as const, sub: "Semua store", page: "users" as PageKey },
+    { label: "Config", value: stats.configs, icon: KeyRound, color: "green" as const, sub: `dari ${stats.tenants} store`, page: "configs" as PageKey },
+    { label: "DB Isolated", value: stats.tenantsWithDb, icon: Server, color: "purple" as const, sub: `dari ${stats.tenants} store`, page: "database" as PageKey },
   ];
 
-  const colorMap: Record<string, string> = {
-    cyan: "border-cyan-500/30 bg-cyan-500/5 text-cyan-400",
-    blue: "border-blue-500/30 bg-blue-500/5 text-blue-400",
-    green: "border-green-500/30 bg-green-500/5 text-green-400",
-    purple: "border-purple-500/30 bg-purple-500/5 text-purple-400",
-  };
-
-  const iconColorMap: Record<string, string> = {
-    cyan: "text-cyan-400",
-    blue: "text-blue-400",
-    green: "text-green-400",
-    purple: "text-purple-400",
+  const colorStyles: Record<string, { card: string; icon: string; value: string }> = {
+    cyan: { card: "border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-transparent", icon: "text-cyan-400 bg-cyan-500/10", value: "text-cyan-200" },
+    blue: { card: "border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent", icon: "text-blue-400 bg-blue-500/10", value: "text-blue-200" },
+    green: { card: "border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent", icon: "text-green-400 bg-green-500/10", value: "text-green-200" },
+    purple: { card: "border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent", icon: "text-purple-400 bg-purple-500/10", value: "text-purple-200" },
   };
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5 p-6">
-        <h2 className="text-xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+      {/* Welcome Banner */}
+      <div className="rounded-2xl border border-cyan-500/15 bg-gradient-to-br from-cyan-500/5 via-blue-500/3 to-purple-500/5 p-5 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
           Selamat datang, Admin! 👑
         </h2>
-        <p className="text-sm text-cyan-600 font-mono mt-1">
+        <p className="text-xs sm:text-sm text-cyan-600 font-mono mt-1">
           Semua kontrol ada di tangan lo. Kelola store, user, dan konfigurasi dari sini.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {cards.map((card) => {
           const Icon = card.icon;
+          const style = colorStyles[card.color];
           return (
-            <div key={card.label} className={`rounded-xl border p-4 ${colorMap[card.color]}`}>
-              <div className="flex items-center justify-between mb-3">
-                <Icon className={`h-5 w-5 ${iconColorMap[card.color]}`} />
+            <button
+              key={card.label}
+              onClick={() => onNavigate(card.page)}
+              className={`rounded-2xl border p-4 sm:p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${style.card}`}
+            >
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-3 ${style.icon}`}>
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-bold font-mono">{card.value}</p>
-              <p className="text-xs font-mono mt-1 opacity-80">{card.label}</p>
-              <p className="text-[10px] font-mono mt-0.5 opacity-50">{card.sub}</p>
-            </div>
+              <p className={`text-2xl sm:text-3xl font-bold font-mono ${style.value}`}>{card.value}</p>
+              <p className="text-xs font-mono mt-1 text-cyan-400">{card.label}</p>
+              <p className="text-[10px] font-mono mt-0.5 text-cyan-700">{card.sub}</p>
+            </button>
           );
         })}
       </div>
 
-      {/* Store List Quick View */}
-      <div className="rounded-xl border border-cyan-900/30 bg-gray-900/30">
-        <div className="px-4 py-3 border-b border-cyan-900/30">
-          <h3 className="text-sm font-mono font-bold text-cyan-400">Daftar Store</h3>
-        </div>
-        <div className="divide-y divide-cyan-900/20">
+      {/* Store List */}
+      <Card>
+        <CardHeader action={
+          <Btn variant="ghost" size="sm" onClick={() => onNavigate("tenants")}>
+            Lihat Semua <ChevronRight className="h-3 w-3" />
+          </Btn>
+        }>
+          <h3 className="text-sm font-mono font-bold text-cyan-300">Daftar Store</h3>
+        </CardHeader>
+        <div className="divide-y divide-cyan-900/15">
           {tenants.map((t) => (
-            <div key={t.id} className="px-4 py-3 flex items-center justify-between hover:bg-cyan-500/5 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${t.status === "active" ? "bg-green-400 shadow-[0_0_4px_rgba(0,255,128,0.6)]" : "bg-red-400"}`} />
-                <div>
-                  <p className="text-sm font-mono text-cyan-200">{t.name}</p>
-                  <p className="text-[10px] font-mono text-cyan-700">{t.address || "Alamat belum diisi"}</p>
+            <div key={t.id} className="px-4 sm:px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.01] transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${t.status === "active" ? "bg-green-400 shadow-[0_0_6px_rgba(0,255,128,0.5)]" : "bg-red-400"}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-cyan-200 truncate">{t.name}</p>
+                  <p className="text-[10px] font-mono text-cyan-700 truncate">{t.address || "Alamat belum diisi"}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${t.neon_database_url ? "bg-purple-500/10 text-purple-300" : "bg-yellow-500/10 text-yellow-300"}`}>
-                  {t.neon_database_url ? "🗄️ Own DB" : "📦 Master"}
-                </span>
-              </div>
+              <Badge variant={t.neon_database_url ? "purple" : "warning"}>
+                {t.neon_database_url ? "Own DB" : "Master"}
+              </Badge>
             </div>
           ))}
           {tenants.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm font-mono text-cyan-700">Belum ada store</div>
+            <div className="px-4 py-10 text-center text-sm font-mono text-cyan-700">Belum ada store</div>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -348,118 +485,124 @@ function TenantsPage() {
     loadTenants();
   };
 
+  const openNewForm = () => {
+    setShowForm(true); setEditingId(null);
+    setForm({ name: "", address: "", phone: "", status: "active", neon_database_url: "" });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-mono text-cyan-500">Daftar Store ({tenants.length})</h2>
+        <p className="text-sm font-mono text-cyan-500">{tenants.length} Store</p>
         <div className="flex gap-2">
-          <button onClick={loadTenants} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-            <RefreshCw className="h-4 w-4 text-cyan-400" />
-          </button>
-          <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", address: "", phone: "", status: "active", neon_database_url: "" }); }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all">
-            <Plus className="h-4 w-4" /> Tambah Store
-          </button>
+          <RefreshBtn onClick={loadTenants} />
+          <Btn onClick={openNewForm}><Plus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah Store</span><span className="sm:hidden">Tambah</span></Btn>
         </div>
       </div>
 
+      {/* Form */}
       {showForm && (
-        <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
-          <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit Store" : "Tambah Store Baru"}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Store</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="GCK Bekasi Kp Bulu" />
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Alamat</label>
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="Jl. Raya Bekasi No. 123" />
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">No. Telp</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="08123456789" />
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Status</label>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+        <Card className="p-4 sm:p-5 space-y-4">
+          <h3 className="text-sm font-mono font-bold text-cyan-300">{editingId ? "Edit Store" : "Tambah Store Baru"}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Nama Store" value={form.name} onChange={(e) => setForm({ ...form, name: (e.target as HTMLInputElement).value })} placeholder="GCK Bekasi Kp Bulu" />
+            <Input label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: (e.target as HTMLInputElement).value })} placeholder="Jl. Raya Bekasi No. 123" />
+            <Input label="No. Telp" value={form.phone} onChange={(e) => setForm({ ...form, phone: (e.target as HTMLInputElement).value })} placeholder="08123456789" />
+            <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: (e.target as HTMLSelectElement).value })}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </Select>
           </div>
-          <div>
-            <label className="text-[10px] font-mono text-cyan-600 uppercase">🗄️ Neon Database URL (Per-Resto)</label>
-            <input value={form.neon_database_url} onChange={(e) => setForm({ ...form, neon_database_url: e.target.value })}
-              className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-[11px] text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require" />
-            <p className="text-[9px] font-mono text-cyan-700 mt-1">Kosongkan jika masih pakai database utama (master)</p>
+          <Input
+            label="🗄️ Neon Database URL"
+            value={form.neon_database_url}
+            onChange={(e) => setForm({ ...form, neon_database_url: (e.target as HTMLInputElement).value })}
+            placeholder="postgresql://user:pass@ep-xxx.aws.neon.tech/neondb?sslmode=require"
+            hint="Kosongkan jika masih pakai master DB"
+          />
+          <div className="flex gap-2 pt-1">
+            <Btn onClick={handleSave} disabled={saving || !form.name} variant="primary">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan"}
+            </Btn>
+            <Btn variant="secondary" onClick={() => { setShowForm(false); setEditingId(null); }}><X className="h-4 w-4" /> Batal</Btn>
           </div>
-          <div className="flex gap-2 pt-2">
-            <button onClick={handleSave} disabled={saving || !form.name}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
-            </button>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
-              <X className="h-4 w-4" /> Batal
-            </button>
-          </div>
-        </div>
+        </Card>
       )}
 
-      {loading ? (
-        <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>
-      ) : tenants.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
-          <Store className="h-8 w-8 text-cyan-800 mx-auto" /><p className="text-sm font-mono text-cyan-700 mt-2">Belum ada store. Tambahin dulu yuk!</p>
-        </div>
+      {/* List */}
+      {loading ? <LoadingState /> : tenants.length === 0 ? (
+        <EmptyState icon={Store} text="Belum ada store. Tambahin dulu yuk!" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
-          <table className="w-full text-sm font-mono">
-            <thead>
-              <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">NAMA</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs hidden sm:table-cell">ALAMAT</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs hidden sm:table-cell">TELP</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">DB</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">STATUS</th>
-                <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tenants.map((t) => (
-                <tr key={t.id} className="border-b border-cyan-900/20 hover:bg-cyan-500/5 transition-colors">
-                  <td className="px-4 py-3 text-cyan-200">{t.name}</td>
-                  <td className="px-4 py-3 text-cyan-300 text-xs hidden sm:table-cell">{t.address || "—"}</td>
-                  <td className="px-4 py-3 text-cyan-300 text-xs hidden sm:table-cell">{t.phone || "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] ${t.neon_database_url ? "bg-purple-500/10 text-purple-300" : "bg-yellow-500/10 text-yellow-300"}`}>
-                      {t.neon_database_url ? "🗄️ Own" : "📦 Master"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs ${t.status === "active" ? "bg-green-500/10 text-green-300" : "bg-red-500/10 text-red-300"}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex gap-1 justify-end">
-                      <button onClick={() => handleEdit(t)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-                        <Pencil className="h-3.5 w-3.5 text-cyan-400" />
-                      </button>
-                      <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
-                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                      </button>
+        <>
+          {/* Desktop: Table */}
+          <Card className="hidden sm:block overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-mono">
+                <thead>
+                  <tr className="border-b border-cyan-900/20 bg-cyan-500/[0.03]">
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">NAMA</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">ALAMAT</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">DB</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">STATUS</th>
+                    <th className="text-right px-5 py-3 text-cyan-500 text-[11px] font-medium">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenants.map((t) => (
+                    <tr key={t.id} className="border-b border-cyan-900/10 hover:bg-white/[0.01] transition-colors">
+                      <td className="px-5 py-3.5">
+                        <p className="text-cyan-200 font-medium">{t.name}</p>
+                        <p className="text-[10px] text-cyan-700">{t.id}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-cyan-400 text-xs">{t.address || "—"}</td>
+                      <td className="px-5 py-3.5"><Badge variant={t.neon_database_url ? "purple" : "warning"}>{t.neon_database_url ? "Own DB" : "Master"}</Badge></td>
+                      <td className="px-5 py-3.5"><Badge variant={t.status === "active" ? "success" : "danger"}>{t.status}</Badge></td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex gap-1.5 justify-end">
+                          <button onClick={() => handleEdit(t)} className="p-2 rounded-lg border border-cyan-800/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
+                            <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                          </button>
+                          <button onClick={() => handleDelete(t.id)} className="p-2 rounded-lg border border-red-800/30 hover:border-red-500/40 hover:bg-red-500/5 transition-all">
+                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Mobile: Cards */}
+          <div className="sm:hidden space-y-3">
+            {tenants.map((t) => (
+              <Card key={t.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${t.status === "active" ? "bg-green-400" : "bg-red-400"}`} />
+                      <p className="text-sm font-mono text-cyan-200 font-medium truncate">{t.name}</p>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {t.address && <p className="text-[11px] font-mono text-cyan-600 mb-2 truncate">{t.address}</p>}
+                    <div className="flex gap-2">
+                      <Badge variant={t.neon_database_url ? "purple" : "warning"}>{t.neon_database_url ? "Own DB" : "Master"}</Badge>
+                      <Badge variant={t.status === "active" ? "success" : "danger"}>{t.status}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => handleEdit(t)} className="p-2 rounded-lg border border-cyan-800/30 hover:border-cyan-500/40 transition-all">
+                      <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                    </button>
+                    <button onClick={() => handleDelete(t.id)} className="p-2 rounded-lg border border-red-800/30 hover:border-red-500/40 transition-all">
+                      <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -519,107 +662,113 @@ function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-mono text-cyan-500">Daftar User ({users.length})</h2>
+        <p className="text-sm font-mono text-cyan-500">{users.length} User</p>
         <div className="flex gap-2">
-          <button onClick={load} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-            <RefreshCw className="h-4 w-4 text-cyan-400" />
-          </button>
-          <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ tenant_id: "", username: "", password: "", role: "admin" }); }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all">
-            <Plus className="h-4 w-4" /> Tambah User
-          </button>
+          <RefreshBtn onClick={load} />
+          <Btn onClick={() => { setShowForm(true); setEditingId(null); setForm({ tenant_id: "", username: "", password: "", role: "admin" }); }}>
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah User</span><span className="sm:hidden">Tambah</span>
+          </Btn>
         </div>
       </div>
 
       {showForm && (
-        <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
-          <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit User" : "Tambah User Baru"}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Username</label>
-              <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="johndoe" />
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Password {editingId && "(kosongkan kalau ga mau ganti)"}</label>
-              <input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} type="password"
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="••••••••" />
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Store</label>
-              <select value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                <option value="">— Pilih Resto —</option>
-                <option value="ALL">Semua Resto (Super Admin)</option>
-                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Role</label>
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                <option value="admin">QC / Quality Control</option>
-                <option value="super_admin">Super Admin</option>
-              </select>
-            </div>
+        <Card className="p-4 sm:p-5 space-y-4">
+          <h3 className="text-sm font-mono font-bold text-cyan-300">{editingId ? "Edit User" : "Tambah User Baru"}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: (e.target as HTMLInputElement).value })} placeholder="johndoe" />
+            <Input label={editingId ? "Password (kosongkan = tetap)" : "Password"} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: (e.target as HTMLInputElement).value })} placeholder="••••••••" />
+            <Select label="Store" value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: (e.target as HTMLSelectElement).value })}>
+              <option value="">— Pilih Resto —</option>
+              <option value="ALL">Semua Resto (Super Admin)</option>
+              {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+            <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: (e.target as HTMLSelectElement).value })}>
+              <option value="admin">🔍 QC / Quality Control</option>
+              <option value="super_admin">👑 Super Admin</option>
+            </Select>
           </div>
-          <div className="flex gap-2 pt-2">
-            <button onClick={handleSave} disabled={saving || !form.username || (!editingId && !form.password) || !form.tenant_id}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
-            </button>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
-              <X className="h-4 w-4" /> Batal
-            </button>
+          <div className="flex gap-2 pt-1">
+            <Btn onClick={handleSave} disabled={saving || !form.username || (!editingId && !form.password) || !form.tenant_id}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan"}
+            </Btn>
+            <Btn variant="secondary" onClick={() => { setShowForm(false); setEditingId(null); }}><X className="h-4 w-4" /> Batal</Btn>
           </div>
-        </div>
+        </Card>
       )}
 
-      {loading ? (
-        <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /><p className="text-xs font-mono text-cyan-600 mt-2">Loading...</p></div>
-      ) : users.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
-          <Users className="h-8 w-8 text-cyan-800 mx-auto" /><p className="text-sm font-mono text-cyan-700 mt-2">Belum ada user.</p>
-        </div>
+      {loading ? <LoadingState /> : users.length === 0 ? (
+        <EmptyState icon={Users} text="Belum ada user." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
-          <table className="w-full text-sm font-mono">
-            <thead>
-              <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">USERNAME</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">RESTO</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">ROLE</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs hidden sm:table-cell">DIBUAT</th>
-                <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-cyan-900/20 hover:bg-cyan-500/5 transition-colors">
-                  <td className="px-4 py-3 text-cyan-200">{u.username}</td>
-                  <td className="px-4 py-3 text-cyan-300 text-xs">{getTenantName(u.tenant_id)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs ${u.role === "super_admin" ? "bg-purple-500/10 text-purple-300" : "bg-blue-500/10 text-blue-300"}`}>
-                      {u.role === "super_admin" ? "👑 Super Admin" : "🔍 QC"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-cyan-600 text-xs hidden sm:table-cell">{new Date(u.created_at).toLocaleDateString("id-ID")}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex gap-1 justify-end">
-                      <button onClick={() => handleEdit(u)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-                        <Pencil className="h-3.5 w-3.5 text-cyan-400" />
-                      </button>
-                      <button onClick={() => handleDelete(u.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
-                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                      </button>
+        <>
+          {/* Desktop: Table */}
+          <Card className="hidden sm:block overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-mono">
+                <thead>
+                  <tr className="border-b border-cyan-900/20 bg-cyan-500/[0.03]">
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">USERNAME</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">RESTO</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">ROLE</th>
+                    <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">DIBUAT</th>
+                    <th className="text-right px-5 py-3 text-cyan-500 text-[11px] font-medium">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-cyan-900/10 hover:bg-white/[0.01] transition-colors">
+                      <td className="px-5 py-3.5 text-cyan-200 font-medium">{u.username}</td>
+                      <td className="px-5 py-3.5 text-cyan-400 text-xs">{getTenantName(u.tenant_id)}</td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant={u.role === "super_admin" ? "purple" : "blue"}>
+                          {u.role === "super_admin" ? "👑 Super Admin" : "🔍 QC"}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5 text-cyan-600 text-xs">{new Date(u.created_at).toLocaleDateString("id-ID")}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex gap-1.5 justify-end">
+                          <button onClick={() => handleEdit(u)} className="p-2 rounded-lg border border-cyan-800/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
+                            <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                          </button>
+                          <button onClick={() => handleDelete(u.id)} className="p-2 rounded-lg border border-red-800/30 hover:border-red-500/40 hover:bg-red-500/5 transition-all">
+                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Mobile: Cards */}
+          <div className="sm:hidden space-y-3">
+            {users.map((u) => (
+              <Card key={u.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-mono text-cyan-200 font-medium">{u.username}</p>
+                    <p className="text-[11px] font-mono text-cyan-600 mt-0.5 truncate">{getTenantName(u.tenant_id)}</p>
+                    <div className="flex gap-2 mt-2">
+                      <Badge variant={u.role === "super_admin" ? "purple" : "blue"}>
+                        {u.role === "super_admin" ? "👑 Super Admin" : "🔍 QC"}
+                      </Badge>
+                      <span className="text-[10px] font-mono text-cyan-700 self-center">{new Date(u.created_at).toLocaleDateString("id-ID")}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => handleEdit(u)} className="p-2 rounded-lg border border-cyan-800/30 transition-all">
+                      <Pencil className="h-3.5 w-3.5 text-cyan-400" />
+                    </button>
+                    <button onClick={() => handleDelete(u.id)} className="p-2 rounded-lg border border-red-800/30 transition-all">
+                      <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -665,8 +814,7 @@ function PersonnelPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedTenant) return;
-    const localUrl = URL.createObjectURL(file);
-    setPreviewUrl(localUrl);
+    setPreviewUrl(URL.createObjectURL(file));
     setUploading(true);
     try {
       const reader = new FileReader();
@@ -676,7 +824,7 @@ function PersonnelPage() {
           action: "upload-signature", tenant_id: selectedTenant,
           file_base64: base64, file_name: file.name, mime_type: file.type,
         });
-        if (result.signature_url) { setForm((prev: any) => ({ ...prev, signature_url: result.signature_url })); }
+        if (result.signature_url) setForm((prev) => ({ ...prev, signature_url: result.signature_url }));
         setUploading(false);
       };
       reader.readAsDataURL(file);
@@ -699,170 +847,130 @@ function PersonnelPage() {
   const qcCount = personnel.filter((p) => p.role === "qc").length;
   const mgrCount = personnel.filter((p) => p.role === "manager").length;
 
-  if (loading) return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /></div>;
+  if (loading) return <LoadingState />;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-mono text-cyan-500">QC & Manajer per Store</h2>
-      </div>
+      <p className="text-sm font-mono text-cyan-500">QC & Manajer per Store</p>
 
       {tenants.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
-          <UserCheck className="h-8 w-8 text-cyan-800 mx-auto" />
-          <p className="text-sm font-mono text-cyan-700 mt-2">Bikin store dulu di halaman Store</p>
-        </div>
+        <EmptyState icon={UserCheck} text="Bikin store dulu di halaman Store" />
       ) : (
         <>
-          <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4">
-            <label className="text-[10px] font-mono text-cyan-600 uppercase">Pilih Store</label>
-            <select value={selectedTenant} onChange={(e) => handleSelectTenant(e.target.value)}
-              className="w-full h-10 px-3 mt-1 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+          <Card className="p-4 sm:p-5">
+            <Select label="Pilih Store" value={selectedTenant} onChange={(e) => handleSelectTenant((e.target as HTMLSelectElement).value)}>
               <option value="">— Pilih store dulu —</option>
               {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
+            </Select>
+          </Card>
 
           {selectedTenant && (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex gap-2">
-                  <button onClick={() => setFilter("all")}
-                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "all" ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
-                    Semua ({personnel.length})
-                  </button>
-                  <button onClick={() => setFilter("qc")}
-                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "qc" ? "border-green-400/50 bg-green-500/10 text-green-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
-                    🔍 QC ({qcCount})
-                  </button>
-                  <button onClick={() => setFilter("manager")}
-                    className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all border ${filter === "manager" ? "border-purple-400/50 bg-purple-500/10 text-purple-200" : "border-cyan-800/40 text-cyan-600 hover:text-cyan-400"}`}>
-                    👔 Manajer ({mgrCount})
-                  </button>
+              {/* Filters + Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+                  {([["all", `Semua (${personnel.length})`, "default"], ["qc", `🔍 QC (${qcCount})`, "success"], ["manager", `👔 Manajer (${mgrCount})`, "purple"]] as const).map(([key, label]) => (
+                    <button key={key} onClick={() => setFilter(key as any)}
+                      className={`shrink-0 px-3 py-2 rounded-xl font-mono text-xs transition-all border ${filter === key ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-200" : "border-cyan-800/30 text-cyan-600 hover:text-cyan-400"}`}>
+                      {label}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => loadPersonnel(selectedTenant)} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-                    <RefreshCw className="h-4 w-4 text-cyan-400" />
-                  </button>
-                  <button onClick={() => { setShowForm(true); setEditingId(null); setPreviewUrl(""); setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" }); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all">
-                    <Plus className="h-4 w-4" /> Tambah Personil
-                  </button>
+                <div className="flex gap-2 shrink-0">
+                  <RefreshBtn onClick={() => loadPersonnel(selectedTenant)} />
+                  <Btn onClick={() => { setShowForm(true); setEditingId(null); setPreviewUrl(""); setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" }); }}>
+                    <Plus className="h-4 w-4" /> Tambah
+                  </Btn>
                 </div>
               </div>
 
+              {/* Form */}
               {showForm && (
-                <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-3">
-                  <h3 className="text-sm font-mono text-cyan-300">{editingId ? "Edit Personil" : "Tambah Personil Baru"}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Singkat (key)</label>
-                      <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="PAJAR" />
-                      <p className="text-[10px] font-mono text-cyan-800 mt-0.5">Nama pendek, huruf kapital</p>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Nama Lengkap</label>
-                      <input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="PAJAR HIDAYAT" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Role</label>
-                      <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                        <option value="qc">🔍 QC</option>
-                        <option value="manager">👔 Manajer</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Status</label>
-                      <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Upload TTD / Tanda Tangan</label>
-                      <div className="flex items-center gap-3 mt-1">
-                        <label className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-all ${uploading ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-300" : "border-cyan-800/50 bg-black/40 text-cyan-300 hover:border-cyan-500/50 hover:bg-cyan-500/5"}`}>
-                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                          <span className="font-mono text-sm">{uploading ? "Uploading..." : "Pilih File"}</span>
-                          <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={uploading} />
-                        </label>
-                        {(previewUrl || form.signature_url) && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-16 rounded-lg border border-cyan-900/50 bg-black/40 overflow-hidden flex items-center justify-center">
-                              <img src={previewUrl || `/api/proxy-image?url=${encodeURIComponent(form.signature_url)}&tenant_id=${selectedTenant}`}
-                                alt="Preview TTD" className="w-full h-full object-contain p-1"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-mono text-green-400">✅ TTD Ready</p>
-                              <p className="text-[10px] font-mono text-cyan-800 truncate max-w-[200px]">{form.signature_url}</p>
-                            </div>
+                <Card className="p-4 sm:p-5 space-y-4">
+                  <h3 className="text-sm font-mono font-bold text-cyan-300">{editingId ? "Edit Personil" : "Tambah Personil Baru"}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input label="Nama Singkat (key)" value={form.name} onChange={(e) => setForm({ ...form, name: (e.target as HTMLInputElement).value })} placeholder="PAJAR" hint="Nama pendek, huruf kapital" />
+                    <Input label="Nama Lengkap" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: (e.target as HTMLInputElement).value })} placeholder="PAJAR HIDAYAT" />
+                    <Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: (e.target as HTMLSelectElement).value })}>
+                      <option value="qc">🔍 QC</option>
+                      <option value="manager">👔 Manajer</option>
+                    </Select>
+                    <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: (e.target as HTMLSelectElement).value })}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </Select>
+                  </div>
+
+                  {/* Signature Upload */}
+                  <div>
+                    <label className="block text-[11px] font-mono text-cyan-500 mb-2">Upload TTD / Tanda Tangan</label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all ${uploading ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-300" : "border-cyan-800/30 bg-black/20 text-cyan-400 hover:border-cyan-500/40"}`}>
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        <span className="font-mono text-sm">{uploading ? "Uploading..." : "Pilih File"}</span>
+                        <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={uploading} />
+                      </label>
+                      {(previewUrl || form.signature_url) && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-12 rounded-lg border border-cyan-900/30 bg-white/5 overflow-hidden flex items-center justify-center">
+                            <img src={previewUrl || `/api/proxy-image?url=${encodeURIComponent(form.signature_url)}&tenant_id=${selectedTenant}`}
+                              alt="TTD" className="w-full h-full object-contain p-1"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                           </div>
-                        )}
-                      </div>
-                      <p className="text-[10px] font-mono text-cyan-800 mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
+                          <p className="text-[11px] font-mono text-green-400">✅ TTD Ready</p>
+                        </div>
+                      )}
                     </div>
+                    <p className="text-[10px] font-mono text-cyan-700 mt-1.5">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <button onClick={handleSave} disabled={saving || !form.name || !form.role}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
-                    </button>
-                    <button onClick={() => { setShowForm(false); setEditingId(null); }}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-800/40 text-cyan-400 font-mono text-sm hover:bg-cyan-500/5 transition-all">
-                      <X className="h-4 w-4" /> Batal
-                    </button>
+
+                  <div className="flex gap-2 pt-1">
+                    <Btn onClick={handleSave} disabled={saving || !form.name || !form.role}>
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan"}
+                    </Btn>
+                    <Btn variant="secondary" onClick={() => { setShowForm(false); setEditingId(null); }}><X className="h-4 w-4" /> Batal</Btn>
                   </div>
-                </div>
+                </Card>
               )}
 
+              {/* Personnel List */}
               {filtered.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-cyan-900/30 rounded-xl">
-                  <UserCheck className="h-8 w-8 text-cyan-800 mx-auto" />
-                  <p className="text-sm font-mono text-cyan-700 mt-2">{personnel.length === 0 ? "Belum ada personil. Tambahin dulu!" : "Ga ada data untuk filter ini"}</p>
-                </div>
+                <EmptyState icon={UserCheck} text={personnel.length === 0 ? "Belum ada personil. Tambahin dulu!" : "Ga ada data untuk filter ini"} />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filtered.map((p) => (
-                    <div key={p.id} className="rounded-xl border border-cyan-900/30 bg-gray-900/40 p-4 hover:border-cyan-500/30 transition-all">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-12 rounded-lg border border-cyan-800/30 bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <Card key={p.id} className="p-4 hover:border-cyan-700/30 transition-all">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Signature thumbnail */}
+                          <div className="w-14 h-11 rounded-lg border border-cyan-800/20 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
                             {p.signature_url ? (
                               <img src={`/api/proxy-image?url=${encodeURIComponent(p.signature_url)}&tenant_id=${selectedTenant}`}
-                                alt="TTD" className="w-full h-full object-contain p-1"
+                                alt="TTD" className="w-full h-full object-contain p-0.5"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                             ) : (
-                              <span className="text-[10px] font-mono text-cyan-800">No TTD</span>
+                              <span className="text-[9px] font-mono text-cyan-800">No TTD</span>
                             )}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${p.role === "qc" ? "bg-green-500/10 text-green-300" : "bg-purple-500/10 text-purple-300"}`}>
-                                {p.role === "qc" ? "🔍 QC" : "👔 MGR"}
-                              </span>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${p.status === "active" ? "bg-cyan-500/10 text-cyan-300" : "bg-red-500/10 text-red-300"}`}>
-                                {p.status}
-                              </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-mono text-cyan-200 font-medium truncate">{p.full_name || p.name}</p>
+                            <p className="text-[10px] font-mono text-cyan-700">key: {p.name}</p>
+                            <div className="flex gap-1.5 mt-1.5">
+                              <Badge variant={p.role === "qc" ? "success" : "purple"}>{p.role === "qc" ? "🔍 QC" : "👔 MGR"}</Badge>
+                              <Badge variant={p.status === "active" ? "default" : "danger"}>{p.status}</Badge>
                             </div>
-                            <p className="text-sm font-mono text-cyan-200 mt-1 font-bold">{p.full_name || p.name}</p>
-                            <p className="text-[10px] font-mono text-cyan-600">key: {p.name}</p>
                           </div>
                         </div>
-                        <div className="flex gap-1">
-                          <button onClick={() => handleEdit(p)} className="p-1.5 rounded border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => handleEdit(p)} className="p-2 rounded-lg border border-cyan-800/30 hover:border-cyan-500/40 transition-all">
                             <Pencil className="h-3.5 w-3.5 text-cyan-400" />
                           </button>
-                          <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded border border-red-800/40 hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                          <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg border border-red-800/30 hover:border-red-500/40 transition-all">
                             <Trash2 className="h-3.5 w-3.5 text-red-400" />
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               )}
@@ -920,108 +1028,141 @@ function ConfigsPage() {
 
   const toggleSecret = (key: string) => setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const configFields = [
-    { key: "google_spreadsheet_id", label: "Google Spreadsheet ID", placeholder: "1ABC...xyz", secret: false, desc: "ID dari Google Sheet khusus store ini" },
-    { key: "google_sheets_credentials", label: "Google Sheets Credentials (JSON)", placeholder: "{...service account JSON...}", secret: true, desc: "Service Account JSON buat akses Google Sheets" },
-    { key: "r2_account_id", label: "R2 Account ID", placeholder: "abc123...", secret: true, desc: "Cloudflare Account ID" },
-    { key: "r2_access_key_id", label: "R2 Access Key ID", placeholder: "abc123...", secret: true, desc: "R2 API Token Access Key" },
-    { key: "r2_secret_access_key", label: "R2 Secret Access Key", placeholder: "abc123...", secret: true, desc: "R2 API Token Secret" },
-    { key: "r2_bucket_name", label: "R2 Bucket Name", placeholder: "ba-waste", secret: false, desc: "Nama bucket R2" },
-    { key: "r2_public_url", label: "R2 Public URL", placeholder: "https://pub-xxx.r2.dev", secret: false, desc: "URL publik bucket R2" },
+  const configSections = [
+    {
+      title: "📊 Google Sheets",
+      desc: "Konfigurasi Google Sheets untuk penyimpanan data waste",
+      fields: [
+        { key: "google_spreadsheet_id", label: "Spreadsheet ID", placeholder: "1ABC...xyz", secret: false, hint: "ID dari Google Sheet khusus store ini" },
+        { key: "google_sheets_credentials", label: "Service Account JSON", placeholder: "{...service account JSON...}", secret: true, hint: "Service Account JSON buat akses Google Sheets" },
+      ]
+    },
+    {
+      title: "☁️ Cloudflare R2",
+      desc: "Konfigurasi R2 untuk penyimpanan foto & tanda tangan",
+      fields: [
+        { key: "r2_account_id", label: "Account ID", placeholder: "abc123...", secret: true, hint: "Cloudflare Account ID" },
+        { key: "r2_access_key_id", label: "Access Key ID", placeholder: "abc123...", secret: true, hint: "R2 API Token Access Key" },
+        { key: "r2_secret_access_key", label: "Secret Access Key", placeholder: "abc123...", secret: true, hint: "R2 API Token Secret" },
+        { key: "r2_bucket_name", label: "Bucket Name", placeholder: "ba-waste", secret: false, hint: "Nama bucket R2" },
+        { key: "r2_public_url", label: "Public URL", placeholder: "https://pub-xxx.r2.dev", secret: false, hint: "URL publik bucket R2" },
+      ]
+    }
   ];
 
-  if (loading) return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /></div>;
+  if (loading) return <LoadingState />;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-mono text-cyan-500">Konfigurasi per-Store</h2>
-        <button onClick={load} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
-          <RefreshCw className="h-4 w-4 text-cyan-400" />
-        </button>
+        <p className="text-sm font-mono text-cyan-500">Konfigurasi per-Store</p>
+        <RefreshBtn onClick={load} />
       </div>
 
       {tenants.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-cyan-900/30 rounded-xl">
-          <Database className="h-8 w-8 text-cyan-800 mx-auto" />
-          <p className="text-sm font-mono text-cyan-700 mt-2">Bikin store dulu, baru bisa isi config</p>
-        </div>
+        <EmptyState icon={Database} text="Bikin store dulu, baru bisa isi config" />
       ) : (
         <>
-          <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4">
-            <label className="text-[10px] font-mono text-cyan-600 uppercase">Pilih Store</label>
-            <select value={selectedTenant} onChange={(e) => handleSelectTenant(e.target.value)}
-              className="w-full h-10 px-3 mt-1 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+          <Card className="p-4 sm:p-5">
+            <Select label="Pilih Store" value={selectedTenant} onChange={(e) => handleSelectTenant((e.target as HTMLSelectElement).value)}>
               <option value="">— Pilih store dulu —</option>
               {tenants.map((t) => {
                 const hasConfig = configs.some((c) => c.tenant_id === t.id);
                 return <option key={t.id} value={t.id}>{t.name} {hasConfig ? "✅" : "⚠️ belum"}</option>;
               })}
-            </select>
-          </div>
+            </Select>
+          </Card>
 
           {selectedTenant && (
-            <div className="rounded-xl border border-cyan-500/30 bg-gray-900/50 p-4 space-y-4">
-              <h3 className="text-sm font-mono text-cyan-300">
-                Config: {tenants.find((t) => t.id === selectedTenant)?.name}
-              </h3>
-              <div className="space-y-3">
-                {configFields.map((field) => (
-                  <div key={field.key}>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">{field.label}</label>
-                      {field.secret && (
-                        <button onClick={() => toggleSecret(field.key)} className="text-[10px] font-mono text-cyan-600 hover:text-cyan-400 flex items-center gap-1">
-                          {showSecrets[field.key] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          {showSecrets[field.key] ? "Hide" : "Show"}
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type={field.secret && !showSecrets[field.key] ? "password" : "text"}
-                      value={(form as any)[field.key]}
-                      onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                      className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none"
-                      placeholder={field.placeholder}
-                    />
-                    <p className="text-[10px] font-mono text-cyan-800 mt-0.5">{field.desc}</p>
+            <div className="space-y-4">
+              {configSections.map((section) => (
+                <Card key={section.title} className="overflow-hidden">
+                  <CardHeader>
+                    <h3 className="text-sm font-mono font-bold text-cyan-300">{section.title}</h3>
+                    <p className="text-[10px] font-mono text-cyan-700 mt-0.5">{section.desc}</p>
+                  </CardHeader>
+                  <div className="p-4 sm:p-5 space-y-4">
+                    {section.fields.map((field) => (
+                      <div key={field.key}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11px] font-mono text-cyan-500">{field.label}</label>
+                          {field.secret && (
+                            <button onClick={() => toggleSecret(field.key)} className="text-[10px] font-mono text-cyan-600 hover:text-cyan-400 flex items-center gap-1">
+                              {showSecrets[field.key] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              {showSecrets[field.key] ? "Hide" : "Show"}
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type={field.secret && !showSecrets[field.key] ? "password" : "text"}
+                          value={(form as any)[field.key]}
+                          onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                          className="w-full h-11 px-3.5 bg-black/30 border border-cyan-900/40 rounded-xl font-mono text-sm text-cyan-100 placeholder:text-cyan-800 focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20 focus:outline-none transition-all"
+                          placeholder={field.placeholder}
+                        />
+                        {field.hint && <p className="text-[10px] font-mono text-cyan-700 mt-1">{field.hint}</p>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan Config"}
-              </button>
+                </Card>
+              ))}
+
+              <Btn onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Menyimpan..." : "Simpan Config"}
+              </Btn>
             </div>
           )}
 
+          {/* Config overview when no tenant selected */}
           {!selectedTenant && configs.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-cyan-900/30">
-              <table className="w-full text-sm font-mono">
-                <thead>
-                  <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
-                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">RESTO</th>
-                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">SHEET ID</th>
-                    <th className="text-left px-4 py-3 text-cyan-500 text-xs">R2 BUCKET</th>
-                    <th className="text-left px-4 py-3 text-cyan-500 text-xs hidden sm:table-cell">UPDATED</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {configs.map((c) => {
-                    const tenant = tenants.find((t) => t.id === c.tenant_id);
-                    return (
-                      <tr key={c.tenant_id} onClick={() => handleSelectTenant(c.tenant_id)}
-                        className="border-b border-cyan-900/20 hover:bg-cyan-500/5 cursor-pointer transition-colors">
-                        <td className="px-4 py-3 text-cyan-200">{tenant?.name || c.tenant_id}</td>
-                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.google_spreadsheet_id ? c.google_spreadsheet_id.substring(0, 15) + "..." : "—"}</td>
-                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.r2_bucket_name || "—"}</td>
-                        <td className="px-4 py-3 text-cyan-600 text-xs hidden sm:table-cell">{c.updated_at ? new Date(c.updated_at).toLocaleDateString("id-ID") : "—"}</td>
+            <>
+              {/* Desktop: Table */}
+              <Card className="hidden sm:block overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm font-mono">
+                    <thead>
+                      <tr className="border-b border-cyan-900/20 bg-cyan-500/[0.03]">
+                        <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">RESTO</th>
+                        <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">SHEET ID</th>
+                        <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">R2 BUCKET</th>
+                        <th className="text-left px-5 py-3 text-cyan-500 text-[11px] font-medium">UPDATED</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {configs.map((c) => {
+                        const tenant = tenants.find((t) => t.id === c.tenant_id);
+                        return (
+                          <tr key={c.tenant_id} onClick={() => handleSelectTenant(c.tenant_id)}
+                            className="border-b border-cyan-900/10 hover:bg-white/[0.01] cursor-pointer transition-colors">
+                            <td className="px-5 py-3.5 text-cyan-200 font-medium">{tenant?.name || c.tenant_id}</td>
+                            <td className="px-5 py-3.5 text-cyan-400 text-xs">{c.google_spreadsheet_id ? c.google_spreadsheet_id.substring(0, 15) + "..." : "—"}</td>
+                            <td className="px-5 py-3.5 text-cyan-400 text-xs">{c.r2_bucket_name || "—"}</td>
+                            <td className="px-5 py-3.5 text-cyan-600 text-xs">{c.updated_at ? new Date(c.updated_at).toLocaleDateString("id-ID") : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-3">
+                {configs.map((c) => {
+                  const tenant = tenants.find((t) => t.id === c.tenant_id);
+                  return (
+                    <Card key={c.tenant_id} className="p-4 active:bg-cyan-500/5" onClick={() => handleSelectTenant(c.tenant_id)}>
+                      <p className="text-sm font-mono text-cyan-200 font-medium">{tenant?.name || c.tenant_id}</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] font-mono text-cyan-600">
+                        <span>Sheet: {c.google_spreadsheet_id ? "✅" : "❌"}</span>
+                        <span>R2: {c.r2_bucket_name ? "✅" : "❌"}</span>
+                        {c.updated_at && <span>{new Date(c.updated_at).toLocaleDateString("id-ID")}</span>}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </>
       )}
@@ -1058,10 +1199,7 @@ function DatabasePage() {
     if (!confirm(`Seed database untuk ${tenant.name}? Ini akan bikin tabel users, personnel, tenant_configs di database tenant.`)) return;
     setSeeding(true); setSeedResult(null);
     try {
-      const result = await api("/api/settings/configs", "POST", {
-        action: "seed-tenant-db",
-        tenant_id: selectedTenant,
-      });
+      const result = await api("/api/settings/configs", "POST", { action: "seed-tenant-db", tenant_id: selectedTenant });
       setSeedResult(result);
     } catch (err: any) {
       setSeedResult({ ok: false, message: err.message });
@@ -1069,44 +1207,44 @@ function DatabasePage() {
     setSeeding(false);
   };
 
-  if (loading) return <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-400 mx-auto" /></div>;
+  if (loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Info Banner */}
-      <div className="rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/5 to-blue-500/5 p-5">
-        <h3 className="text-base font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-blue-400 flex items-center gap-2">
-          <Server className="w-5 h-5 text-purple-400" /> Database Management
-        </h3>
-        <p className="text-sm text-cyan-600 font-mono mt-1">
-          Seed database untuk store baru yang udah punya Neon DB URL sendiri.
-        </p>
+      <div className="rounded-2xl border border-purple-500/15 bg-gradient-to-br from-purple-500/5 via-blue-500/3 to-transparent p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <Server className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-blue-400">Database Management</h3>
+            <p className="text-[11px] text-cyan-600 font-mono">Seed database untuk store baru</p>
+          </div>
+        </div>
       </div>
 
-      {/* Seed Tenant DB */}
-      <div className="rounded-xl border border-cyan-900/30 bg-gray-900/30 p-5 space-y-4">
-        <h4 className="text-sm font-mono font-bold text-cyan-300">Seed Tenant Database</h4>
-        <p className="text-xs font-mono text-cyan-700">Bikin tabel (users, personnel, tenant_configs) di database tenant yang baru.</p>
-
-        <div>
-          <label className="text-[10px] font-mono text-cyan-600 uppercase">Pilih Store</label>
-          <select value={selectedTenant} onChange={(e) => { setSelectedTenant(e.target.value); setSeedResult(null); }}
-            className="w-full h-10 px-3 mt-1 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
+      {/* Seed Section */}
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <h4 className="text-sm font-mono font-bold text-cyan-300">Seed Tenant Database</h4>
+          <p className="text-[10px] font-mono text-cyan-700 mt-0.5">Bikin tabel (users, personnel, tenant_configs) di database baru</p>
+        </CardHeader>
+        <div className="p-4 sm:p-5 space-y-4">
+          <Select label="Pilih Store" value={selectedTenant} onChange={(e) => { setSelectedTenant((e.target as HTMLSelectElement).value); setSeedResult(null); }}>
             <option value="">— Pilih store —</option>
             {tenants.map((t) => (
               <option key={t.id} value={t.id}>{t.name} {t.neon_database_url ? "🗄️" : "📦 (no own DB)"}</option>
             ))}
-          </select>
-        </div>
+          </Select>
 
-        {selectedTenant && (
-          <div className="space-y-3">
-            {(() => {
-              const tenant = tenants.find(t => t.id === selectedTenant);
-              return tenant ? (
-                <div className="rounded-lg border border-cyan-900/30 bg-black/20 p-3 space-y-1">
-                  <p className="text-xs font-mono text-cyan-400">📍 {tenant.name}</p>
-                  <p className="text-[10px] font-mono text-cyan-700">
+          {selectedTenant && (() => {
+            const tenant = tenants.find(t => t.id === selectedTenant);
+            return tenant ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-cyan-900/20 bg-black/20 p-3.5">
+                  <p className="text-xs font-mono text-cyan-300">📍 {tenant.name}</p>
+                  <p className="text-[11px] font-mono text-cyan-600 mt-0.5">
                     DB: {tenant.neon_database_url ? (
                       <span className="text-purple-300">🗄️ Own Database</span>
                     ) : (
@@ -1114,64 +1252,62 @@ function DatabasePage() {
                     )}
                   </p>
                 </div>
-              ) : null;
-            })()}
 
-            <button
-              onClick={handleSeedTenantDb}
-              disabled={seeding || !selectedTenant}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-purple-400/50 bg-purple-500/10 text-purple-200 font-mono text-sm hover:bg-purple-500/20 disabled:opacity-50 transition-all"
-            >
-              {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              {seeding ? "Seeding..." : "Seed Tenant DB"}
-            </button>
+                <Btn variant="purple" onClick={handleSeedTenantDb} disabled={seeding || !selectedTenant}>
+                  {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                  {seeding ? "Seeding..." : "Seed Tenant DB"}
+                </Btn>
 
-            {seedResult && (
-              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-mono ${seedResult.ok ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}>
-                {seedResult.ok ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-                <p className="text-xs">{seedResult.message}</p>
+                {seedResult && (
+                  <div className={`flex items-start gap-2.5 p-3.5 rounded-xl text-sm font-mono ${seedResult.ok ? "bg-green-500/10 border border-green-500/15 text-green-400" : "bg-red-500/10 border border-red-500/15 text-red-400"}`}>
+                    {seedResult.ok ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+                    <p className="text-xs">{seedResult.message}</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            ) : null;
+          })()}
+        </div>
+      </Card>
 
       {/* DB Status Overview */}
-      <div className="rounded-xl border border-cyan-900/30 bg-gray-900/30">
-        <div className="px-4 py-3 border-b border-cyan-900/30">
-          <h4 className="text-sm font-mono font-bold text-cyan-400">Status Database per Store</h4>
-        </div>
-        <div className="divide-y divide-cyan-900/20">
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <h4 className="text-sm font-mono font-bold text-cyan-300">Status per Store</h4>
+        </CardHeader>
+        <div className="divide-y divide-cyan-900/15">
           {tenants.map((t) => (
-            <div key={t.id} className="px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.neon_database_url ? "bg-purple-500/10 border border-purple-500/30" : "bg-yellow-500/10 border border-yellow-500/30"}`}>
+            <div key={t.id} className="px-4 sm:px-5 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${t.neon_database_url ? "bg-purple-500/10 border border-purple-500/20" : "bg-yellow-500/10 border border-yellow-500/20"}`}>
                   <Server className={`h-4 w-4 ${t.neon_database_url ? "text-purple-400" : "text-yellow-400"}`} />
                 </div>
-                <div>
-                  <p className="text-sm font-mono text-cyan-200">{t.name}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-cyan-200 truncate">{t.name}</p>
                   <p className="text-[10px] font-mono text-cyan-700">{t.id}</p>
                 </div>
               </div>
-              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold ${t.neon_database_url ? "bg-purple-500/10 text-purple-300 border border-purple-500/20" : "bg-yellow-500/10 text-yellow-300 border border-yellow-500/20"}`}>
-                {t.neon_database_url ? "🗄️ Isolated" : "📦 Master"}
-              </span>
+              <Badge variant={t.neon_database_url ? "purple" : "warning"}>
+                {t.neon_database_url ? "Isolated" : "Master"}
+              </Badge>
             </div>
           ))}
           {tenants.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm font-mono text-cyan-700">Belum ada store</div>
+            <div className="px-4 py-10 text-center text-sm font-mono text-cyan-700">Belum ada store</div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Tips */}
-      <div className="rounded-xl border border-cyan-900/20 bg-gray-900/20 p-4 text-xs font-mono text-cyan-700 space-y-1">
-        <p>💡 <strong className="text-cyan-500">Tips:</strong></p>
-        <p>• Bikin Neon project baru di <a href="https://neon.tech" target="_blank" className="text-purple-400 hover:underline">neon.tech</a> (gratis!)</p>
-        <p>• Copy connection string → paste di halaman Store → Neon Database URL</p>
-        <p>• Balik ke sini → pilih store → klik "Seed Tenant DB"</p>
-        <p>• Pastikan pake <code className="text-cyan-500">?sslmode=require</code></p>
-      </div>
+      <Card className="p-4 sm:p-5">
+        <p className="text-xs font-mono text-cyan-500 font-bold mb-2">💡 Tips</p>
+        <ul className="space-y-1.5 text-[11px] font-mono text-cyan-600">
+          <li>• Bikin Neon project baru di <a href="https://neon.tech" target="_blank" className="text-purple-400 hover:underline">neon.tech</a> (gratis!)</li>
+          <li>• Copy connection string → paste di halaman Store → Neon Database URL</li>
+          <li>• Balik ke sini → pilih store → klik "Seed Tenant DB"</li>
+          <li>• Pastikan pakai <code className="text-cyan-400 bg-cyan-500/5 px-1 rounded">?sslmode=require</code></li>
+        </ul>
+      </Card>
     </div>
   );
 }
