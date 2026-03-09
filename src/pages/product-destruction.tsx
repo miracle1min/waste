@@ -72,11 +72,11 @@ type ItemRow = {
 type Step = "date" | "category" | "products" | "files" | "review";
 
 const STEPS = [
-  { id: "date", title: "Tanggal", description: "Pilih tanggal hari kerja" },
-  { id: "category", title: "Kategori", description: "Pilih kategori produk" },
-  { id: "products", title: "Produk", description: "Detail produk" },
-  { id: "files", title: "Dokumen", description: "Upload berkas" },
-  { id: "review", title: "Review", description: "Periksa data" },
+  { id: "date", title: "Tanggal", description: "Pilih tanggal kerja lo" },
+  { id: "category", title: "Kategori", description: "Mau buang yang mana?" },
+  { id: "products", title: "Produk", description: "Isi detail produknya" },
+  { id: "files", title: "Dokumen", description: "Upload berkasnya" },
+  { id: "review", title: "Review", description: "Cek sebelum kirim" },
 ];
 
 // Simple logout button component
@@ -106,7 +106,7 @@ function LogoutButton() {
       onClick={handleLogout}
       disabled={isLoggingOut}
       className="p-2 w-10 h-10 text-slate-400 hover:text-cyan-400 border border-transparent hover:border-cyan-800/50 transition-colors duration-200"
-      title="Keluar"
+      title="Logout"
     >
       {isLoggingOut ? (
         <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -164,13 +164,13 @@ export default function ProductDestruction() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedData) {
         e.preventDefault();
-        e.returnValue = 'Data belum disimpan! Yakin mau meninggalkan halaman?';
+        e.returnValue = 'Data belum kesimpen! Yakin mau ninggalin halaman ini?';
       }
     };
 
     const handlePopState = () => {
       if (hasUnsavedData) {
-        if (!window.confirm('Data belum disimpan! Yakin mau kembali?')) {
+        if (!window.confirm('Data belum kesimpen! Yakin mau balik?')) {
           window.history.pushState(null, '', window.location.pathname);
         }
       }
@@ -712,7 +712,7 @@ export default function ProductDestruction() {
       const res = await fetch(`/api/get-day-data?date=${selectedDate}`);
       const dayData = await res.json();
       if (!dayData.success || !dayData.grouped) {
-        toast({ title: "Error", description: "Gagal mengambil data dari spreadsheet", variant: "destructive" });
+        toast({ title: "Ups!", description: "Gagal ambil data dari spreadsheet", variant: "destructive" });
         return;
       }
       // Dynamic import jspdf
@@ -1048,13 +1048,13 @@ export default function ProductDestruction() {
       const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
       doc.save(fileName);
       
-      toast({ title: "PDF Generated!", description: `File ${fileName} berhasil didownload` });
+      toast({ title: "PDF Jadi!", description: `File ${fileName} berhasil ke-download` });
 
 
     } catch (error) {
       console.error('PDF generation error:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
-      toast({ title: "Error Generate PDF", description: `${errMsg}`, variant: "destructive" });
+      toast({ title: "Gagal Bikin PDF", description: `${errMsg}`, variant: "destructive" });
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -1122,7 +1122,7 @@ export default function ProductDestruction() {
               <button
                 onClick={() => window.location.href = "/"}
                 className="flex-shrink-0 p-1.5 text-slate-400 hover:text-cyan-400 transition-colors"
-                title="Kembali ke Menu"
+                title="Balik ke Menu"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -1235,7 +1235,7 @@ export default function ProductDestruction() {
                     <Label className="text-base sm:text-lg font-medium">Store / Outlet</Label>
                     <Select value={storeName} onValueChange={setStoreName}>
                       <SelectTrigger className="text-base h-12 sm:h-14">
-                        <SelectValue placeholder="Pilih store" />
+                        <SelectValue placeholder="Pilih store lo" />
                       </SelectTrigger>
                       <SelectContent>
                         {STORES.map((store) => (
@@ -1423,7 +1423,7 @@ export default function ProductDestruction() {
                               </SelectContent>
                             </Select>
                             <Input
-                              placeholder="Atau ketik nama produk lain"
+                              placeholder="Atau ketik nama produk lainnya"
                               className="h-10 text-sm"
                               value={row.customProductName}
                               onChange={(e) => { updateItemRow(rowIndex, 'customProductName', e.target.value); updateItemRow(rowIndex, 'namaProduk', e.target.value); }}
@@ -1623,7 +1623,7 @@ export default function ProductDestruction() {
                 <div className="w-full space-y-4 sm:space-y-6">
                   <ParafSelector
                     label="Paraf QC"
-                    description="Pilih nama untuk paraf QC"
+                    description="Pilih nama buat paraf QC"
                     value={form.watch("parafQCName")}
                     onValueChange={(value) => {
                       form.setValue("parafQCName", value);
@@ -1633,7 +1633,7 @@ export default function ProductDestruction() {
 
                   <ParafManagerSelector
                     label="Paraf Manager"
-                    description="Pilih nama untuk paraf Manager"
+                    description="Pilih nama buat paraf Manager"
                     value={form.watch("parafManagerName")}
                     onValueChange={(value) => {
                       form.setValue("parafManagerName", value);
@@ -1891,7 +1891,7 @@ export default function ProductDestruction() {
                 setItemRows([{ ...emptyItemRow }]);
                 resetForm();
                 localStorage.removeItem('waste_form_cache');
-                toast({ title: "🗑️ Data Direset", description: "Semua data berhasil direset" });
+                toast({ title: "🗑️ Direset!", description: "Semua data udah ke-reset" });
                 // Force refresh status input
                 setStatusRefreshTrigger(prev => prev + 1);
               }}

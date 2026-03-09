@@ -116,13 +116,13 @@ async function generatePdfForDate(
   pelaporName?: string,
   pelaporSigUrl?: string
 ): Promise<{ blob: Blob; fileName: string } | null> {
-  onProgress?.(`Mengambil data ${date}...`);
+  onProgress?.(`Ngambil data ${date}...`);
   
   const res = await fetch(`/api/get-day-data?date=${date}`);
   const dayData = await res.json();
   if (!dayData.success || !dayData.grouped) return null;
 
-  onProgress?.(`Membuat PDF ${date}...`);
+  onProgress?.(`Bikin PDF ${date}...`);
 
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
@@ -450,10 +450,10 @@ export default function Dashboard() {
       if (json.success) {
         setData(json);
       } else {
-        setError(json.error || "Gagal memuat data");
+        setError(json.error || "Gagal load data");
       }
     } catch {
-      setError("Gagal terhubung ke server");
+      setError("Ga bisa connect ke server");
     } finally {
       setLoading(false);
     }
@@ -518,7 +518,7 @@ export default function Dashboard() {
     if (!selectedPelapor) {
       toast({
         title: "👤 Pilih Pelapor",
-        description: "Pilih nama pelapor terlebih dahulu untuk TTD di PDF",
+        description: "Pilih nama pelapor dulu ya buat TTD di PDF",
         variant: "destructive",
       });
       return;
@@ -567,7 +567,7 @@ export default function Dashboard() {
 
     toast({
       title: `📄 Batch PDF Selesai!`,
-      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — PDF berhasil didownload`,
+      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — PDF udah ke-download`,
     });
   };
 
@@ -660,7 +660,7 @@ export default function Dashboard() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mr-3" />
-            <span className="text-slate-400">Memuat data dashboard...</span>
+            <span className="text-slate-400">Lagi loading data, bentar ya...</span>
           </div>
         )}
 
@@ -774,7 +774,7 @@ export default function Dashboard() {
                       </div>
                     )}
                     {!selectedPelapor && selectedPdfDates.size > 0 && (
-                      <p className="text-[10px] text-amber-400 mt-1">⚠️ Pilih pelapor dulu sebelum generate PDF</p>
+                      <p className="text-[10px] text-amber-400 mt-1">⚠️ Pilih pelapor dulu sebelum bikin PDF</p>
                     )}
                   </div>
 
@@ -798,7 +798,7 @@ export default function Dashboard() {
                   </Button>
                 </>
               ) : (
-                <p className="text-center text-slate-500 py-6">Tidak ada data tersedia untuk generate PDF</p>
+                <p className="text-center text-slate-500 py-6">Belum ada data buat generate PDF nih</p>
               )}
             </div>
 
@@ -868,7 +868,7 @@ export default function Dashboard() {
                   if (stations.length === 0) {
                     return (
                       <p className="text-center text-slate-500 py-6 text-sm">
-                        Tidak ada data waste untuk periode {statPeriod === "daily" ? "hari ini" : statPeriod === "weekly" ? "7 hari terakhir" : "30 hari terakhir"}
+                        Belum ada data waste buat periode {statPeriod === "daily" ? "hari ini" : statPeriod === "weekly" ? "7 hari terakhir" : "30 hari terakhir"}
                       </p>
                     );
                   }

@@ -17,8 +17,8 @@ const QC_OPTIONS = [
 ];
 
 const loginSchema = z.object({
-  qcName: z.string().min(1, "Pilih nama QC terlebih dahulu"),
-  password: z.string().min(1, "Password wajib diisi"),
+  qcName: z.string().min(1, "Pilih nama QC dulu ya"),
+  password: z.string().min(1, "Password jangan kosong"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -274,7 +274,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       setConfirmedName(data.qcName);
       setShowConfirm(true);
     } else {
-      setError("⚠ ACCESS DENIED — Password salah");
+      setError("⚠ DITOLAK — Password lo salah");
       form.setValue("password", "");
     }
     setIsSubmitting(false);
@@ -310,8 +310,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               </div>
 
               <div>
-                <p className="text-xs font-mono text-green-400/60 tracking-[0.3em] uppercase">Identity Verified</p>
-                <p className="text-cyan-400/70 text-sm font-mono mt-3">Kamu akan masuk sebagai:</p>
+                <p className="text-xs font-mono text-green-400/60 tracking-[0.3em] uppercase">Identitas Oke</p>
+                <p className="text-cyan-400/70 text-sm font-mono mt-3">Lo mau masuk sebagai:</p>
                 <p className="text-2xl font-bold mt-2 font-mono tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400">
                   {confirmedName}
                 </p>
@@ -323,7 +323,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   className="flex-1 h-12 rounded-lg border border-cyan-800/50 bg-transparent text-cyan-400 font-mono text-sm
                     hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all duration-300"
                 >
-                  ← Kembali
+                  ← Balik
                 </button>
                 <button
                   onClick={handleConfirmLogin}
@@ -331,7 +331,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     hover:bg-cyan-500/20 hover:shadow-[0_0_20px_rgba(0,255,255,0.3)] transition-all duration-300
                     active:scale-95"
                 >
-                  Ya, Masuk! →
+                  Yap, Masuk! →
                 </button>
               </div>
             </div>
@@ -381,7 +381,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               {/* Title */}
               <div>
                 <div className="text-xs font-mono text-cyan-500/50 tracking-[0.4em] uppercase mb-2">
-                  // system access
+                  // akses sistem
                 </div>
                 <h1 className="text-4xl font-black tracking-wider">
                   <GlitchText text="AWAS" className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500" />
@@ -417,14 +417,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <div className="text-[10px] font-mono text-cyan-600 tracking-wider uppercase mb-1.5 ml-1">
-                        ▸ Identitas QC
+                        ▸ Nama QC
                       </div>
                       <FormControl>
                         <CyberSelect
                           value={field.value}
                           onChange={field.onChange}
                           options={QC_OPTIONS}
-                          placeholder="Pilih nama kamu..."
+                          placeholder="Pilih nama lo..."
                         />
                       </FormControl>
                       <FormMessage className="text-red-400 text-xs font-mono" />
@@ -439,7 +439,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <div className="text-[10px] font-mono text-cyan-600 tracking-wider uppercase mb-1.5 ml-1">
-                        ▸ Kode Akses
+                        ▸ Password
                       </div>
                       <FormControl>
                         <div className="relative">
@@ -483,11 +483,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   {isSubmitting ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      AUTHENTICATING...
+                      Lagi ngecek...
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      INITIALIZE →
+                      MASUK →
                     </span>
                   )}
                 </button>
@@ -498,9 +498,9 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <div className="text-center min-h-[20px]">
               <TypewriterText
                 texts={[
-                  "Masukkan kredensial untuk lanjut",
-                  "Waste tracking made simple ☕",
-                  "System ready. Awaiting input...",
+                  "Masukin kredensial buat lanjut",
+                  "Waste tracking simpel abis ☕",
+                  "Sistem siap. Gas aja...",
                 ]}
                 speed={60}
               />
@@ -510,7 +510,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <div className="flex items-center gap-3 pt-2">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent to-cyan-500/20" />
               <span className="text-[10px] font-mono text-cyan-700/50">
-                By DirgaX | Jangan Lupa ☕
+                By DirgaX | Jgn lupa ☕
               </span>
               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-cyan-500/20" />
             </div>

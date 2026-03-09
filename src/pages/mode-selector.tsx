@@ -60,10 +60,10 @@ export default function ModeSelector() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
-            Pilih Mode Input
+            Mau Pakai Yang Mana?
           </h2>
           <p className="text-sm text-slate-400">
-            Pilih cara input data waste yang kamu inginkan
+            Tinggal pilih, langsung gas bro!
           </p>
         </div>
 
@@ -83,11 +83,11 @@ export default function ModeSelector() {
               Waste Otomatis
             </h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Paste format teks langsung → data otomatis ter-record. TTD otomatis dari database. Cocok buat QC yang udah hafal formatnya.
+              Paste format teks langsung → data otomatis ter-record. TTD otomatis dari database. Pas banget buat QC yang udah hafal formatnya.
             </p>
             <div className="mt-4 flex items-center gap-2 text-xs text-cyan-500/70">
               <Zap className="w-3 h-3" />
-              <span>~30 detik per station</span>
+              <span>~30 detik per station, ngebut!</span>
             </div>
           </button>
 
@@ -106,11 +106,11 @@ export default function ModeSelector() {
               Waste Manual
             </h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Input step-by-step pakai form lengkap. TTD gambar tangan. Cocok buat yang baru pertama kali atau butuh kontrol penuh.
+              Input step-by-step pakai form lengkap. TTD gambar tangan. Buat yang baru belajar atau butuh kontrol penuh.
             </p>
             <div className="mt-4 flex items-center gap-2 text-xs text-purple-500/70">
               <ClipboardEdit className="w-3 h-3" />
-              <span>Full wizard 5 langkah</span>
+              <span>Full wizard 5 langkah, telaten ya</span>
             </div>
           </button>
         </div>

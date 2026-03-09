@@ -48,7 +48,7 @@ function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] }
   const lines = text.trim().split("\n").map(l => l.trim()).filter(l => l.length > 0);
 
   if (lines.length === 0) {
-    return { items: [], errors: [{ line: 0, message: "Data kosong. Paste minimal 1 item." }] };
+    return { items: [], errors: [{ line: 0, message: "Kosong nih. Paste minimal 1 item dulu." }] };
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -88,11 +88,11 @@ function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] }
       continue;
     }
 
-    errors.push({ line: lineNum, message: `Format salah: "${line}". Gunakan: NAMA (KODE LOT): QTY SATUAN ALASAN` });
+    errors.push({ line: lineNum, message: `Format salah nih: "${line}". Gunakan: NAMA (KODE LOT): QTY SATUAN ALASAN` });
   }
 
   if (items.length === 0 && errors.length === 0) {
-    errors.push({ line: 0, message: "Tidak ada item yang berhasil di-parse" });
+    errors.push({ line: 0, message: "Ga ada item yang ke-parse" });
   }
 
   return { items, errors };
@@ -166,8 +166,8 @@ export default function AutoWaste() {
     if (!parsedItems.length || !selectedStation || !selectedShift || !selectedQC || !selectedManajer) return;
     if (dokumentasiFiles.length === 0) {
       toast({
-        title: "📸 Foto Dokumentasi Wajib",
-        description: "Upload minimal 1 foto dokumentasi pemusnahan sebelum submit",
+        title: "📸 Foto Dokumentasi Dong",
+        description: "Upload minimal 1 foto dokumentasi dulu ya!",
         variant: "destructive",
       });
       return;
@@ -178,8 +178,8 @@ export default function AutoWaste() {
       const qcUrl = signatureUrls[selectedQC] || "";
       const mgrUrl = signatureUrls[selectedManajer] || "";
 
-      if (!qcUrl) throw new Error(`TTD untuk QC "${selectedQC}" tidak ditemukan`);
-      if (!mgrUrl) throw new Error(`TTD untuk Manajer "${selectedManajer}" tidak ditemukan`);
+      if (!qcUrl) throw new Error(`TTD untuk QC "${selectedQC}" ga ketemu`);
+      if (!mgrUrl) throw new Error(`TTD untuk Manajer "${selectedManajer}" ga ketemu`);
 
       const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
       const jamList = parsedItems.map(() => jamFormatted);
@@ -392,7 +392,7 @@ export default function AutoWaste() {
                 {selectedQC && signatureUrls[selectedQC] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-slate-800/50 border border-slate-700/30">
                     <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 rounded bg-white/10 p-0.5" />
-                    <span className="text-[10px] text-green-400">✓ TTD ready</span>
+                    <span className="text-[10px] text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
               </div>
@@ -409,7 +409,7 @@ export default function AutoWaste() {
                 {selectedManajer && signatureUrls[selectedManajer] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-slate-800/50 border border-slate-700/30">
                     <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 rounded bg-white/10 p-0.5" />
-                    <span className="text-[10px] text-green-400">✓ TTD ready</span>
+                    <span className="text-[10px] text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
               </div>
@@ -417,7 +417,7 @@ export default function AutoWaste() {
 
             {isLoadingSignatures && (
               <p className="text-xs text-slate-500 text-center flex items-center justify-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Memuat tanda tangan...
+                <Loader2 className="w-3 h-3 animate-spin" /> Lagi ambil TTD...
               </p>
             )}
 
@@ -426,7 +426,7 @@ export default function AutoWaste() {
               disabled={!configReady}
               className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-5 text-base font-bold disabled:opacity-40"
             >
-              Lanjut Paste Data Item →
+              Gas, Paste Data Item →
             </Button>
           </div>
         )}
@@ -444,7 +444,7 @@ export default function AutoWaste() {
             {/* Format reference */}
             <div className="p-3 rounded-lg border border-cyan-800/30 bg-cyan-950/20">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-cyan-400">📝 Format per baris</span>
+                <span className="text-xs font-bold text-cyan-400">📝 Format tiap baris</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -468,7 +468,7 @@ Contoh:
               <textarea
                 value={rawText}
                 onChange={e => { setRawText(e.target.value); setParseErrors([]); }}
-                placeholder={`Paste data item di sini...\n\nContoh:\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Dimsum Ayam (2025-03-09): 3 PACK Rusak\n- Bakso Ikan (2025-03-09): 2 PACK Stale`}
+                placeholder={`Paste item di sini...\n\nContoh:\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Dimsum Ayam (2025-03-09): 3 PACK Rusak\n- Bakso Ikan (2025-03-09): 2 PACK Stale`}
                 className="w-full h-52 px-4 py-3 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white font-mono text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none placeholder:text-slate-600"
               />
               {rawText && (
@@ -505,9 +505,9 @@ Contoh:
                   try {
                     const text = await navigator.clipboard.readText();
                     setRawText(text);
-                    toast({ title: "📋 Pasted!", description: "Teks dari clipboard berhasil di-paste" });
+                    toast({ title: "📋 Pasted!", description: "Teks clipboard sukses ke-paste" });
                   } catch {
-                    toast({ title: "⚠️ Gagal", description: "Tidak bisa akses clipboard. Paste manual.", variant: "destructive" });
+                    toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste sendiri ya.", variant: "destructive" });
                   }
                 }}
                 className="flex-1 border-cyan-800/50 text-cyan-400 hover:bg-cyan-950/30"
@@ -519,7 +519,7 @@ Contoh:
                 disabled={!rawText.trim()}
                 className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold"
               >
-                <Zap className="w-4 h-4 mr-2" /> Parse & Preview
+                <Zap className="w-4 h-4 mr-2" /> Parse & Cek
               </Button>
             </div>
           </div>
@@ -529,8 +529,8 @@ Contoh:
         {step === "preview" && (
           <div className="space-y-4 w-full">
             <div className="text-center">
-              <h2 className="text-lg font-bold text-green-400 mb-1">✅ Preview Data</h2>
-              <p className="text-xs text-slate-400">Periksa data sebelum submit</p>
+              <h2 className="text-lg font-bold text-green-400 mb-1">✅ Cek Data</h2>
+              <p className="text-xs text-slate-400">Cek dulu sebelum kirim</p>
             </div>
 
             {/* Info cards */}
@@ -606,7 +606,7 @@ Contoh:
 
             {/* Documentation photos */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">📸 Foto Dokumentasi <span className="text-red-400">*wajib</span></label>
+              <label className="text-sm font-medium text-slate-300">📸 Foto Dokumentasi <span className="text-red-400">*wajib ya</span></label>
               <MultiFileUpload
                 onFilesSelect={setDokumentasiFiles}
                 maxFiles={10}
@@ -614,9 +614,9 @@ Contoh:
                 label="Foto Dokumentasi"
               />
               {dokumentasiFiles.length === 0 ? (
-                <p className="text-xs text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto dokumentasi harus diupload</p>
+                <p className="text-xs text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto dulu ya bro</p>
               ) : (
-                <p className="text-xs text-green-400 flex items-center gap-1">✅ {dokumentasiFiles.length} foto siap diupload</p>
+                <p className="text-xs text-green-400 flex items-center gap-1">✅ {dokumentasiFiles.length} foto udah siap</p>
               )}
             </div>
 
@@ -627,7 +627,7 @@ Contoh:
                 onClick={() => setStep("paste")}
                 className="flex-1 border-slate-700/50 text-slate-400"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Edit
+                <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
               </Button>
               <Button
                 onClick={handleSubmit}
@@ -635,9 +635,9 @@ Contoh:
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
               >
                 {isSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
                 ) : (
-                  <><Send className="w-4 h-4 mr-2" /> Submit ke Spreadsheet</>
+                  <><Send className="w-4 h-4 mr-2" /> Kirim ke Spreadsheet</>
                 )}
               </Button>
             </div>
@@ -653,7 +653,7 @@ Contoh:
             <div>
               <h2 className="text-2xl font-bold text-green-400 mb-2">Data Tersimpan! 🎉</h2>
               <p className="text-sm text-slate-400">
-                {selectedStation} - {selectedShift} berhasil direcord ke Google Sheets
+                {selectedStation} - {selectedShift} udah ke-record di Google Sheets
               </p>
             </div>
 
@@ -673,14 +673,14 @@ Contoh:
                 onClick={handleNewEntry}
                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-5 text-base font-bold"
               >
-                <Zap className="w-5 h-5 mr-2" /> Input Station Lain
+                <Zap className="w-5 h-5 mr-2" /> Lanjut Station Lain
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation("/")}
                 className="w-full border-slate-700/50 text-slate-400"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Menu
+                <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
               </Button>
             </div>
           </div>
