@@ -33,6 +33,15 @@ interface DashboardData {
   stationTotals: Record<string, number>;
   shiftTotals: Record<string, number>;
   topProducts: Array<{ name: string; count: number; qty: number }>;
+  lastEntry?: {
+    date: string;
+    qc: string;
+    station: string;
+    shift: string;
+  };
+  stationBreakdown?: Record<string, Array<{ unit: string; items: Array<{ name: string; qty: number }>; totalQty: number }>>;
+  periodBreakdown?: Record<string, Record<string, Array<{ unit: string; items: Array<{ name: string; qty: number }>; totalQty: number }>>>;
+  qcNames?: string[];
 }
 
 
