@@ -524,7 +524,8 @@ export default function Dashboard() {
 
   // Pelapor dropdown state
   const [selectedPelapor, setSelectedPelapor] = useState<string>("");
-  const [statPeriod, setStatPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
+  const [statPeriod, setStatPeriod] = useState<"daily" | "weekly" | "monthly" | "custom">("weekly");
+  const [customStatDate, setCustomStatDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
   const [loadingSignatures, setLoadingSignatures] = useState(true);
 
@@ -1022,31 +1023,57 @@ export default function Dashboard() {
                   <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
                     🏭 Waste per Station (Detail per Satuan)
                   </h2>
-                  <div className="flex bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
-                    {([["daily", "Hari Ini"], ["weekly", "7 Hari"], ["monthly", "30 Hari"]] as const).map(([key, label]) => (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+                      {([["daily", "Hari Ini"], ["weekly", "7 Hari"], ["monthly", "30 Hari"]] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          onClick={() => setStatPeriod(key)}
+                          className={`px-3 py-1 text-[11px] font-medium transition-all ${
+                            statPeriod === key 
+                              ? "bg-cyan-600 text-white" 
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                       <button
-                        key={key}
-                        onClick={() => setStatPeriod(key)}
-                        className={`px-3 py-1 text-[11px] font-medium transition-all ${
-                          statPeriod === key 
+                        onClick={() => setStatPeriod("custom")}
+                        className={`px-3 py-1 text-[11px] font-medium transition-all flex items-center gap-1 ${
+                          statPeriod === "custom" 
                             ? "bg-cyan-600 text-white" 
                             : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                         }`}
                       >
-                        {label}
+                        📅 Tanggal
                       </button>
-                    ))}
+                    </div>
+                    {statPeriod === "custom" && (
+                      <input
+                        type="date"
+                        value={customStatDate}
+                        onChange={(e) => setCustomStatDate(e.target.value)}
+                        className="text-xs bg-slate-900 border border-cyan-700/50 rounded-lg px-2 py-1 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition"
+                      />
+                    )}
                   </div>
                 </div>
 
                 {(() => {
-                  const periodData = data.periodBreakdown[statPeriod] || {};
+                  const periodData = statPeriod === "custom" 
+                    ? (data.periodBreakdown.byDate?.[customStatDate] || {})
+                    : (data.periodBreakdown[statPeriod] || {});
                   const stations = Object.keys(periodData);
                   
                   if (stations.length === 0) {
+                    const periodLabel = statPeriod === "daily" ? "hari ini" 
+                      : statPeriod === "weekly" ? "7 hari terakhir" 
+                      : statPeriod === "monthly" ? "30 hari terakhir"
+                      : `tanggal ${customStatDate.split("-").reverse().join("/")}`;
                     return (
                       <p className="text-center text-slate-500 py-6 text-sm">
-                        Belum ada data waste buat periode {statPeriod === "daily" ? "hari ini" : statPeriod === "weekly" ? "7 hari terakhir" : "30 hari terakhir"}
+                        Belum ada data waste buat {periodLabel}
                       </p>
                     );
                   }

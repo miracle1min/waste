@@ -235,6 +235,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         daily: buildPeriodBreakdown(allItems, todayStr),
         weekly: buildPeriodBreakdown(allItems, weekAgo),
         monthly: buildPeriodBreakdown(allItems, monthAgo),
+        byDate: (() => {
+          const grouped: Record<string, typeof allItems> = {};
+          for (const item of allItems) {
+            if (!grouped[item.date]) grouped[item.date] = [];
+            grouped[item.date].push(item);
+          }
+          const result: Record<string, Record<string, { unit: string; items: { name: string; qty: number }[]; totalQty: number }[]>> = {};
+          for (const [date, dateItems] of Object.entries(grouped)) {
+            const byStation: Record<string, Record<string, Record<string, number>>> = {};
+            for (const item of dateItems) {
+              if (!byStation[item.station]) byStation[item.station] = {};
+              if (!byStation[item.station][item.unit]) byStation[item.station][item.unit] = {};
+              byStation[item.station][item.unit][item.product] = (byStation[item.station][item.unit][item.product] || 0) + item.qty;
+            }
+            result[date] = {};
+            for (const [station, unitMap] of Object.entries(byStation)) {
+              result[date][station] = Object.entries(unitMap).map(([unit, products]) => {
+                const items = Object.entries(products).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+                return { unit, items, totalQty: items.reduce((s, i) => s + i.qty, 0) };
+              }).sort((a, b) => b.totalQty - a.totalQty);
+            }
+          }
+          return result;
+        })(),
       },
       qcNames: Array.from(allQcNames),
     });
