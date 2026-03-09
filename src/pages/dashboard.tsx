@@ -389,20 +389,15 @@ export default function Dashboard() {
   const [customEnd, setCustomEnd] = useState("");
   const [showRangeMenu, setShowRangeMenu] = useState(false);
   
-  // Fetch Pelapor signatures on mount
+  // Fetch Pelapor signatures on mount (dynamic from DB)
   useEffect(() => {
     async function fetchSigs() {
       try {
-        const res = await fetch("/api/signatures");
+        const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
+        const res = await fetch(`/api/signatures?role=qc&tenant_id=${encodeURIComponent(tenantId)}`);
         const data = await res.json();
-        if (data.success) {
-          // Only QC signatures for pelapor
-          const qcNames = ["PAJAR", "RIZKI", "JOHAN", "LUISA"];
-          const qcSigs: Record<string, string> = {};
-          for (const name of qcNames) {
-            if (data.signatures[name]) qcSigs[name] = data.signatures[name];
-          }
-          setPelaporSigUrls(qcSigs);
+        if (data.success && data.signatures) {
+          setPelaporSigUrls(data.signatures);
         }
       } catch (e) {
         console.error("Failed to load pelapor signatures:", e);

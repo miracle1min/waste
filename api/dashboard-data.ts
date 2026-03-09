@@ -194,12 +194,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               if (entryTime >= lastEntryTime) {
                 lastEntryTime = entryTime;
                 const prevQc: string = (lastEntryInfo as any)?.qc || '';
-                lastEntryInfo = { date: tab, qc: qcName || prevQc, station, shift };
+                const cleanQc = (qcName && !qcName.includes('#REF') && !qcName.includes('Please use')) ? qcName : prevQc;
+                lastEntryInfo = { date: tab, qc: cleanQc || '-', station, shift };
               }
             }
 
-            // Track QC names
-            if (qcName && !allQcNames.has(qcName)) allQcNames.add(qcName);
+            // Track QC names (filter out #REF! errors from broken formulas)
+            if (qcName && !qcName.includes('#REF') && !qcName.includes('Please use') && !allQcNames.has(qcName)) allQcNames.add(qcName);
 
             // Collect daily items for period breakdown  
             allItems.push({ date: tabDate?.toISOString().split('T')[0] || tab, station, product: pName, qty, unit, shift });
