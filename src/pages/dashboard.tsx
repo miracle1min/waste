@@ -103,7 +103,9 @@ const extractImageUrl = (val: string): string => {
 async function generatePdfForDate(
   date: string,
   storeName: string,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  pelaporName?: string,
+  pelaporSigUrl?: string
 ): Promise<{ blob: Blob; fileName: string } | null> {
   onProgress?.(`Mengambil data ${date}...`);
   
@@ -317,26 +319,15 @@ async function generatePdfForDate(
   }
   startY += 8;
 
-  const loggedInQC = localStorage.getItem('waste_app_qc_name') || 'QC';
-  const qcSigMap: Record<string, string> = {
-    'JOHAN CLAUS THENU': 'johan-claus-thenu',
-    'M. RIZKI RAMDANI': 'm-rizki-ramdani',
-    'LUISA RIKE FERNANDA': 'luisa-rike-fernanda',
-    'PAJAR HIDAYAT': 'pajar-hidayat',
-  };
-
+  // Pelapor signature from dropdown selection
+  const displayPelapor = pelaporName || 'QC';
   let qcSigImg: string | null = null;
-  const sigFileName = qcSigMap[loggedInQC];
-  if (sigFileName) {
+  if (pelaporSigUrl) {
     try {
-      const sigRes = await fetch(`/signatures/qc/${sigFileName}.jpeg`);
-      if (sigRes.ok) {
-        const blob = await sigRes.blob();
-        qcSigImg = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
+      const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(pelaporSigUrl)}`);
+      if (proxyRes.ok) {
+        const data = await proxyRes.json();
+        if (data.success && data.dataUrl) qcSigImg = data.dataUrl;
       }
     } catch {}
   }
@@ -354,7 +345,7 @@ async function generatePdfForDate(
   if (qcSigImg) doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
   doc.line(rightX, startY + 15, rightX + 55, startY + 15);
   doc.setFont('helvetica', 'normal');
-  doc.text(loggedInQC, rightX + 5, startY + 20);
+  doc.text(displayPelapor, rightX + 5, startY + 20);
 
   const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
   return { blob: doc.output('blob'), fileName };
@@ -372,11 +363,40 @@ export default function Dashboard() {
   const [customEnd, setCustomEnd] = useState("");
   const [showRangeMenu, setShowRangeMenu] = useState(false);
   
+  // Fetch Pelapor signatures on mount
+  useEffect(() => {
+    async function fetchSigs() {
+      try {
+        const res = await fetch("/api/signatures");
+        const data = await res.json();
+        if (data.success) {
+          // Only QC signatures for pelapor
+          const qcNames = ["PAJAR", "RIZKI", "JOHAN", "LUISA"];
+          const qcSigs: Record<string, string> = {};
+          for (const name of qcNames) {
+            if (data.signatures[name]) qcSigs[name] = data.signatures[name];
+          }
+          setPelaporSigUrls(qcSigs);
+        }
+      } catch (e) {
+        console.error("Failed to load pelapor signatures:", e);
+      } finally {
+        setLoadingSignatures(false);
+      }
+    }
+    fetchSigs();
+  }, []);
+
   // Batch PDF states
   const [selectedPdfDates, setSelectedPdfDates] = useState<Set<string>>(new Set());
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
   const [pdfProgressNum, setPdfProgressNum] = useState({ current: 0, total: 0 });
+
+  // Pelapor dropdown state
+  const [selectedPelapor, setSelectedPelapor] = useState<string>("");
+  const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
+  const [loadingSignatures, setLoadingSignatures] = useState(true);
 
   const dateRange = useMemo(() => {
     if (range === "custom" && customStart && customEnd) {
@@ -469,6 +489,14 @@ export default function Dashboard() {
 
   const handleBatchPdf = async () => {
     if (selectedPdfDates.size === 0) return;
+    if (!selectedPelapor) {
+      toast({
+        title: "👤 Pilih Pelapor",
+        description: "Pilih nama pelapor terlebih dahulu untuk TTD di PDF",
+        variant: "destructive",
+      });
+      return;
+    }
     setPdfGenerating(true);
     const dates = Array.from(selectedPdfDates).sort();
     const storeName = localStorage.getItem('waste_app_store') || 'Store';
@@ -483,7 +511,7 @@ export default function Dashboard() {
       
       try {
         const { fullDate } = formatTabDate(date);
-        const result = await generatePdfForDate(fullDate || date, storeName, (msg) => setPdfProgress(msg));
+        const result = await generatePdfForDate(fullDate || date, storeName, (msg) => setPdfProgress(msg), selectedPelapor, pelaporSigUrls[selectedPelapor]);
         if (result) {
           // Download individual file
           const url = URL.createObjectURL(result.blob);
@@ -708,10 +736,41 @@ export default function Dashboard() {
                     </div>
                   )}
 
+                  {/* Pelapor dropdown */}
+                  <div className="mt-3 mb-2">
+                    <label className="text-xs font-medium text-slate-400 mb-1 block">
+                      👤 Pelapor (TTD di PDF) <span className="text-red-400">*wajib</span>
+                    </label>
+                    <select
+                      value={selectedPelapor}
+                      onChange={(e) => setSelectedPelapor(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none"
+                    >
+                      <option value="">-- Pilih Pelapor --</option>
+                      {Object.keys(pelaporSigUrls).map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                    {selectedPelapor && pelaporSigUrls[selectedPelapor] && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <img 
+                          src={pelaporSigUrls[selectedPelapor]} 
+                          alt={`TTD ${selectedPelapor}`}
+                          className="h-8 rounded bg-white/10 p-0.5"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <span className="text-[10px] text-green-400">✅ TTD {selectedPelapor} siap</span>
+                      </div>
+                    )}
+                    {!selectedPelapor && selectedPdfDates.size > 0 && (
+                      <p className="text-[10px] text-amber-400 mt-1">⚠️ Pilih pelapor dulu sebelum generate PDF</p>
+                    )}
+                  </div>
+
                   {/* Generate button */}
                   <Button
                     onClick={handleBatchPdf}
-                    disabled={selectedPdfDates.size === 0 || pdfGenerating}
+                    disabled={selectedPdfDates.size === 0 || pdfGenerating || !selectedPelapor}
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-2 disabled:opacity-50"
                   >
                     {pdfGenerating ? (
