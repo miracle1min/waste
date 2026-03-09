@@ -194,8 +194,9 @@ async function generatePdfForDate(
   const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
   let startY = 33;
 
-  // Signature cache
+  // Signature & documentation photo cache
   const sigCache: Record<string, string> = {};
+  const docPhotoCache: Record<string, string> = {};
   const fetchSigImage = async (url: string): Promise<string | null> => {
     if (!url || url === '-' || !url.startsWith('http')) return null;
     if (sigCache[url]) return sigCache[url];
@@ -206,6 +207,43 @@ async function generatePdfForDate(
       if (data.success && data.dataUrl) {
         sigCache[url] = data.dataUrl;
         return data.dataUrl;
+      }
+      return null;
+    } catch { return null; }
+  };
+  const fetchDocPhoto = async (url: string): Promise<string | null> => {
+    if (!url || url === '-' || !url.startsWith('http')) return null;
+    if (docPhotoCache[url]) return docPhotoCache[url];
+    try {
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) return null;
+      const data = await proxyRes.json();
+      if (data.success && data.dataUrl) {
+        // Resize to 236x236 via offscreen canvas
+        const resized = await new Promise<string>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 236;
+            canvas.height = 236;
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 236, 236);
+            // Cover-fit: crop center
+            const scale = Math.max(236 / img.width, 236 / img.height);
+            const sw = 236 / scale;
+            const sh = 236 / scale;
+            const sx = (img.width - sw) / 2;
+            const sy = (img.height - sh) / 2;
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 236, 236);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = () => resolve(data.dataUrl);
+          img.src = data.dataUrl;
+        });
+        docPhotoCache[url] = resized;
+        return resized;
       }
       return null;
     } catch { return null; }
@@ -224,7 +262,7 @@ async function generatePdfForDate(
 
     const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
 
-    // Pre-fetch sigs
+    // Pre-fetch sigs + doc photos
     for (const station of stationOrder) {
       const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
       if (entry) {
@@ -232,13 +270,22 @@ async function generatePdfForDate(
         const mgrUrl = extractImageUrl(entry.parafManager);
         if (qcUrl) await fetchSigImage(qcUrl);
         if (mgrUrl) await fetchSigImage(mgrUrl);
+        // Pre-fetch documentation photos (max 2 per entry)
+        if (entry.dokumentasi) {
+          const docUrls = entry.dokumentasi
+            .map((d: string) => extractImageUrl(d))
+            .filter((u: string) => u)
+            .slice(0, 2);
+          for (const docUrl of docUrls) {
+            await fetchDocPhoto(docUrl);
+          }
+        }
       }
     }
 
-    type RowEntry = { entry: any | null; stationIdx: number };
+    type RowEntry = { entry: any | null; stationIdx: number; docUrls: string[] };
     const rowEntries: RowEntry[] = [];
     const rows: string[][] = [];
-    const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/12W36gW1ma3Df2-zftIYkX-z6c0m_X1KV8C1ISDw8PtI/edit';
 
     stationOrder.forEach((station, idx) => {
       const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
@@ -249,21 +296,25 @@ async function generatePdfForDate(
         const satuan = String(entry.unit || '-').replace(/,\s*/g, '\n');
         const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
         const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
-        const hasDocs = entry.dokumentasi?.some((d: string) => {
-          if (!d || d === '-') return false;
-          return d.includes('http') || d.includes('IMAGE');
-        });
-        rowEntries.push({ entry, stationIdx: idx });
+        // Collect doc photo URLs (max 2)
+        const docUrls = (entry.dokumentasi || [])
+          .map((d: string) => extractImageUrl(d))
+          .filter((u: string) => u)
+          .slice(0, 2);
+        rowEntries.push({ entry, stationIdx: idx, docUrls });
         rows.push([
           (idx + 1).toString(), namaProduk, kodeProduk, jumlahProduk, satuan,
           metode, alasan, parseJamValue(entry.jamTanggalPemusnahan || '-'),
-          '', '', hasDocs ? '' : '-',
+          '', '', docUrls.length > 0 ? '' : '-',
         ]);
       } else {
-        rowEntries.push({ entry: null, stationIdx: idx });
+        rowEntries.push({ entry: null, stationIdx: idx, docUrls: [] });
         rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
       }
     });
+
+    // Check if any row in this shift has doc photos
+    const hasAnyDocPhotos = rowEntries.some(re => re.docUrls.length > 0);
 
     autoTable(doc, {
       head: headers, body: rows, startY,
@@ -272,13 +323,22 @@ async function generatePdfForDate(
       headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle' },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center', valign: 'middle' },
-        1: { cellWidth: 48 }, 2: { cellWidth: 26 },
+        1: { cellWidth: hasAnyDocPhotos ? 44 : 48 }, 2: { cellWidth: 26 },
         3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 18, halign: 'center' },
-        5: { cellWidth: 23 }, 6: { cellWidth: 40 },
+        5: { cellWidth: 23 }, 6: { cellWidth: hasAnyDocPhotos ? 38 : 40 },
         7: { cellWidth: 20 }, 8: { cellWidth: 26, halign: 'center' },
-        9: { cellWidth: 26, halign: 'center' }, 10: { cellWidth: 24, halign: 'center' },
+        9: { cellWidth: 26, halign: 'center' }, 10: { cellWidth: hasAnyDocPhotos ? 30 : 24, halign: 'center' },
       },
       tableWidth: pageWidth - 2 * margin, theme: 'grid',
+      didParseCell: (data: any) => {
+        if (data.section !== 'body') return;
+        const rowIdx = data.row.index;
+        const rowEntry = rowEntries[rowIdx];
+        // Increase row height for rows with doc photos
+        if (rowEntry?.docUrls?.length > 0) {
+          data.cell.styles.minCellHeight = Math.max(data.cell.styles.minCellHeight, 16);
+        }
+      },
       didDrawCell: (data: any) => {
         if (data.section !== 'body') return;
         const rowIdx = data.row.index;
@@ -311,25 +371,28 @@ async function generatePdfForDate(
           }
         }
         if (colIdx === 10) {
-          const hasDocs = rowEntry.entry.dokumentasi?.some((d: string) => {
-            if (!d || d === '-') return false;
-            return d.includes('http') || d.includes('IMAGE');
-          });
-          if (hasDocs) {
-            doc.setTextColor(0, 0, 255);
-            doc.setFontSize(7);
-            const linkText = 'Lihat Foto';
-            const textWidth = doc.getTextWidth(linkText);
-            const linkX = cellX + (cellW - textWidth) / 2;
-            const linkY = cellY + cellH / 2 + 1;
-            doc.text(linkText, linkX, linkY);
-            doc.setDrawColor(0, 0, 255);
-            doc.setLineWidth(0.2);
-            doc.line(linkX, linkY + 0.5, linkX + textWidth, linkY + 0.5);
-            doc.setDrawColor(0, 0, 0);
-            doc.setLineWidth(0.1);
-            doc.link(linkX, linkY - 3, textWidth, 5, { url: spreadsheetUrl });
-            doc.setTextColor(0, 0, 0);
+          const docUrls = rowEntry.docUrls || [];
+          if (docUrls.length > 0) {
+            const padding = 1;
+            const availW = cellW - (padding * 2);
+            const availH = cellH - (padding * 2);
+            const imgCount = Math.min(docUrls.length, 2);
+            // Each image is square, fit 2 side by side with 1mm gap
+            const gap = imgCount > 1 ? 1 : 0;
+            const imgSize = Math.min(availH, (availW - gap) / imgCount);
+            const totalW = (imgSize * imgCount) + gap;
+            let drawX = cellX + (cellW - totalW) / 2;
+            const drawY = cellY + (cellH - imgSize) / 2;
+
+            for (let di = 0; di < imgCount; di++) {
+              const docUrl = docUrls[di];
+              if (docUrl && docPhotoCache[docUrl]) {
+                try {
+                  doc.addImage(docPhotoCache[docUrl], 'JPEG', drawX, drawY, imgSize, imgSize);
+                } catch {}
+              }
+              drawX += imgSize + gap;
+            }
           }
         }
       },
