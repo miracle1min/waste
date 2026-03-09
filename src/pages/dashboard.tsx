@@ -1062,7 +1062,7 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       {sortedStations.map((station: string, idx: number) => {
                         const unitGroups = periodData[station] as { unit: string; items: { name: string; qty: number }[]; totalQty: number }[];
-                        const stationTotal = unitGroups.reduce((s: number, u) => s + u.totalQty, 0);
+                        const stationTotal = unitGroups.reduce((s: number, u) => s + u.items.length, 0);
                         const maxTotal = periodData[sortedStations[0]].reduce((s: number, u: any) => s + u.totalQty, 0);
                         
                         return (
