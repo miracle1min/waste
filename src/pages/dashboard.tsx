@@ -395,6 +395,7 @@ export default function Dashboard() {
 
   // Pelapor dropdown state
   const [selectedPelapor, setSelectedPelapor] = useState<string>("");
+  const [statPeriod, setStatPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
   const [loadingSignatures, setLoadingSignatures] = useState(true);
 
@@ -790,6 +791,154 @@ export default function Dashboard() {
                 <p className="text-center text-slate-500 py-6">Tidak ada data tersedia untuk generate PDF</p>
               )}
             </div>
+
+            {/* ==================== DATA WASTE TERAKHIR ==================== */}
+            {data.lastEntry && (
+              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
+                <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2 mb-3">
+                  📋 Data Waste Terakhir
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tanggal</p>
+                    <p className="text-sm font-bold text-white mt-1">{data.lastEntry.date}</p>
+                  </div>
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">QC / Pelapor</p>
+                    <p className="text-sm font-bold text-cyan-300 mt-1">{data.lastEntry.qc || '-'}</p>
+                  </div>
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Station</p>
+                    <p className="text-sm font-bold text-amber-300 mt-1">{data.lastEntry.station}</p>
+                  </div>
+                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Shift</p>
+                    <p className="text-sm font-bold text-violet-300 mt-1">{data.lastEntry.shift}</p>
+                  </div>
+                </div>
+                {data.qcNames && data.qcNames.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span className="text-[10px] text-slate-500 mr-1 self-center">QC Aktif:</span>
+                    {data.qcNames.map((qc: string) => (
+                      <span key={qc} className="text-[10px] bg-cyan-950/50 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-800/50">{qc}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ==================== WASTE STATION DETAIL (by UNIT) ==================== */}
+            {data.periodBreakdown && (
+              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
+                    🏭 Waste per Station (Detail per Satuan)
+                  </h2>
+                  <div className="flex bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+                    {([["daily", "Hari Ini"], ["weekly", "7 Hari"], ["monthly", "30 Hari"]] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setStatPeriod(key)}
+                        className={`px-3 py-1 text-[11px] font-medium transition-all ${
+                          statPeriod === key 
+                            ? "bg-cyan-600 text-white" 
+                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(() => {
+                  const periodData = data.periodBreakdown[statPeriod] || {};
+                  const stations = Object.keys(periodData);
+                  
+                  if (stations.length === 0) {
+                    return (
+                      <p className="text-center text-slate-500 py-6 text-sm">
+                        Tidak ada data waste untuk periode {statPeriod === "daily" ? "hari ini" : statPeriod === "weekly" ? "7 hari terakhir" : "30 hari terakhir"}
+                      </p>
+                    );
+                  }
+
+                  // Sort stations by total qty (sum all units)
+                  const sortedStations = stations.sort((a, b) => {
+                    const totalA = periodData[a].reduce((s: number, u: any) => s + u.totalQty, 0);
+                    const totalB = periodData[b].reduce((s: number, u: any) => s + u.totalQty, 0);
+                    return totalB - totalA;
+                  });
+
+                  return (
+                    <div className="space-y-3">
+                      {sortedStations.map((station: string, idx: number) => {
+                        const unitGroups = periodData[station] as { unit: string; items: { name: string; qty: number }[]; totalQty: number }[];
+                        const stationTotal = unitGroups.reduce((s: number, u) => s + u.totalQty, 0);
+                        const maxTotal = periodData[sortedStations[0]].reduce((s: number, u: any) => s + u.totalQty, 0);
+                        
+                        return (
+                          <div key={station} className="bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden">
+                            {/* Station header */}
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white bg-cyan-600/20 px-2 py-0.5 rounded">#{idx + 1}</span>
+                                <span className="text-sm font-bold text-white">{station}</span>
+                              </div>
+                              <span className="text-[11px] text-slate-400">
+                                Total: <span className="text-cyan-300 font-bold">{stationTotal.toLocaleString()}</span> item
+                              </span>
+                            </div>
+                            
+                            {/* Progress bar */}
+                            <div className="px-3 pt-1">
+                              <div className="w-full bg-slate-800 rounded-full h-1.5">
+                                <div 
+                                  className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all"
+                                  style={{ width: `${maxTotal > 0 ? (stationTotal / maxTotal) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Unit groups */}
+                            <div className="p-3 space-y-2">
+                              {unitGroups.map((ug) => (
+                                <div key={ug.unit} className="bg-slate-800/50 rounded-lg p-2">
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                      ug.unit === 'GRAM' ? 'bg-amber-900/40 text-amber-300' :
+                                      ug.unit === 'PCS' ? 'bg-blue-900/40 text-blue-300' :
+                                      ug.unit === 'PORSI' ? 'bg-green-900/40 text-green-300' :
+                                      'bg-purple-900/40 text-purple-300'
+                                    }`}>
+                                      {ug.unit}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      Subtotal: <span className="font-bold text-white">{ug.totalQty.toLocaleString()} {ug.unit}</span>
+                                    </span>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {ug.items.slice(0, 5).map((item, iIdx) => (
+                                      <div key={iIdx} className="flex items-center justify-between text-[11px]">
+                                        <span className="text-slate-300 truncate mr-2">{item.name}</span>
+                                        <span className="text-white font-mono font-medium whitespace-nowrap">{item.qty.toLocaleString()} {ug.unit}</span>
+                                      </div>
+                                    ))}
+                                    {ug.items.length > 5 && (
+                                      <p className="text-[10px] text-slate-500 mt-1">+{ug.items.length - 5} item lainnya</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
