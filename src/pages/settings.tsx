@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 
 // ===== Types =====
-interface Tenant { id: string; name: string; store_code: string; status: string; created_at: string; }
+interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
 interface UserItem { id: string; tenant_id: string; username: string; role: string; created_at: string; }
 interface TenantConfig { tenant_id: string; google_sheet_id: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
 
@@ -96,7 +96,7 @@ function TenantsTab() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", store_code: "", status: "active" });
+  const [form, setForm] = useState({ name: "", address: "", phone: "", status: "active" });
   const [saving, setSaving] = useState(false);
 
   const loadTenants = async () => {
@@ -113,18 +113,19 @@ function TenantsTab() {
     if (editingId) {
       await api("/api/settings/tenants", "PUT", { id: editingId, ...form });
     } else {
-      await api("/api/settings/tenants", "POST", form);
+      const autoId = form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      await api("/api/settings/tenants", "POST", { id: autoId, ...form });
     }
     setSaving(false);
     setShowForm(false);
     setEditingId(null);
-    setForm({ name: "", store_code: "", status: "active" });
+    setForm({ name: "", address: "", phone: "", status: "active" });
     loadTenants();
   };
 
   const handleEdit = (t: Tenant) => {
     setEditingId(t.id);
-    setForm({ name: t.name, store_code: t.store_code, status: t.status });
+    setForm({ name: t.name, address: t.address || "", phone: t.phone || "", status: t.status });
     setShowForm(true);
   };
 
@@ -143,7 +144,7 @@ function TenantsTab() {
             <RefreshCw className="h-4 w-4 text-cyan-400" />
           </button>
           <button
-            onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", store_code: "", status: "active" }); }}
+            onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", address: "", phone: "", status: "active" }); }}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all"
           >
             <Plus className="h-4 w-4" /> Tambah Store
@@ -162,9 +163,14 @@ function TenantsTab() {
                 className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="GCK Bekasi Kp Bulu" />
             </div>
             <div>
-              <label className="text-[10px] font-mono text-cyan-600 uppercase">Kode Store</label>
-              <input value={form.store_code} onChange={(e) => setForm({ ...form, store_code: e.target.value })}
-                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="BKS-KB" />
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">Alamat</label>
+              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="Jl. Raya Bekasi No. 123" />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-cyan-600 uppercase">No. Telp</label>
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="08123456789" />
             </div>
             <div>
               <label className="text-[10px] font-mono text-cyan-600 uppercase">Status</label>
@@ -176,7 +182,7 @@ function TenantsTab() {
             </div>
           </div>
           <div className="flex gap-2 pt-2">
-            <button onClick={handleSave} disabled={saving || !form.name || !form.store_code}
+            <button onClick={handleSave} disabled={saving || !form.name}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? "Nyimpen..." : "Simpan"}
             </button>
@@ -201,7 +207,8 @@ function TenantsTab() {
             <thead>
               <tr className="border-b border-cyan-900/30 bg-cyan-500/5">
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">NAMA</th>
-                <th className="text-left px-4 py-3 text-cyan-500 text-xs">KODE</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">ALAMAT</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">TELP</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">STATUS</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">DIBUAT</th>
                 <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
@@ -211,7 +218,8 @@ function TenantsTab() {
               {tenants.map((t) => (
                 <tr key={t.id} className="border-b border-cyan-900/20 hover:bg-cyan-500/5 transition-colors">
                   <td className="px-4 py-3 text-cyan-200">{t.name}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-xs">{t.store_code}</span></td>
+                  <td className="px-4 py-3 text-cyan-300 text-xs">{t.address || "—"}</td>
+                  <td className="px-4 py-3 text-cyan-300 text-xs">{t.phone || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${t.status === "active" ? "bg-green-500/10 text-green-300" : "bg-red-500/10 text-red-300"}`}>
                       {t.status}
@@ -330,7 +338,7 @@ function UsersTab() {
                 className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none">
                 <option value="">— Pilih Store —</option>
                 <option value="ALL">Semua Store (Super Admin)</option>
-                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.store_code})</option>)}
+                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div>
@@ -499,7 +507,7 @@ function ConfigsTab() {
               <option value="">— Pilih store dulu —</option>
               {tenants.map((t) => {
                 const hasConfig = configs.some((c) => c.tenant_id === t.id);
-                return <option key={t.id} value={t.id}>{t.name} ({t.store_code}) {hasConfig ? "✅" : "⚠️ belum"}</option>;
+                return <option key={t.id} value={t.id}>{t.name} {hasConfig ? "✅" : "⚠️ belum"}</option>;
               })}
             </select>
           </div>
