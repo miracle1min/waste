@@ -1,19 +1,12 @@
 /**
  * Neon Database Library — pusat data tenants, users, dan configs.
- * Uses dynamic import to avoid Vercel bundling issues.
  */
+import { neon } from "@neondatabase/serverless";
 
-type NeonQueryFunction = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<Record<string, unknown>[]>;
-
-let _sql: NeonQueryFunction | null = null;
-
-async function getSQL(): Promise<NeonQueryFunction> {
-  if (_sql) return _sql;
+function getSQL() {
   const url = process.env.NEON_DATABASE_URL;
   if (!url) throw new Error("NEON_DATABASE_URL not set");
-  const { neon } = await import("@neondatabase/serverless");
-  _sql = neon(url) as unknown as NeonQueryFunction;
-  return _sql;
+  return neon(url);
 }
 
 // ==================== TENANTS ====================
@@ -27,28 +20,28 @@ export interface Tenant {
 }
 
 export async function getAllTenants(): Promise<Tenant[]> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM tenants ORDER BY created_at DESC`;
-  return rows as unknown as Tenant[];
+  return rows as Tenant[];
 }
 
 export async function getTenantById(id: string): Promise<Tenant | null> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM tenants WHERE id = ${id}`;
-  return (rows[0] as unknown as Tenant) || null;
+  return (rows[0] as Tenant) || null;
 }
 
 export async function createTenant(t: Omit<Tenant, "created_at">): Promise<Tenant> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`
     INSERT INTO tenants (id, name, address, phone, status)
     VALUES (${t.id}, ${t.name}, ${t.address || ""}, ${t.phone || ""}, ${t.status || "active"})
     RETURNING *`;
-  return rows[0] as unknown as Tenant;
+  return rows[0] as Tenant;
 }
 
 export async function updateTenant(id: string, data: Partial<Tenant>): Promise<Tenant | null> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`
     UPDATE tenants SET
       name = COALESCE(${data.name ?? null}, name),
@@ -57,11 +50,11 @@ export async function updateTenant(id: string, data: Partial<Tenant>): Promise<T
       status = COALESCE(${data.status ?? null}, status)
     WHERE id = ${id}
     RETURNING *`;
-  return (rows[0] as unknown as Tenant) || null;
+  return (rows[0] as Tenant) || null;
 }
 
 export async function deleteTenant(id: string): Promise<boolean> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`DELETE FROM tenants WHERE id = ${id} RETURNING id`;
   return rows.length > 0;
 }
@@ -79,15 +72,15 @@ export interface User {
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM users ORDER BY created_at DESC`;
-  return rows as unknown as User[];
+  return rows as User[];
 }
 
 export async function getUserByUsername(username: string): Promise<User | null> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM users WHERE username = ${username} AND status = 'active'`;
-  return (rows[0] as unknown as User) || null;
+  return (rows[0] as User) || null;
 }
 
 export async function createUser(u: {
@@ -97,16 +90,16 @@ export async function createUser(u: {
   role: string;
   tenant_id: string | null;
 }): Promise<User> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`
     INSERT INTO users (username, password_hash, display_name, role, tenant_id, status)
     VALUES (${u.username}, ${u.password_hash}, ${u.display_name}, ${u.role}, ${u.tenant_id}, 'active')
     RETURNING *`;
-  return rows[0] as unknown as User;
+  return rows[0] as User;
 }
 
 export async function updateUser(id: number, data: Partial<User>): Promise<User | null> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`
     UPDATE users SET
       display_name = COALESCE(${data.display_name ?? null}, display_name),
@@ -116,11 +109,11 @@ export async function updateUser(id: number, data: Partial<User>): Promise<User 
       password_hash = COALESCE(${data.password_hash ?? null}, password_hash)
     WHERE id = ${id}
     RETURNING *`;
-  return (rows[0] as unknown as User) || null;
+  return (rows[0] as User) || null;
 }
 
 export async function deleteUser(id: number): Promise<boolean> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`DELETE FROM users WHERE id = ${id} RETURNING id`;
   return rows.length > 0;
 }
@@ -141,15 +134,15 @@ export interface TenantConfig {
 }
 
 export async function getAllConfigs(): Promise<TenantConfig[]> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM tenant_configs ORDER BY tenant_id`;
-  return rows as unknown as TenantConfig[];
+  return rows as TenantConfig[];
 }
 
 export async function getConfigByTenantId(tenantId: string): Promise<TenantConfig | null> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`SELECT * FROM tenant_configs WHERE tenant_id = ${tenantId}`;
-  return (rows[0] as unknown as TenantConfig) || null;
+  return (rows[0] as TenantConfig) || null;
 }
 
 export async function upsertConfig(c: {
@@ -163,7 +156,7 @@ export async function upsertConfig(c: {
   r2_public_url?: string;
   extra_config?: Record<string, unknown>;
 }): Promise<TenantConfig> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`
     INSERT INTO tenant_configs (tenant_id, google_spreadsheet_id, google_sheets_credentials, r2_account_id, r2_access_key_id, r2_secret_access_key, r2_bucket_name, r2_public_url, extra_config)
     VALUES (
@@ -188,11 +181,11 @@ export async function upsertConfig(c: {
       extra_config = COALESCE(${JSON.stringify(c.extra_config || {})}::jsonb, tenant_configs.extra_config),
       updated_at = NOW()
     RETURNING *`;
-  return rows[0] as unknown as TenantConfig;
+  return rows[0] as TenantConfig;
 }
 
 export async function deleteConfig(tenantId: string): Promise<boolean> {
-  const sql = await getSQL();
+  const sql = getSQL();
   const rows = await sql`DELETE FROM tenant_configs WHERE tenant_id = ${tenantId} RETURNING id`;
   return rows.length > 0;
 }

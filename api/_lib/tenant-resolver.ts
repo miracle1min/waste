@@ -1,7 +1,7 @@
 /**
  * Tenant Resolver — resolve credentials per-tenant dari Neon.
  */
-import { getConfigByTenantId } from "./db";
+import { getConfigByTenantId } from "./db.js";
 import type { VercelRequest } from "@vercel/node";
 
 export interface TenantCredentials {
