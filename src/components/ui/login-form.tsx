@@ -5,10 +5,11 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { AlertCircle, Lock, Loader2, User, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Lock, Loader2, User, CheckCircle2, Store } from "lucide-react";
 import logoUrl from "@assets/waste-logo_1753322218969.webp";
 
 const loginSchema = z.object({
+  tenant_id: z.string().optional(),
   username: z.string().min(1, "Username jangan kosong dong"),
   password: z.string().min(1, "Password jangan kosong"),
 });
@@ -17,6 +18,11 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
   onLogin: (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string) => void;
+}
+
+interface TenantOption {
+  id: string;
+  name: string;
 }
 
 /* ── Animated Background ── */
@@ -148,15 +154,32 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loginResult, setLoginResult] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
   }, []);
 
+  // Fetch tenants list for dropdown
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/tenants");
+        const data = await res.json();
+        if (data.tenants) setTenants(data.tenants);
+      } catch (err) {
+        console.error("Failed to fetch tenants:", err);
+      } finally {
+        setLoadingTenants(false);
+      }
+    })();
+  }, []);
+
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { tenant_id: "", username: "", password: "" },
   });
 
   const handleSubmit = async (data: LoginFormData) => {
@@ -167,7 +190,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: data.username, password: data.password }),
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+          tenant_id: data.tenant_id || undefined,
+        }),
       });
 
       const json = await res.json();
@@ -232,7 +259,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   <p className="text-xs font-mono text-cyan-500/60">
                     Role: <span className="text-cyan-300">{user.role === 'super_admin' ? '👑 Super Admin' : '🔍 QC / Quality Control'}</span>
                   </p>
-                  {(
+                  {user.tenant_name && (
                     <p className="text-xs font-mono text-cyan-500/60">
                       Resto: <span className="text-cyan-300">{user.tenant_name}</span>
                     </p>
@@ -318,6 +345,44 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {/* Tenant / Store Selector */}
+                <FormField
+                  control={form.control}
+                  name="tenant_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="text-[10px] font-mono text-cyan-600 tracking-wider uppercase mb-1.5 ml-1">
+                        ▸ Pilih Resto
+                      </div>
+                      <FormControl>
+                        <div className="relative">
+                          <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-500" />
+                          <select
+                            {...field}
+                            disabled={loadingTenants}
+                            className="w-full h-12 pl-11 pr-4 bg-black/40 backdrop-blur-sm border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,255,255,0.3)] focus:outline-none hover:border-cyan-400/60 transition-all duration-300 appearance-none cursor-pointer"
+                          >
+                            <option value="" className="bg-gray-950 text-cyan-400">
+                              {loadingTenants ? "Loading resto..." : "— Pilih Resto —"}
+                            </option>
+                            {tenants.map((t) => (
+                              <option key={t.id} value={t.id} className="bg-gray-950 text-cyan-100">
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <svg className="h-4 w-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-xs font-mono" />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="username"
@@ -388,10 +453,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               </form>
             </Form>
 
+            <div className="text-center">
+              <p className="text-[10px] font-mono text-cyan-700/40">Super Admin? Kosongin aja resto-nya</p>
+            </div>
+
             <div className="text-center min-h-[20px]">
               <TypewriterText
                 texts={[
-                  "Masukin kredensial buat lanjut",
+                  "Pilih resto, masukin kredensial",
                   "Waste tracking simpel abis ☕",
                   "Sistem siap. Gas aja...",
                 ]}

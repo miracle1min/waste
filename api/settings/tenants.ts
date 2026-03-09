@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../_lib/db.js";
+import { clearTenantDbCache } from "../_lib/tenant-db.js";
 import { requireRole, handleAuthError } from "../_lib/auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,9 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ tenants });
     }
     if (req.method === "POST") {
-      const { id, name, address, phone, status } = req.body || {};
+      const { id, name, address, phone, status, neon_database_url } = req.body || {};
       if (!id || !name) return res.status(400).json({ error: "ID & nama store wajib diisi!" });
-      const tenant = await createTenant({ id, name, address: address || "", phone: phone || "", status: status || "active" });
+      const tenant = await createTenant({ id, name, address: address || "", phone: phone || "", status: status || "active", neon_database_url: neon_database_url || "" });
       return res.json({ success: true, tenant });
     }
     if (req.method === "PUT") {
@@ -26,6 +27,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!id) return res.status(400).json({ error: "ID store wajib diisi!" });
       const tenant = await updateTenant(id, data);
       if (!tenant) return res.status(404).json({ error: "Store ga ketemu!" });
+      // Clear DB URL cache when tenant is updated
+      clearTenantDbCache(id);
       return res.json({ success: true, tenant });
     }
     if (req.method === "DELETE") {

@@ -1,19 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { query } from '../_lib/db.js';
+import { tenantQuery } from '../_lib/tenant-db.js';
 import { requireRole, handleAuthError } from '../_lib/auth.js';
 
 /**
- * Personnel CRUD API (admin only)
- * GET    /api/settings/personnel?tenant_id=xxx          → list all personnel for tenant
- * POST   /api/settings/personnel                        → create personnel
- * PUT    /api/settings/personnel?id=123                 → update personnel
- * DELETE /api/settings/personnel?id=123                 → delete personnel
+ * Personnel CRUD API (admin only) — now uses per-tenant DB
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // BUG-012 fix: Add authorization check — was completely missing
     requireRole(req, "super_admin", "admin_store");
   } catch (err) {
     return handleAuthError(err, res);
@@ -24,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'GET': {
         const tenantId = req.query.tenant_id as string;
         if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
-        const rows = await query(
+        const rows = await tenantQuery(tenantId,
           'SELECT id, tenant_id, name, full_name, role, signature_url, status, created_at FROM personnel WHERE tenant_id = $1 ORDER BY role, name',
           [tenantId]
         );
@@ -39,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!['qc', 'manager'].includes(role)) {
           return res.status(400).json({ success: false, message: 'role harus qc atau manager' });
         }
-        const rows = await query(
+        const rows = await tenantQuery(tenant_id,
           'INSERT INTO personnel (tenant_id, name, full_name, role, signature_url, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
           [tenant_id, name.toUpperCase(), full_name || name, role, signature_url || null, status || 'active']
         );
@@ -48,7 +43,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case 'PUT': {
         const id = req.query.id as string;
+        const tenantId = (req.body?.tenant_id || req.query.tenant_id) as string;
         if (!id) return res.status(400).json({ success: false, message: 'id wajib diisi' });
+        if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
         const { name, full_name, role, signature_url, status } = req.body || {};
         const sets: string[] = [];
         const vals: any[] = [];
@@ -61,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!sets.length) return res.status(400).json({ success: false, message: 'Ga ada yang diupdate' });
         sets.push(`updated_at = NOW()`);
         vals.push(id);
-        const rows = await query(
+        const rows = await tenantQuery(tenantId,
           `UPDATE personnel SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
           vals
         );
@@ -71,8 +68,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case 'DELETE': {
         const delId = req.query.id as string;
+        const tenantId = (req.query.tenant_id || req.body?.tenant_id) as string;
         if (!delId) return res.status(400).json({ success: false, message: 'id wajib diisi' });
-        const rows = await query('DELETE FROM personnel WHERE id = $1 RETURNING id', [delId]);
+        if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
+        const rows = await tenantQuery(tenantId, 'DELETE FROM personnel WHERE id = $1 RETURNING id', [delId]);
         if (!rows.length) return res.status(404).json({ success: false, message: 'Personnel ga ketemu' });
         return res.json({ success: true, deleted: true });
       }
@@ -81,7 +80,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ success: false, message: 'Method not allowed' });
     }
   } catch (err: any) {
-    // BUG-008 fix: Don't leak internal errors
     console.error('Personnel API error:', err);
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
   }

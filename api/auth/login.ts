@@ -6,12 +6,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { username, password } = req.body || {};
+    const { username, password, tenant_id } = req.body || {};
     if (!username || !password) {
       return res.status(400).json({ error: "Username & password wajib diisi dong!" });
     }
 
-    const user = await getUserByUsername(username);
+    // Look up user — pass tenant_id so it checks the right DB
+    const user = await getUserByUsername(username, tenant_id || undefined);
 
     // BUG-009 fix: Generic error message — no username enumeration
     if (!user || !verifyPassword(password, user.password_hash)) {
@@ -21,16 +22,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // BUG-001 fix: Migrate legacy SHA-256 hash to scrypt on successful login
     if (isLegacyHash(user.password_hash)) {
       const newHash = hashPassword(password);
-      await updateUser(user.id, { password_hash: newHash });
+      await updateUser(user.id, { password_hash: newHash }, user.tenant_id || undefined);
     }
 
     let tenantName = "";
-    if (user.tenant_id) {
+    if (user.tenant_id && user.tenant_id !== "ALL") {
       const tenant = await getTenantById(user.tenant_id);
       tenantName = tenant?.name || "";
     }
 
-    // BUG-002 fix: Issue a JWT token instead of relying on client-side storage
+    // BUG-002 fix: Issue a JWT token
     const token = createToken({
       userId: user.id,
       username: user.username,
@@ -50,7 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (err: any) {
-    // BUG-008 fix: Don't leak internal error details
     console.error("Login error:", err);
     return res.status(500).json({ error: "Terjadi kesalahan server." });
   }

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
 
 // ===== Types =====
-interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
+interface Tenant { id: string; name: string; address: string; phone: string; status: string; neon_database_url: string; created_at: string; }
 interface UserItem { id: string; tenant_id: string; username: string; role: string; created_at: string; }
 interface Personnel { id: number; tenant_id: string; name: string; full_name: string; role: string; signature_url: string; status: string; created_at: string; }
 interface TenantConfig { tenant_id: string; google_spreadsheet_id: string; google_sheets_credentials: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
@@ -108,7 +108,7 @@ function TenantsTab() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", address: "", phone: "", status: "active" });
+  const [form, setForm] = useState({ name: "", address: "", phone: "", status: "active", neon_database_url: "" });
   const [saving, setSaving] = useState(false);
 
   const loadTenants = async () => {
@@ -131,13 +131,13 @@ function TenantsTab() {
     setSaving(false);
     setShowForm(false);
     setEditingId(null);
-    setForm({ name: "", address: "", phone: "", status: "active" });
+    setForm({ name: "", address: "", phone: "", status: "active", neon_database_url: "" });
     loadTenants();
   };
 
   const handleEdit = (t: Tenant) => {
     setEditingId(t.id);
-    setForm({ name: t.name, address: t.address || "", phone: t.phone || "", status: t.status });
+    setForm({ name: t.name, address: t.address || "", phone: t.phone || "", status: t.status, neon_database_url: t.neon_database_url || "" });
     setShowForm(true);
   };
 
@@ -156,7 +156,7 @@ function TenantsTab() {
             <RefreshCw className="h-4 w-4 text-cyan-400" />
           </button>
           <button
-            onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", address: "", phone: "", status: "active" }); }}
+            onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", address: "", phone: "", status: "active", neon_database_url: "" }); }}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all"
           >
             <Plus className="h-4 w-4" /> Tambah Store
@@ -193,6 +193,12 @@ function TenantsTab() {
               </select>
             </div>
           </div>
+          <div>
+            <label className="text-[10px] font-mono text-cyan-600 uppercase">🗄️ Neon Database URL (Per-Resto)</label>
+            <input value={form.neon_database_url} onChange={(e) => setForm({ ...form, neon_database_url: e.target.value })}
+              className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-[11px] text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require" />
+            <p className="text-[9px] font-mono text-cyan-700 mt-1">Kosongkan jika masih pakai database utama (master)</p>
+          </div>
           <div className="flex gap-2 pt-2">
             <button onClick={handleSave} disabled={saving || !form.name}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-green-400/50 bg-green-500/10 text-green-200 font-mono text-sm hover:bg-green-500/20 disabled:opacity-50 transition-all">
@@ -221,6 +227,7 @@ function TenantsTab() {
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">NAMA</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">ALAMAT</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">TELP</th>
+                <th className="text-left px-4 py-3 text-cyan-500 text-xs">DB</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">STATUS</th>
                 <th className="text-left px-4 py-3 text-cyan-500 text-xs">DIBUAT</th>
                 <th className="text-right px-4 py-3 text-cyan-500 text-xs">AKSI</th>
@@ -232,6 +239,11 @@ function TenantsTab() {
                   <td className="px-4 py-3 text-cyan-200">{t.name}</td>
                   <td className="px-4 py-3 text-cyan-300 text-xs">{t.address || "—"}</td>
                   <td className="px-4 py-3 text-cyan-300 text-xs">{t.phone || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] ${t.neon_database_url ? "bg-purple-500/10 text-purple-300" : "bg-yellow-500/10 text-yellow-300"}`}>
+                      {t.neon_database_url ? "🗄️ Own" : "📦 Master"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${t.status === "active" ? "bg-green-500/10 text-green-300" : "bg-red-500/10 text-red-300"}`}>
                       {t.status}

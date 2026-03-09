@@ -1,12 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
-import { query } from './_lib/db.js';
+import { tenantQuery } from './_lib/tenant-db.js';
 
 /**
- * Signature lookup API - now reads from DB (personnel table)
- * GET /api/signatures?tenant_id=xxx           → all signatures for tenant
- * GET /api/signatures?tenant_id=xxx&name=PAJAR → single signature
- * GET /api/signatures?tenant_id=xxx&role=qc    → filter by role
+ * Signature lookup API — reads from per-tenant DB (personnel table)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -14,6 +11,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const tenantId = (req.query.tenant_id as string) || extractTenantId(req);
+    if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
+
     const tenantCreds = await resolveTenantCredentials(tenantId);
     const publicUrl = (tenantCreds.r2PublicUrl || process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
     if (!publicUrl) {
@@ -25,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Single lookup by name
     if (name) {
-      const rows = await query(
+      const rows = await tenantQuery(tenantId,
         'SELECT name, full_name, role, signature_url FROM personnel WHERE tenant_id = $1 AND name = $2 AND status = $3',
         [tenantId, name, 'active']
       );
@@ -51,9 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     sql += ' ORDER BY role, name';
 
-    const rows = await query(sql, params);
+    const rows = await tenantQuery(tenantId, sql, params);
 
-    // Build signatures map (backward compatible) + detailed list
     const signatures: Record<string, string> = {};
     const personnel: any[] = [];
     for (const p of rows) {

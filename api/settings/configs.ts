@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db.js";
-import { testConnection, seedDatabase, switchDatabase } from "../_lib/database-ops.js";
+import { testConnection, seedDatabase, switchDatabase, seedTenantDatabase, migrateToTenantDb } from "../_lib/database-ops.js";
 import { uploadToR2 } from "../_lib/r2.js";
 import { resolveTenantCredentials } from "../_lib/tenant-resolver.js";
 import { requireRole, handleAuthError } from "../_lib/auth.js";
@@ -39,6 +39,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // BUG-007 fix: Only allow testing with preconfigured DB URLs, not arbitrary ones
         if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
         const result = await testConnection(body.db_url);
+        return res.json(result);
+      }
+
+      // Seed a new per-tenant database (create tables)
+      if (body.action === "seed-tenant-db") {
+        if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
+        if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
+        const result = await seedTenantDatabase(body.db_url, body.tenant_id);
+        return res.json(result);
+      }
+
+      // Migrate data from master to per-tenant DB
+      if (body.action === "migrate-tenant-db") {
+        if (!body.db_url) return res.status(400).json({ error: "URL database target wajib diisi!" });
+        if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
+        const sourceUrl = process.env.NEON_DATABASE_URL;
+        if (!sourceUrl) return res.status(500).json({ error: "Database source belum dikonfigurasi." });
+        const result = await migrateToTenantDb(sourceUrl, body.db_url, body.tenant_id);
         return res.json(result);
       }
 
