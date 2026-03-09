@@ -1,8 +1,9 @@
+import { useLocation } from "wouter";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut, Download, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut, Download, AlertTriangle, BarChart3 } from "lucide-react";
 import { useStableCallback, useDebounce, usePerformanceMonitor } from "@/hooks/usePerformanceOptimization";
 import { parseApiError, getUserFriendlyErrorMessage, retryRequest } from "@/utils/errorHandler";
 
@@ -1166,6 +1167,13 @@ export default function ProductDestruction() {
               </div>
             </div>
             <div className="flex-shrink-0 flex items-center gap-2">
+              <button
+                onClick={() => window.location.href = "/dashboard"}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/50 rounded-md transition-all"
+              >
+                <BarChart3 className="w-3 h-3" />
+                Dashboard
+              </button>
               <LogoutButton />
             </div>
           </div>
