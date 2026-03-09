@@ -7,11 +7,13 @@ import {
 } from "recharts";
 import { 
   ArrowLeft, TrendingUp, Package, Calendar, BarChart3, 
-  Loader2, RefreshCw, ChevronDown, FileText, Download, CheckSquare, Square
+  Loader2, RefreshCw, ChevronDown, FileText, Download, CheckSquare, Square,
+  Store, User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/ui/footer";
 import { useToast } from "@/hooks/use-toast";
+import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 interface DashboardData {
   success: boolean;
@@ -578,72 +580,123 @@ export default function Dashboard() {
     });
   };
 
+  const userName = localStorage.getItem("waste_app_qc_name") || "User";
+  const tenantName = localStorage.getItem("waste_app_tenant_name") || "";
+
   return (
     <div className="min-h-screen bg-[hsl(220,45%,6%)] text-white flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-        <div className="w-full px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Top row: branding + actions */}
+        <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/50 px-2"
+              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
+              title="Kembali"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Kembali
+              <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-cyan-400" />
-              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                Dashboard Analytics
+            <div className="h-6 w-px bg-cyan-900/40" />
+            <img src={wasteLogo} alt="AWAS" className="w-7 h-7 rounded-md" />
+            <div className="leading-tight">
+              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                Dashboard
               </h1>
+              {tenantName && (
+                <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                  <Store className="w-2.5 h-2.5" />
+                  {tenantName}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRangeMenu(!showRangeMenu)}
-                className="text-xs border-cyan-800 bg-cyan-950/30 text-cyan-300 hover:bg-cyan-900/50"
+          <div className="flex items-center gap-1.5">
+            {/* User badge */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-500/5 border border-cyan-900/30 mr-1">
+              <User className="w-3 h-3 text-cyan-600" />
+              <span className="text-[10px] font-medium text-cyan-400">{userName}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchData}
+              className="text-cyan-400 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+        </div>
+        {/* Bottom row: date range controls */}
+        <div className="w-full px-3 pb-2 flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-hide">
+            {(["7", "14", "30", "all"] as RangeOption[]).map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setRange(opt)}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                  range === opt
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
+                }`}
               >
-                <Calendar className="w-3 h-3 mr-1" />
-                {rangeLabels[range]}
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
+                {rangeLabels[opt]}
+              </button>
+            ))}
+            <div className="relative">
+              <button
+                onClick={() => setShowRangeMenu(!showRangeMenu)}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1 ${
+                  range === "custom"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
+                }`}
+              >
+                <Calendar className="w-3 h-3" />
+                Custom
+                <ChevronDown className="w-3 h-3" />
+              </button>
               {showRangeMenu && (
-                <div className="absolute right-0 mt-1 w-56 bg-[hsl(220,45%,12%)] border border-cyan-900/50 rounded-lg shadow-xl z-50 py-1">
-                  {(["7", "14", "30", "all"] as RangeOption[]).map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => { setRange(opt); setShowRangeMenu(false); }}
-                      className={`w-full text-left px-3 py-2 text-xs hover:bg-cyan-950/50 transition ${range === opt ? "text-cyan-400 font-semibold" : "text-slate-300"}`}
-                    >
-                      {rangeLabels[opt]}
-                    </button>
-                  ))}
-                  <div className="border-t border-cyan-900/30 mt-1 pt-1 px-3 py-2">
-                    <p className="text-[10px] text-slate-500 mb-1">Custom Range</p>
-                    <div className="flex gap-1">
+                <div className="absolute left-0 mt-1.5 w-60 bg-[hsl(220,45%,12%)] border border-cyan-900/50 rounded-xl shadow-2xl shadow-black/40 z-50 p-3">
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mb-2">Pilih Rentang Tanggal</p>
+                  <div className="space-y-1.5">
+                    <div>
+                      <label className="text-[10px] text-slate-400 mb-0.5 block">Dari</label>
                       <input
                         type="date"
                         value={customStart}
                         onChange={(e) => setCustomStart(e.target.value)}
-                        className="flex-1 text-[10px] bg-slate-900 border border-cyan-900/50 rounded px-1 py-0.5 text-white"
+                        className="w-full text-xs bg-slate-900/80 border border-cyan-900/50 rounded-lg px-2 py-1.5 text-white focus:border-cyan-500/50 focus:outline-none transition"
                       />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 mb-0.5 block">Sampai</label>
                       <input
                         type="date"
                         value={customEnd}
                         onChange={(e) => setCustomEnd(e.target.value)}
-                        className="flex-1 text-[10px] bg-slate-900 border border-cyan-900/50 rounded px-1 py-0.5 text-white"
+                        className="w-full text-xs bg-slate-900/80 border border-cyan-900/50 rounded-lg px-2 py-1.5 text-white focus:border-cyan-500/50 focus:outline-none transition"
                       />
                     </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowRangeMenu(false)}
+                      className="flex-1 h-7 text-[11px] text-slate-400 hover:text-white"
+                    >
+                      Batal
+                    </Button>
                     <Button
                       size="sm"
                       onClick={() => { setRange("custom"); setShowRangeMenu(false); }}
                       disabled={!customStart || !customEnd}
-                      className="w-full mt-1 h-6 text-[10px] bg-cyan-600 hover:bg-cyan-700"
+                      className="flex-1 h-7 text-[11px] bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg"
                     >
                       Terapkan
                     </Button>
@@ -651,14 +704,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={fetchData}
-              className="text-cyan-400 hover:bg-cyan-950/50 px-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
           </div>
         </div>
       </header>
