@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 import { getCurrentWIBDateString } from "@shared/timezone";
+import { apiFetch } from "@/lib/api-client";
 
 // ========================
 // TYPES & CONSTANTS

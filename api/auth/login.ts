@@ -1,37 +1,47 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateUser } from '../_lib/master-sheet';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import crypto from "crypto";
+import { getUserByUsername } from "../_lib/db";
+import { getTenantById } from "../_lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     const { username, password } = req.body || {};
-
     if (!username || !password) {
-      return res.status(400).json({ error: 'Username dan password wajib diisi' });
+      return res.status(400).json({ error: "Username & password wajib diisi dong!" });
     }
 
-    const result = await authenticateUser(username, password);
+    const user = await getUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ error: "Username ga ketemu nih, cek lagi ya!" });
+    }
 
-    if (!result) {
-      return res.status(401).json({ error: 'Username atau password salah' });
+    const hash = crypto.createHash("sha256").update(password).digest("hex");
+    if (hash !== user.password_hash) {
+      return res.status(401).json({ error: "Password salah cuy, coba lagi!" });
+    }
+
+    // Get tenant info if not super admin
+    let tenantName = "";
+    if (user.tenant_id) {
+      const tenant = await getTenantById(user.tenant_id);
+      tenantName = tenant?.name || "";
     }
 
     return res.status(200).json({
       success: true,
-      user: result.user,
-      tenant: result.tenant,
+      user: {
+        username: user.username,
+        display_name: user.display_name,
+        role: user.role,
+        tenant_id: user.tenant_id || "",
+        tenant_name: tenantName,
+      },
     });
-  } catch (err: any) {
-    console.error('Login error:', err);
-    return res.status(500).json({ error: 'Ada masalah di server, coba lagi' });
+  } catch (err: unknown) {
+    console.error("Login error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return res.status(500).json({ error: "Server error: " + message });
   }
 }

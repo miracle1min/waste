@@ -21,7 +21,7 @@ export async function parseForm(req: IncomingMessage): Promise<ParsedForm> {
       // Normalize fields: formidable v3 returns arrays
       const normalizedFields: Record<string, string> = {};
       for (const [key, value] of Object.entries(fields)) {
-        normalizedFields[key] = Array.isArray(value) ? value[0] || '' : (value as string) || '';
+        normalizedFields[key] = Array.isArray(value) ? (value[0] as string) || '' : String(value || '');
       }
 
       // Normalize files
