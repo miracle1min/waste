@@ -120,8 +120,14 @@ async function generatePdfForDate(
   onProgress?.(`Ngambil data ${date}...`);
   
   const res = await apiFetch(`/api/get-day-data?date=${date}`);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => 'unknown');
+    throw new Error(`API error ${res.status}: ${errText}`);
+  }
   const dayData = await res.json();
-  if (!dayData.success || !dayData.grouped) return null;
+  if (!dayData.success || !dayData.grouped) {
+    throw new Error(`Data kosong: success=${dayData.success}, error=${dayData.error || 'none'}`);
+  }
 
   onProgress?.(`Bikin PDF ${date}...`);
 
@@ -524,6 +530,7 @@ export default function Dashboard() {
     const storeName = localStorage.getItem('waste_app_store') || 'Store';
     let successCount = 0;
     let failCount = 0;
+    let lastError = '';
 
     setPdfProgressNum({ current: 0, total: dates.length });
 
@@ -554,6 +561,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error(`PDF error for ${date}:`, err);
         failCount++;
+        lastError = err instanceof Error ? err.message : String(err);
       }
     }
 
@@ -563,7 +571,10 @@ export default function Dashboard() {
 
     toast({
       title: `📄 Batch PDF Selesai!`,
-      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — PDF udah ke-download`,
+      description: failCount > 0
+        ? `${successCount} berhasil, ${failCount} gagal — ${lastError || 'unknown error'}`
+        : `${successCount} berhasil — PDF udah ke-download`,
+      variant: failCount > 0 ? "destructive" : "default",
     });
   };
 
