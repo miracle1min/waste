@@ -295,7 +295,7 @@ export default function AutoWaste() {
       <main className="flex-1 w-full px-4 py-4 space-y-4">
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
-          <div className="space-y-4 max-w-xl mx-auto">
+          <div className="space-y-4 w-full">
             <div className="text-center">
               <h2 className="text-lg font-bold text-cyan-400 mb-1">⚡ Konfigurasi</h2>
               <p className="text-xs text-slate-400">Pilih semua parameter, lalu paste data item</p>
@@ -425,7 +425,7 @@ export default function AutoWaste() {
 
         {/* ========== STEP: PASTE ========== */}
         {step === "paste" && (
-          <div className="space-y-4 max-w-2xl mx-auto">
+          <div className="space-y-4 w-full">
             <div className="text-center">
               <h2 className="text-lg font-bold text-cyan-400 mb-1">📋 Paste Data Item</h2>
               <p className="text-xs text-slate-400">
@@ -519,7 +519,7 @@ Contoh:
 
         {/* ========== STEP: PREVIEW ========== */}
         {step === "preview" && (
-          <div className="space-y-4 max-w-2xl mx-auto">
+          <div className="space-y-4 w-full">
             <div className="text-center">
               <h2 className="text-lg font-bold text-green-400 mb-1">✅ Preview Data</h2>
               <p className="text-xs text-slate-400">Periksa data sebelum submit</p>
@@ -572,23 +572,23 @@ Contoh:
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-slate-800/30 text-slate-400">
-                      <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Nama Produk</th>
-                      <th className="px-3 py-2 text-left">Kode Lot</th>
-                      <th className="px-3 py-2 text-center">Qty</th>
-                      <th className="px-3 py-2 text-left">Satuan</th>
-                      <th className="px-3 py-2 text-left">Alasan</th>
+                      <th className="px-2 py-1.5 text-left">#</th>
+                      <th className="px-2 py-1.5 text-left">Produk</th>
+                      <th className="px-2 py-1.5 text-left">Lot</th>
+                      <th className="px-2 py-1.5 text-center">Qty</th>
+                      <th className="px-2 py-1.5 text-left">Satuan</th>
+                      <th className="px-2 py-1.5 text-left">Alasan</th>
                     </tr>
                   </thead>
                   <tbody>
                     {parsedItems.map((item, i) => (
                       <tr key={i} className="border-t border-slate-800/30 hover:bg-slate-800/20">
-                        <td className="px-3 py-2 text-slate-500">{i + 1}</td>
-                        <td className="px-3 py-2 text-white font-medium">{item.namaProduk}</td>
-                        <td className="px-3 py-2 text-slate-300">{item.kodeLot || "-"}</td>
-                        <td className="px-3 py-2 text-center text-yellow-400 font-bold">{item.qty}</td>
-                        <td className="px-3 py-2 text-slate-300">{item.unit}</td>
-                        <td className="px-3 py-2 text-slate-300">{item.alasan}</td>
+                        <td className="px-2 py-1.5 text-slate-500">{i + 1}</td>
+                        <td className="px-2 py-1.5 text-white font-medium truncate max-w-[100px]">{item.namaProduk}</td>
+                        <td className="px-2 py-1.5 text-slate-300 text-[11px]">{item.kodeLot || "-"}</td>
+                        <td className="px-2 py-1.5 text-center text-yellow-400 font-bold">{item.qty}</td>
+                        <td className="px-2 py-1.5 text-slate-300">{item.unit}</td>
+                        <td className="px-2 py-1.5 text-slate-300 truncate max-w-[80px]">{item.alasan}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -633,7 +633,7 @@ Contoh:
 
         {/* ========== STEP: SUCCESS ========== */}
         {step === "success" && (
-          <div className="space-y-6 max-w-xl mx-auto text-center py-8">
+          <div className="space-y-6 w-full text-center py-8">
             <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>

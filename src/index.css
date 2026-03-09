@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global overflow fix for mobile */
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+
 /* ═══════════════════════════════════════════
    CYBERPUNK THEME - BA WASTE
    Lightweight, functional, no heavy animations

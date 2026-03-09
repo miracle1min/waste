@@ -1139,7 +1139,7 @@ export default function ProductDestruction() {
     <div className="min-h-screen bg-cyber-dark cyber-grid-bg flex flex-col">
       {/* Header - Cyberpunk */}
       <div className="bg-cyber-header backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-1.5">
+        <div className="w-full px-4 py-1.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <button
@@ -1187,7 +1187,7 @@ export default function ProductDestruction() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+      <div className="flex-1 w-full px-3 sm:px-4 py-3 sm:py-4">
         {/* Step Wizard */}
         <StepWizard 
           steps={STEPS} 

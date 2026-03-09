@@ -35,6 +35,25 @@ interface DashboardData {
   topProducts: Array<{ name: string; count: number; qty: number }>;
 }
 
+
+// Parse DD/MM/YY tab name to Date  
+function parseTabDate(tab: string): Date | null {
+  const m = tab.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  if (!m) return null;
+  return new Date(2000 + parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+}
+
+function formatTabDate(tab: string): { display: string; dayName: string; fullDate: string } {
+  const d = parseTabDate(tab);
+  if (!d || isNaN(d.getTime())) return { display: tab, dayName: '?', fullDate: tab };
+  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  return {
+    display: `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`,
+    dayName: days[d.getDay()],
+    fullDate: `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`,
+  };
+}
+
 const STATION_COLORS: Record<string, string> = {
   NOODLE: "#06b6d4",
   DIMSUM: "#8b5cf6",
@@ -463,7 +482,8 @@ export default function Dashboard() {
       setPdfProgressNum({ current: i + 1, total: dates.length });
       
       try {
-        const result = await generatePdfForDate(date, storeName, (msg) => setPdfProgress(msg));
+        const { fullDate } = formatTabDate(date);
+        const result = await generatePdfForDate(fullDate || date, storeName, (msg) => setPdfProgress(msg));
         if (result) {
           // Download individual file
           const url = URL.createObjectURL(result.blob);
@@ -516,7 +536,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[hsl(220,45%,6%)] text-white flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-3 py-2 flex items-center justify-between">
+        <div className="w-full px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -597,7 +617,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 py-4 space-y-4">
+      <main className="flex-1 w-full px-3 py-4 space-y-4">
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mr-3" />
@@ -616,6 +636,102 @@ export default function Dashboard() {
 
         {data && !loading && (
           <>
+            {/* ==================== BATCH PDF SECTION ==================== */}
+            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Generate PDF BA WASTE
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500">
+                    {selectedPdfDates.size}/{availableDates.length} dipilih
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleAllPdfDates}
+                    className="text-[10px] text-cyan-400 hover:bg-cyan-950/50 px-2 h-7"
+                  >
+                    {selectedPdfDates.size === availableDates.length ? "Batal Semua" : "Pilih Semua"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Date grid */}
+              {availableDates.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4 max-h-64 overflow-y-auto pr-1">
+                    {availableDates.map((date) => {
+                      const isSelected = selectedPdfDates.has(date);
+                      const { display, dayName } = formatTabDate(date);
+                      return (
+                        <button
+                          key={date}
+                          onClick={() => togglePdfDate(date)}
+                          disabled={pdfGenerating}
+                          className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-all ${
+                            isSelected
+                              ? "border-cyan-500 bg-cyan-950/60 text-cyan-300"
+                              : "border-cyan-900/30 bg-[hsl(220,45%,8%)] text-slate-400 hover:border-cyan-700"
+                          } ${pdfGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                          ) : (
+                            <Square className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
+                          )}
+                          <div className="text-left">
+                            <div className="font-mono font-semibold">{display}</div>
+                            <div className="text-[9px] text-slate-500">{dayName}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Progress bar */}
+                  {pdfGenerating && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-cyan-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{pdfProgress}</span>
+                        <span className="ml-auto font-mono">
+                          {pdfProgressNum.current}/{pdfProgressNum.total}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                          style={{ width: `${pdfProgressNum.total > 0 ? (pdfProgressNum.current / pdfProgressNum.total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generate button */}
+                  <Button
+                    onClick={handleBatchPdf}
+                    disabled={selectedPdfDates.size === 0 || pdfGenerating}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-2 disabled:opacity-50"
+                  >
+                    {pdfGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating {pdfProgressNum.current}/{pdfProgressNum.total}...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Generate {selectedPdfDates.size} PDF{selectedPdfDates.size > 1 ? "s" : ""}
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-center text-slate-500 py-6">Tidak ada data tersedia untuk generate PDF</p>
+              )}
+            </div>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -772,103 +888,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* ==================== BATCH PDF SECTION ==================== */}
-            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Generate PDF BA WASTE
-                </h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">
-                    {selectedPdfDates.size}/{availableDates.length} dipilih
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleAllPdfDates}
-                    className="text-[10px] text-cyan-400 hover:bg-cyan-950/50 px-2 h-7"
-                  >
-                    {selectedPdfDates.size === availableDates.length ? "Batal Semua" : "Pilih Semua"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Date grid */}
-              {availableDates.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4 max-h-64 overflow-y-auto pr-1">
-                    {availableDates.map((date) => {
-                      const isSelected = selectedPdfDates.has(date);
-                      const d = new Date(date + 'T00:00:00');
-                      const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][d.getDay()];
-                      const display = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
-                      return (
-                        <button
-                          key={date}
-                          onClick={() => togglePdfDate(date)}
-                          disabled={pdfGenerating}
-                          className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-all ${
-                            isSelected
-                              ? "border-cyan-500 bg-cyan-950/60 text-cyan-300"
-                              : "border-cyan-900/30 bg-[hsl(220,45%,8%)] text-slate-400 hover:border-cyan-700"
-                          } ${pdfGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                          ) : (
-                            <Square className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
-                          )}
-                          <div className="text-left">
-                            <div className="font-mono font-semibold">{display}</div>
-                            <div className="text-[9px] text-slate-500">{dayName}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Progress bar */}
-                  {pdfGenerating && (
-                    <div className="mb-4 space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-cyan-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>{pdfProgress}</span>
-                        <span className="ml-auto font-mono">
-                          {pdfProgressNum.current}/{pdfProgressNum.total}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
-                          style={{ width: `${pdfProgressNum.total > 0 ? (pdfProgressNum.current / pdfProgressNum.total) * 100 : 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Generate button */}
-                  <Button
-                    onClick={handleBatchPdf}
-                    disabled={selectedPdfDates.size === 0 || pdfGenerating}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-2 disabled:opacity-50"
-                  >
-                    {pdfGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating {pdfProgressNum.current}/{pdfProgressNum.total}...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-2" />
-                        Generate {selectedPdfDates.size} PDF{selectedPdfDates.size > 1 ? "s" : ""}
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <p className="text-center text-slate-500 py-6">Tidak ada data tersedia untuk generate PDF</p>
-              )}
-            </div>
           </>
         )}
       </main>
