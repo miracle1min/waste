@@ -117,6 +117,7 @@ function LogoutButton() {
 export default function ProductDestruction() {
   // Performance monitoring
   const { logRenderInfo } = usePerformanceMonitor('ProductDestruction');
+  const { tenantName } = useAuth();
   
   const [currentStep, setCurrentStep] = useState<Step>("date");
   const [completedSteps, setCompletedSteps] = useState<Step[]>([]);
