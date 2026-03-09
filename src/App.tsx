@@ -12,27 +12,38 @@ import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
 import AutoWaste from "@/pages/auto-waste";
 import Dashboard from "@/pages/dashboard";
-import Settings from "@/pages/settings";
+import AdminPanel from "@/pages/admin-panel";
 
-function Router() {
+function UserRouter() {
   return (
     <Switch>
       <Route path="/" component={ModeSelector} />
       <Route path="/manual-waste" component={ProductDestruction} />
       <Route path="/auto-waste" component={AutoWaste} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
+function AdminRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={AdminPanel} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route component={AdminPanel} />
+    </Switch>
+  );
+}
+
 function AuthenticatedApp() {
+  const { isSuperAdmin } = useAuth();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <Toaster />
-        <Router />
+        {isSuperAdmin ? <AdminRouter /> : <UserRouter />}
       </main>
     </div>
   );
