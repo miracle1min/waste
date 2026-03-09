@@ -1384,7 +1384,7 @@ function ActivityLogPage() {
       if (status) params.set("status", status);
       if (dateFrom) params.set("date_from", dateFrom);
       if (dateTo) params.set("date_to", dateTo);
-      const data = await api(`/api/activity-log?${params}`);
+      const data = await api(`/api/dashboard-data?mode=activity-log&${params}`);
       if (data.success) {
         setLogs(data.logs || []);
         setTotal(data.total || 0);

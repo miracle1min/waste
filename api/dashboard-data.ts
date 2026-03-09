@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
+import { requireRole, handleAuthError } from './_lib/auth.js';
+import { getActivityLogs } from './_lib/activity-logger.js';
 
 // Parse tab name "DD/MM/YY" to Date
 function parseTabToDate(tab: string): Date | null {
@@ -21,6 +23,32 @@ function tabToISODate(tab: string): string {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Activity Log sub-route (Super Admin only)
+  if (req.query.mode === 'activity-log') {
+    try {
+      requireRole(req, 'super_admin');
+      const {
+        page, limit, action, category, tenant_id,
+        username, status, date_from, date_to, search
+      } = req.query;
+      const result = await getActivityLogs({
+        page: page ? parseInt(page as string) : 1,
+        limit: limit ? parseInt(limit as string) : 50,
+        action: action as string,
+        category: category as string,
+        tenantId: tenant_id as string,
+        username: username as string,
+        status: status as string,
+        dateFrom: date_from as string,
+        dateTo: date_to as string,
+        search: search as string,
+      });
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      return handleAuthError(err, res);
+    }
+  }
 
   const { startDate, endDate } = req.query;
 

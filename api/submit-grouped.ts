@@ -153,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         shift,
         date: data.tanggal,
         itemCount: productList.length,
-        photoCount: imageUrls.filter(Boolean).length,
+        photoCount: Object.keys(imageUrls).length,
       },
       status: "success",
     });
