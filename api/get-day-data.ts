@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import crypto from 'crypto';
 
 function base64url(input: string | Buffer): string {
   const buf = typeof input === 'string' ? Buffer.from(input) : input;
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function createJWT(credentials: { client_email: string; private_key: string }): string {
@@ -55,23 +56,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { GOOGLE_SHEETS_CREDENTIALS, GOOGLE_SPREADSHEET_ID } = process.env;
-    if (!GOOGLE_SHEETS_CREDENTIALS || !GOOGLE_SPREADSHEET_ID) {
-      return res.status(500).json({ error: 'Missing Google Sheets config' });
+    // Resolve per-tenant credentials
+    const tenantId = extractTenantId(req);
+    const tenantCreds = await resolveTenantCredentials(tenantId);
+
+    if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
+      return res.status(500).json({ error: 'Google Sheets belum di-setting buat resto ini' });
     }
 
-    const credentials = JSON.parse(GOOGLE_SHEETS_CREDENTIALS);
+    const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
+    const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
     const accessToken = await getAccessToken(credentials);
     const tabName = formatDateToTab(date as string);
 
     // Read all data from the tab
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:V?valueRenderOption=FORMULA`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(tabName)}!A:V?valueRenderOption=FORMULA`;
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     });
 
     if (!response.ok) {
-      return res.json({ success: true, data: [], storeName: '', date: date });
+      return res.json({ success: true, data: [], storeName: '', date: date, grouped: {} });
     }
 
     const sheetData = (await response.json()) as { values?: string[][] };
@@ -99,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }));
 
     // Get store name from first entry
-    const storeName = entries.find(e => e.store)?.store || 'BEKASI KP. BULU';
+    const storeName = entries.find(e => e.store)?.store || '';
 
     // Group by shift
     const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];

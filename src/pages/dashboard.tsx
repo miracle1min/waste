@@ -119,7 +119,7 @@ async function generatePdfForDate(
 ): Promise<{ blob: Blob; fileName: string } | null> {
   onProgress?.(`Ngambil data ${date}...`);
   
-  const res = await fetch(`/api/get-day-data?date=${date}`);
+  const res = await apiFetch(`/api/get-day-data?date=${date}`);
   const dayData = await res.json();
   if (!dayData.success || !dayData.grouped) return null;
 

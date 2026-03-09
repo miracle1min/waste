@@ -258,7 +258,7 @@ export default function ProductDestruction() {
   useEffect(() => {
     if (!selectedDate) return;
     setIsLoadingStatus(true);
-    fetch(`/api/get-day-data?date=${selectedDate}`)
+    apiFetch(`/api/get-day-data?date=${selectedDate}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.grouped) {
@@ -712,7 +712,7 @@ export default function ProductDestruction() {
   const handleGeneratePdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const res = await fetch(`/api/get-day-data?date=${selectedDate}`);
+      const res = await apiFetch(`/api/get-day-data?date=${selectedDate}`);
       const dayData = await res.json();
       if (!dayData.success || !dayData.grouped) {
         toast({ title: "Ups!", description: "Gagal ambil data dari spreadsheet", variant: "destructive" });
