@@ -7,6 +7,7 @@ import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 import { getCurrentWIBDateString } from "@shared/timezone";
 import { apiFetch } from "@/lib/api-client";
+import { useAuth } from "@/hooks/useAuth";
 
 // ========================
 // TYPES & CONSTANTS
@@ -106,6 +107,7 @@ function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] }
 export default function AutoWaste() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { tenantName } = useAuth();
 
   // Step
   const [step, setStep] = useState<AutoStep>("config");
