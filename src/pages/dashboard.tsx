@@ -347,13 +347,23 @@ async function generatePdfForDate(
   doc.setFont('helvetica', 'normal');
   doc.text(displayPelapor, rightX + 5, startY + 20);
 
-  // Disclaimer footer
-  const disclaimerY = startY + 28;
-  doc.setFontSize(6.5);
+  // Disclaimer footer - with page boundary check
+  let disclaimerY = startY + 30;
+  if (disclaimerY > pageHeight - 10) {
+    doc.addPage();
+    disclaimerY = 20;
+  }
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Data waste ini bersifat Internal & Rahasia serta terjaga keamanannya di database QC.', pageWidth / 2, disclaimerY, { align: 'center' });
-  doc.setTextColor(0, 0, 0); // reset
+  doc.setTextColor(100, 100, 100);
+  const disclaimerText = 'Data waste ini bersifat Internal & Rahasia serta terjaga keamanannya di database QC.';
+  doc.text(disclaimerText, pageWidth / 2, disclaimerY, { align: 'center' });
+  // Garis tipis di atas disclaimer
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.line(margin + 20, disclaimerY - 3, pageWidth - margin - 20, disclaimerY - 3);
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0); // reset
 
   const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
   return { blob: doc.output('blob'), fileName };
