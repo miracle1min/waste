@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loade
 interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
 interface UserItem { id: string; tenant_id: string; username: string; role: string; created_at: string; }
 interface Personnel { id: number; tenant_id: string; name: string; full_name: string; role: string; signature_url: string; status: string; created_at: string; }
-interface TenantConfig { tenant_id: string; google_sheet_id: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
+interface TenantConfig { tenant_id: string; google_spreadsheet_id: string; google_sheets_credentials: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
 
 // ===== API Helpers =====
 async function api(url: string, method = "GET", body?: any) {
@@ -661,7 +661,7 @@ function ConfigsTab() {
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({
-    google_sheet_id: "",
+    google_spreadsheet_id: "", google_sheets_credentials: "",
     r2_account_id: "",
     r2_access_key_id: "",
     r2_secret_access_key: "",
@@ -684,7 +684,7 @@ function ConfigsTab() {
     const existing = configs.find((c) => c.tenant_id === tid);
     if (existing) {
       setForm({
-        google_sheet_id: existing.google_sheet_id || "",
+        google_spreadsheet_id: existing.google_spreadsheet_id || "", google_sheets_credentials: existing.google_sheets_credentials || "",
         r2_account_id: existing.r2_account_id || "",
         r2_access_key_id: existing.r2_access_key_id || "",
         r2_secret_access_key: existing.r2_secret_access_key || "",
@@ -692,7 +692,7 @@ function ConfigsTab() {
         r2_public_url: existing.r2_public_url || "",
       });
     } else {
-      setForm({ google_sheet_id: "", r2_account_id: "", r2_access_key_id: "", r2_secret_access_key: "", r2_bucket_name: "", r2_public_url: "" });
+      setForm({ google_spreadsheet_id: "", google_sheets_credentials: "", r2_account_id: "", r2_access_key_id: "", r2_secret_access_key: "", r2_bucket_name: "", r2_public_url: "" });
     }
   };
 
@@ -709,7 +709,8 @@ function ConfigsTab() {
   };
 
   const configFields = [
-    { key: "google_sheet_id", label: "Google Spreadsheet ID", placeholder: "1ABC...xyz", secret: false, desc: "ID dari Google Sheet khusus store ini" },
+    { key: "google_spreadsheet_id", label: "Google Spreadsheet ID", placeholder: "1ABC...xyz", secret: false, desc: "ID dari Google Sheet khusus store ini" },
+    { key: "google_sheets_credentials", label: "Google Sheets Credentials (JSON)", placeholder: "{...service account JSON...}", secret: true, desc: "Service Account JSON buat akses Google Sheets" },
     { key: "r2_account_id", label: "R2 Account ID", placeholder: "abc123...", secret: true, desc: "Cloudflare Account ID" },
     { key: "r2_access_key_id", label: "R2 Access Key ID", placeholder: "abc123...", secret: true, desc: "R2 API Token Access Key" },
     { key: "r2_secret_access_key", label: "R2 Secret Access Key", placeholder: "abc123...", secret: true, desc: "R2 API Token Secret" },
@@ -807,7 +808,7 @@ function ConfigsTab() {
                       <tr key={c.tenant_id} onClick={() => handleSelectTenant(c.tenant_id)}
                         className="border-b border-cyan-900/20 hover:bg-cyan-500/5 cursor-pointer transition-colors">
                         <td className="px-4 py-3 text-cyan-200">{tenant?.name || c.tenant_id}</td>
-                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.google_sheet_id ? c.google_sheet_id.substring(0, 15) + "..." : "—"}</td>
+                        <td className="px-4 py-3 text-cyan-400 text-xs">{c.google_spreadsheet_id ? c.google_spreadsheet_id.substring(0, 15) + "..." : "—"}</td>
                         <td className="px-4 py-3 text-cyan-400 text-xs">{c.r2_bucket_name || "—"}</td>
                         <td className="px-4 py-3 text-cyan-600 text-xs">{c.updated_at ? new Date(c.updated_at).toLocaleDateString("id-ID") : "—"}</td>
                       </tr>
