@@ -1,8 +1,23 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserByUsername, getTenantById, updateUser } from "../_lib/db.js";
+import { getUserByUsername, getTenantById, updateUser, getAllTenants } from "../_lib/db.js";
 import { verifyPassword, isLegacyHash, hashPassword, createToken } from "../_lib/auth.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // GET = return tenant list for login dropdown (was /api/auth/tenants)
+  if (req.method === "GET") {
+    try {
+      const tenants = await getAllTenants();
+      const publicList = tenants
+        .filter((t) => t.status === "active")
+        .map((t) => ({ id: t.id, name: t.name }));
+      return res.json({ success: true, tenants: publicList });
+    } catch (err: any) {
+      console.error("Tenants list error:", err);
+      return res.status(500).json({ error: "Gagal ambil daftar store." });
+    }
+  }
+
+  // POST = login
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {

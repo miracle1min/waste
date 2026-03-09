@@ -166,7 +166,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/auth/tenants");
+        const res = await fetch("/api/auth/login");
         const data = await res.json();
         if (data.tenants) setTenants(data.tenants);
       } catch (err) {
