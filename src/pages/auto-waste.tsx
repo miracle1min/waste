@@ -302,7 +302,7 @@ export default function AutoWaste() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
       {/* Header */}
-      <header className="w-full border-b border-cyan-900/30 bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         <div className="w-full px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button
@@ -315,8 +315,9 @@ export default function AutoWaste() {
             </Button>
             <Zap className="w-5 h-5 text-cyan-400" />
             <div>
-              <h1 className="text-sm font-bold text-cyan-400">Waste Otomatis</h1>
+              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Waste Otomatis</h1>
               <p className="text-[10px] text-slate-500">Fast Mode • Paste & Go</p>
+              {tenantName && <p className="text-[10px] text-cyan-500/70 font-mono truncate">{tenantName}</p>}
             </div>
           </div>
           {/* Step indicator */}

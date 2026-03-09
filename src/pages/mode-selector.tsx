@@ -17,7 +17,7 @@ export default function ModeSelector() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
       {/* Header */}
-      <header className="w-full border-b border-cyan-900/30 bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         <div className="w-full px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src={wasteLogo} alt="AWAS Logo" className="w-8 h-8 rounded" />
@@ -26,6 +26,7 @@ export default function ModeSelector() {
                 AWAS
               </h1>
               <p className="text-[10px] text-slate-500">Aplikasi Waste Always Simple</p>
+              {tenantName && <p className="text-[10px] text-cyan-500/70 font-mono truncate">{tenantName}</p>}
             </div>
             {/* User info */}
             <div className="hidden sm:flex items-center gap-2 ml-3 px-2 py-1 rounded-lg bg-cyan-500/5 border border-cyan-900/30">

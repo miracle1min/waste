@@ -1112,7 +1112,7 @@ export default function ProductDestruction() {
   return (
     <div className="min-h-screen bg-cyber-dark cyber-grid-bg flex flex-col">
       {/* Header - Cyberpunk */}
-      <div className="bg-cyber-header backdrop-blur-sm sticky top-0 z-40">
+      <div className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         <div className="w-full px-4 py-1.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1131,20 +1131,10 @@ export default function ProductDestruction() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-sm sm:text-base font-heading font-bold heading-gradient truncate tracking-wider leading-tight">
+                <h1 className="text-sm sm:text-base font-heading font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent truncate tracking-wider leading-tight">
                   BA WASTE
                 </h1>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate leading-tight">
-                  V.3.1.1 | Made With ☕ By{' '}
-                  <a 
-                    href="https://www.facebook.com/hipnotismagic" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 font-semibold"
-                  >
-                    DirgaX
-                  </a>
-                </p>
+                {tenantName && <p className="text-[10px] text-cyan-500/70 font-mono truncate">{tenantName}</p>}
               </div>
             </div>
             <div className="flex-shrink-0 flex items-center gap-2">

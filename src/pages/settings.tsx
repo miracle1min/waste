@@ -43,7 +43,7 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-gray-950 text-cyan-100">
       {/* Header */}
-      <div className="border-b border-cyan-900/30 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-30">
+      <div className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-4">
           <button onClick={() => navigate("/")} className="p-1.5 sm:p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all flex-shrink-0">
             <ArrowLeft className="h-4 w-4 text-cyan-400" />
@@ -53,6 +53,7 @@ export default function Settings() {
               ⚙️ Settings — Control Panel
             </h1>
             <p className="text-[10px] sm:text-xs font-mono text-cyan-600">Kelola store, user, dan konfigurasi</p>
+            <p className="text-[10px] text-purple-400/70 font-mono flex items-center gap-1">🛡️ Super Admin Panel</p>
           </div>
         </div>
       </div>
