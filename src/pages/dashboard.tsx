@@ -356,23 +356,21 @@ async function generatePdfForDate(
   doc.setFont('helvetica', 'normal');
   doc.text(displayPelapor, rightX + 5, startY + 20);
 
-  // Disclaimer footer - with page boundary check
-  let disclaimerY = startY + 30;
-  if (disclaimerY > pageHeight - 10) {
-    doc.addPage();
-    disclaimerY = 20;
-  }
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(100, 100, 100);
-  const disclaimerText = 'Data waste ini bersifat Internal & Rahasia serta terjaga keamanannya di database QC.';
-  doc.text(disclaimerText, pageWidth / 2, disclaimerY, { align: 'center' });
-  // Garis tipis di atas disclaimer
+
+  // Disclaimer footer - selalu di paling bawah halaman terakhir
+  const totalPages = doc.getNumberOfPages();
+  doc.setPage(totalPages);
+  const bottomY = pageHeight - 5;
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(130, 130, 130);
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.2);
-  doc.line(margin + 20, disclaimerY - 3, pageWidth - margin - 20, disclaimerY - 3);
+  doc.line(margin + 30, bottomY - 3.5, pageWidth - margin - 30, bottomY - 3.5);
+  const disclaimerText = "Data waste ini bersifat Internal \& Rahasia serta terjaga keamanannya di database QC.";
+  doc.text(disclaimerText, pageWidth / 2, bottomY, { align: "center" });
   doc.setTextColor(0, 0, 0);
-  doc.setDrawColor(0, 0, 0); // reset
+  doc.setDrawColor(0, 0, 0);
 
   const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
   return { blob: doc.output('blob'), fileName };
