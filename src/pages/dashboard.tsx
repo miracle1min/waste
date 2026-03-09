@@ -117,7 +117,8 @@ async function generatePdfForDate(
   storeName: string,
   onProgress?: (msg: string) => void,
   pelaporName?: string,
-  pelaporSigUrl?: string
+  pelaporSigUrl?: string,
+  onDetailProgress?: (current: number, total: number, phase: string) => void
 ): Promise<{ blob: Blob; fileName: string } | null> {
   onProgress?.(`Ngambil data ${date}...`);
   
@@ -262,7 +263,21 @@ async function generatePdfForDate(
 
     const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
 
-    // Pre-fetch sigs + doc photos
+    // Pre-fetch sigs + doc photos with progress
+    // First collect all URLs to calculate total
+    const allDocUrlsForShift: string[] = [];
+    for (const station of stationOrder) {
+      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+      if (entry?.dokumentasi) {
+        const urls = entry.dokumentasi
+          .map((d: string) => extractImageUrl(d))
+          .filter((u: string) => u);
+        allDocUrlsForShift.push(...urls);
+      }
+    }
+    let fetchedCount = 0;
+    const totalPhotos = allDocUrlsForShift.length;
+
     for (const station of stationOrder) {
       const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
       if (entry) {
@@ -270,14 +285,17 @@ async function generatePdfForDate(
         const mgrUrl = extractImageUrl(entry.parafManager);
         if (qcUrl) await fetchSigImage(qcUrl);
         if (mgrUrl) await fetchSigImage(mgrUrl);
-        // Pre-fetch documentation photos (max 2 per entry)
+        // Pre-fetch ALL documentation photos (no limit)
         if (entry.dokumentasi) {
           const docUrls = entry.dokumentasi
             .map((d: string) => extractImageUrl(d))
-            .filter((u: string) => u)
-            .slice(0, 2);
+            .filter((u: string) => u);
           for (const docUrl of docUrls) {
             await fetchDocPhoto(docUrl);
+            fetchedCount++;
+            const phase = `📸 ${shift} - Foto ${fetchedCount}/${totalPhotos}`;
+            onProgress?.(phase);
+            onDetailProgress?.(fetchedCount, totalPhotos, `foto_${shift}`);
           }
         }
       }
@@ -296,11 +314,10 @@ async function generatePdfForDate(
         const satuan = String(entry.unit || '-').replace(/,\s*/g, '\n');
         const metode = String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
         const alasan = String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
-        // Collect doc photo URLs (max 2)
+        // Collect ALL doc photo URLs
         const docUrls = (entry.dokumentasi || [])
           .map((d: string) => extractImageUrl(d))
-          .filter((u: string) => u)
-          .slice(0, 2);
+          .filter((u: string) => u);
         rowEntries.push({ entry, stationIdx: idx, docUrls });
         rows.push([
           (idx + 1).toString(), namaProduk, kodeProduk, jumlahProduk, satuan,
@@ -334,9 +351,11 @@ async function generatePdfForDate(
         if (data.section !== 'body') return;
         const rowIdx = data.row.index;
         const rowEntry = rowEntries[rowIdx];
-        // Increase row height for rows with doc photos
+        // Dynamic row height based on number of photos (2 per row, each ~14mm + gap)
         if (rowEntry?.docUrls?.length > 0) {
-          data.cell.styles.minCellHeight = Math.max(data.cell.styles.minCellHeight, 16);
+          const photoRows = Math.ceil(rowEntry.docUrls.length / 2);
+          const photoHeight = photoRows * 14 + (photoRows - 1) * 1 + 3; // 14mm per photo row + 1mm gap + padding
+          data.cell.styles.minCellHeight = Math.max(data.cell.styles.minCellHeight, photoHeight);
         }
       },
       didDrawCell: (data: any) => {
@@ -373,25 +392,30 @@ async function generatePdfForDate(
         if (colIdx === 10) {
           const docUrls = rowEntry.docUrls || [];
           if (docUrls.length > 0) {
-            const padding = 1;
+            const padding = 1.5;
             const availW = cellW - (padding * 2);
-            const availH = cellH - (padding * 2);
-            const imgCount = Math.min(docUrls.length, 2);
-            // Each image is square, fit 2 side by side with 1mm gap
-            const gap = imgCount > 1 ? 1 : 0;
-            const imgSize = Math.min(availH, (availW - gap) / imgCount);
-            const totalW = (imgSize * imgCount) + gap;
-            let drawX = cellX + (cellW - totalW) / 2;
-            const drawY = cellY + (cellH - imgSize) / 2;
+            const gap = 1; // 1mm gap between photos
+            const photosPerRow = 2;
+            const imgSize = Math.min(13, (availW - gap) / photosPerRow); // max 13mm per photo
+            const photoRows = Math.ceil(docUrls.length / photosPerRow);
+            const totalH = photoRows * imgSize + (photoRows - 1) * gap;
+            let startDrawY = cellY + (cellH - totalH) / 2;
 
-            for (let di = 0; di < imgCount; di++) {
-              const docUrl = docUrls[di];
-              if (docUrl && docPhotoCache[docUrl]) {
-                try {
-                  doc.addImage(docPhotoCache[docUrl], 'JPEG', drawX, drawY, imgSize, imgSize);
-                } catch {}
+            for (let row = 0; row < photoRows; row++) {
+              const startIdx = row * photosPerRow;
+              const rowPhotos = docUrls.slice(startIdx, startIdx + photosPerRow);
+              const rowTotalW = rowPhotos.length * imgSize + (rowPhotos.length - 1) * gap;
+              let drawX = cellX + (cellW - rowTotalW) / 2;
+              const drawY = startDrawY + row * (imgSize + gap);
+
+              for (const docUrl of rowPhotos) {
+                if (docUrl && docPhotoCache[docUrl]) {
+                  try {
+                    doc.addImage(docPhotoCache[docUrl], 'JPEG', drawX, drawY, imgSize, imgSize);
+                  } catch {}
+                }
+                drawX += imgSize + gap;
               }
-              drawX += imgSize + gap;
             }
           }
         }
@@ -496,6 +520,7 @@ export default function Dashboard() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfProgress, setPdfProgress] = useState("");
   const [pdfProgressNum, setPdfProgressNum] = useState({ current: 0, total: 0 });
+  const [photoProgress, setPhotoProgress] = useState({ current: 0, total: 0, phase: '' });
 
   // Pelapor dropdown state
   const [selectedPelapor, setSelectedPelapor] = useState<string>("");
@@ -617,7 +642,12 @@ export default function Dashboard() {
       
       try {
         const { fullDate } = formatTabDate(date);
-        const result = await generatePdfForDate(fullDate || date, storeName, (msg) => setPdfProgress(msg), selectedPelapor, pelaporSigUrls[selectedPelapor]);
+        const result = await generatePdfForDate(
+          fullDate || date, storeName,
+          (msg) => setPdfProgress(msg),
+          selectedPelapor, pelaporSigUrls[selectedPelapor],
+          (current, total, phase) => setPhotoProgress({ current, total, phase })
+        );
         if (result) {
           // Download individual file
           const url = URL.createObjectURL(result.blob);
@@ -645,6 +675,7 @@ export default function Dashboard() {
     setPdfGenerating(false);
     setPdfProgress("");
     setPdfProgressNum({ current: 0, total: 0 });
+    setPhotoProgress({ current: 0, total: 0, phase: '' });
 
     toast({
       title: `📄 Batch PDF Selesai!`,
@@ -855,22 +886,42 @@ export default function Dashboard() {
                     })}
                   </div>
 
-                  {/* Progress bar */}
+                  {/* Progress bar with photo detail */}
                   {pdfGenerating && (
-                    <div className="mb-4 space-y-2">
+                    <div className="mb-4 space-y-3 bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                      {/* Overall progress */}
                       <div className="flex items-center gap-2 text-xs text-cyan-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>{pdfProgress}</span>
-                        <span className="ml-auto font-mono">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                        <span className="truncate">{pdfProgress || 'Mempersiapkan...'}</span>
+                        <span className="ml-auto font-mono font-bold text-cyan-300 flex-shrink-0">
                           {pdfProgressNum.current}/{pdfProgressNum.total}
                         </span>
                       </div>
-                      <div className="w-full bg-slate-800 rounded-full h-2">
+                      {/* Overall bar */}
+                      <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden">
                         <div
-                          className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 transition-all duration-700 ease-out"
                           style={{ width: `${pdfProgressNum.total > 0 ? (pdfProgressNum.current / pdfProgressNum.total) * 100 : 0}%` }}
                         />
                       </div>
+                      {/* Photo fetch progress */}
+                      {photoProgress.total > 0 && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                            <span>📸 Foto: {photoProgress.current}/{photoProgress.total}</span>
+                            <span className="ml-auto font-mono">
+                              {Math.round((photoProgress.current / photoProgress.total) * 100)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                              style={{ width: `${(photoProgress.current / photoProgress.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-slate-500 text-center">⏳ Mohon tunggu, sedang memproses foto dokumentasi...</p>
                     </div>
                   )}
 
