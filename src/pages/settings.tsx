@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
 
 // ===== Types =====
 interface Tenant { id: string; name: string; address: string; phone: string; status: string; created_at: string; }
@@ -432,6 +432,8 @@ function PersonnelTab() {
   const [form, setForm] = useState({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" });
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<"all" | "qc" | "manager">("all");
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
@@ -470,9 +472,40 @@ function PersonnelTab() {
     loadPersonnel(selectedTenant);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTenant) return;
+    // Show local preview
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+    // Convert to base64 and upload
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const result = await api("/api/settings/configs", "POST", {
+          action: "upload-signature",
+          tenant_id: selectedTenant,
+          file_base64: base64,
+          file_name: file.name,
+          mime_type: file.type,
+        });
+        if (result.signature_url) {
+          setForm((prev: any) => ({ ...prev, signature_url: result.signature_url }));
+        }
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploading(false);
+    }
+  };
+
   const handleEdit = (p: Personnel) => {
     setEditingId(p.id);
     setForm({ name: p.name, full_name: p.full_name || "", role: p.role, signature_url: p.signature_url || "", status: p.status });
+    setPreviewUrl("");
     setShowForm(true);
   };
 
@@ -535,7 +568,7 @@ function PersonnelTab() {
                   <button onClick={() => loadPersonnel(selectedTenant)} className="p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
                     <RefreshCw className="h-4 w-4 text-cyan-400" />
                   </button>
-                  <button onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" }); }}
+                  <button onClick={() => { setShowForm(true); setEditingId(null); setPreviewUrl(""); setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" }); }}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-mono text-sm hover:bg-cyan-500/20 transition-all">
                     <Plus className="h-4 w-4" /> Tambah Personil
                   </button>
@@ -575,10 +608,31 @@ function PersonnelTab() {
                       </select>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-[10px] font-mono text-cyan-600 uppercase">TTD / Signature URL (path di R2)</label>
-                      <input value={form.signature_url} onChange={(e) => setForm({ ...form, signature_url: e.target.value })}
-                        className="w-full h-10 px-3 bg-black/40 border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:outline-none" placeholder="signatures/pajar.jpeg" />
-                      <p className="text-[10px] font-mono text-cyan-800 mt-0.5">Path relatif di R2 bucket (tanpa base URL)</p>
+                      <label className="text-[10px] font-mono text-cyan-600 uppercase">Upload TTD / Tanda Tangan</label>
+                      <div className="flex items-center gap-3 mt-1">
+                        <label className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-all ${uploading ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-300" : "border-cyan-800/50 bg-black/40 text-cyan-300 hover:border-cyan-500/50 hover:bg-cyan-500/5"}`}>
+                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                          <span className="font-mono text-sm">{uploading ? "Uploading..." : "Pilih File"}</span>
+                          <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={uploading} />
+                        </label>
+                        {(previewUrl || form.signature_url) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-16 rounded-lg border border-cyan-900/50 bg-black/40 overflow-hidden flex items-center justify-center">
+                              <img
+                                src={previewUrl || `/api/proxy-image?url=${encodeURIComponent(form.signature_url)}&tenant_id=${selectedTenant}`}
+                                alt="Preview TTD"
+                                className="w-full h-full object-contain p-1"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-mono text-green-400">✅ TTD Ready</p>
+                              <p className="text-[10px] font-mono text-cyan-800 truncate max-w-[200px]">{form.signature_url}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-mono text-cyan-800 mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-2">

@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db.js";
 import { testConnection, seedDatabase, switchDatabase } from "../_lib/database-ops.js";
+import { uploadToR2 } from "../_lib/r2.js";
+import { resolveTenantCredentials } from "../_lib/tenant-resolver.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const role = req.headers["x-user-role"] as string;
@@ -34,6 +36,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!body.new_url) return res.status(400).json({ error: "URL database baru wajib diisi!" });
         const result = await switchDatabase(body.new_url);
         return res.json(result);
+      }
+
+      // Upload signature to R2
+      if (body.action === "upload-signature") {
+        const { tenant_id, file_base64, file_name, mime_type } = body;
+        if (!tenant_id || !file_base64 || !file_name) {
+          return res.status(400).json({ error: "tenant_id, file_base64, dan file_name wajib diisi!" });
+        }
+        const creds = await resolveTenantCredentials(tenant_id);
+        const buffer = Buffer.from(file_base64, "base64");
+        const safeName = file_name.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
+        // uploadToR2 returns full URL like https://pub-xxx.r2.dev/signatures/123-abc-name.jpg
+        const fullUrl = await uploadToR2(buffer, safeName, mime_type || "image/jpeg", "signatures", {
+          accountId: creds.r2AccountId,
+          accessKeyId: creds.r2AccessKeyId,
+          secretAccessKey: creds.r2SecretAccessKey,
+          bucketName: creds.r2BucketName,
+          publicUrl: creds.r2PublicUrl,
+        });
+        // Extract relative path from full URL for DB storage
+        const publicBase = (creds.r2PublicUrl || "").replace(/\/$/, "");
+        const signaturePath = publicBase ? fullUrl.replace(publicBase + "/", "") : fullUrl;
+        return res.json({ success: true, signature_url: signaturePath, full_url: fullUrl });
       }
 
       // Special action: migrate from env vars
