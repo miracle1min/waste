@@ -156,22 +156,43 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [mounted, setMounted] = useState(false);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(true);
+  const [loadingMsg, setLoadingMsg] = useState("Menyambungkan ke server...");
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
   }, []);
 
-  // Fetch tenants list for dropdown
+  // Fetch tenants list for dropdown — with cache & loading messages
   useEffect(() => {
     (async () => {
+      // Try cache first for instant display
+      try {
+        const cached = localStorage.getItem("waste_tenants_cache");
+        if (cached) {
+          const { tenants: cachedTenants, ts } = JSON.parse(cached);
+          if (Date.now() - ts < 5 * 60 * 1000) { // 5 min cache
+            setTenants(cachedTenants);
+            setLoadingTenants(false);
+          }
+        }
+      } catch {}
+
+      // Fetch fresh data
+      const msgTimer = setTimeout(() => setLoadingMsg("Membangunkan database..."), 2000);
+      const msgTimer2 = setTimeout(() => setLoadingMsg("Hampir selesai, tunggu ya..."), 5000);
       try {
         const res = await fetch("/api/auth/login");
         const data = await res.json();
-        if (data.tenants) setTenants(data.tenants);
+        if (data.tenants) {
+          setTenants(data.tenants);
+          localStorage.setItem("waste_tenants_cache", JSON.stringify({ tenants: data.tenants, ts: Date.now() }));
+        }
       } catch (err) {
         console.error("Failed to fetch tenants:", err);
       } finally {
+        clearTimeout(msgTimer);
+        clearTimeout(msgTimer2);
         setLoadingTenants(false);
       }
     })();
@@ -357,25 +378,41 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                       <FormControl>
                         <div className="relative">
                           <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-500" />
-                          <select
-                            {...field}
-                            disabled={loadingTenants}
-                            className="w-full h-12 pl-11 pr-4 bg-black/40 backdrop-blur-sm border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,255,255,0.3)] focus:outline-none hover:border-cyan-400/60 transition-all duration-300 appearance-none cursor-pointer"
-                          >
-                            <option value="" className="bg-gray-950 text-cyan-400">
-                              {loadingTenants ? "Loading resto..." : "— Pilih Resto —"}
-                            </option>
-                            {tenants.map((t) => (
-                              <option key={t.id} value={t.id} className="bg-gray-950 text-cyan-100">
-                                {t.name}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <svg className="h-4 w-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
+                          {loadingTenants && tenants.length === 0 ? (
+                            <div className="w-full h-12 pl-11 pr-4 bg-black/40 backdrop-blur-sm border border-cyan-900/50 rounded-lg flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
+                                  <span className="text-xs font-mono text-cyan-400/80">{loadingMsg}</span>
+                                </div>
+                                <div className="mt-1.5 h-1 w-full bg-cyan-950/50 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full animate-pulse" style={{ width: '60%', animation: 'loading-bar 2s ease-in-out infinite' }} />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                {...field}
+                                disabled={loadingTenants}
+                                className="w-full h-12 pl-11 pr-4 bg-black/40 backdrop-blur-sm border border-cyan-900/50 rounded-lg font-mono text-sm text-cyan-100 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,255,255,0.3)] focus:outline-none hover:border-cyan-400/60 transition-all duration-300 appearance-none cursor-pointer"
+                              >
+                                <option value="" className="bg-gray-950 text-cyan-400">
+                                  — Pilih Resto —
+                                </option>
+                                {tenants.map((t) => (
+                                  <option key={t.id} value={t.id} className="bg-gray-950 text-cyan-100">
+                                    {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg className="h-4 w-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </FormControl>
                       <FormMessage className="text-red-400 text-xs font-mono" />
@@ -503,6 +540,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         }
         .cyber-glitch-1 { animation: glitch1 3s infinite; color: #ff00ff; opacity: 0.7; }
         .cyber-glitch-2 { animation: glitch2 3s infinite; color: #00ffff; opacity: 0.7; }
+        @keyframes loading-bar {
+          0% { width: 10%; opacity: 0.5; }
+          50% { width: 80%; opacity: 1; }
+          100% { width: 10%; opacity: 0.5; }
+        }
       `}</style>
     </div>
   );
