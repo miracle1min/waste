@@ -212,6 +212,12 @@ function buildImageFormula(url: string): string {
   return `=IMAGE("${safeUrl}"; 4; 90; 90)`;
 }
 
+// Helper: safely uppercase any string value
+function toUpper(val: any): string {
+  if (val == null) return '';
+  return String(val).toUpperCase();
+}
+
 function buildDokumentasiColumns(dokumentasiUrl: string): string[] {
   const urls = dokumentasiUrl ? dokumentasiUrl.split('\n').filter((u: string) => u.trim()) : [];
   return Array.from({ length: 10 }, (_, i) =>
@@ -254,15 +260,15 @@ export async function appendToGoogleSheets(
 
   const dokumentasiCols = buildDokumentasiColumns(imageUrls.dokumentasi || '');
   const rowData = [
-    (shift || 'OPENING').toUpperCase(),
-    (storeName || '').toUpperCase(),
-    data.kategoriInduk,
-    data.namaProduk,
-    data.kodeProduk,
+    toUpper(shift || 'OPENING'),
+    toUpper(storeName),
+    toUpper(data.kategoriInduk),
+    toUpper(data.namaProduk),
+    toUpper(data.kodeProduk),
     data.jumlahProduk,
-    data.unit,
-    data.metodePemusnahan,
-    data.alasanPemusnahan || '',
+    toUpper(data.unit),
+    toUpper(data.metodePemusnahan),
+    toUpper(data.alasanPemusnahan),
     (data.jamTanggalPemusnahanList
       ? data.jamTanggalPemusnahanList.map((j: string) => formatJamForStorage(j)).join('\n')
       : formatJamForStorage(data.jamTanggalPemusnahan)),
@@ -288,7 +294,7 @@ export async function appendGroupToGoogleSheets(
   await ensureSheetTab(accessToken, spreadsheetId, tabName);
 
   const rowNumber = await getRowCount(accessToken, spreadsheetId, tabName);
-  const categoryHeaderRow = [kategoriInduk.toUpperCase(), ...Array(21).fill('')];
+  const categoryHeaderRow = [toUpper(kategoriInduk), ...Array(21).fill('')];
 
   const itemRows = items.map((item: any) => {
     const dokumentasiCols = buildDokumentasiColumns(item.dokumentasiUrl || '');
@@ -296,12 +302,12 @@ export async function appendGroupToGoogleSheets(
       '',
       '',
       '',
-      item.namaProduk.toUpperCase(),
-      item.kodeProduk.toUpperCase(),
+      toUpper(item.namaProduk),
+      toUpper(item.kodeProduk),
       item.jumlahProduk,
-      item.unit.toUpperCase(),
-      item.metodePemusnahan.toUpperCase(),
-      item.alasanPemusnahan || '',
+      toUpper(item.unit),
+      toUpper(item.metodePemusnahan),
+      toUpper(item.alasanPemusnahan),
       formatJamForStorage(item.jamTanggalPemusnahan),
       buildImageFormula(item.parafQCUrl || ''),
       buildImageFormula(item.parafManagerUrl || ''),
@@ -354,18 +360,18 @@ export async function appendGroupedToGoogleSheets(
 
   const rowNumber = await getRowCount(accessToken, spreadsheetId, tabName);
 
-  const productNames = data.productList.join('\n').toUpperCase();
-  const productCodes = data.kodeProdukList.join('\n').toUpperCase();
+  const productNames = data.productList.map((v: string) => toUpper(v)).join('\n');
+  const productCodes = data.kodeProdukList.map((v: string) => toUpper(v)).join('\n');
   const quantities = data.jumlahProdukList.join('\n');
-  const units = data.unitList.join('\n').toUpperCase();
-  const methods = data.metodePemusnahanList.join('\n').toUpperCase();
-  const reasons = data.alasanPemusnahanList.join('\n');
+  const units = data.unitList.map((v: string) => toUpper(v)).join('\n');
+  const methods = data.metodePemusnahanList.map((v: string) => toUpper(v)).join('\n');
+  const reasons = data.alasanPemusnahanList.map((v: string) => toUpper(v)).join('\n');
 
   const dokumentasiCols = buildDokumentasiColumns(imageUrls.dokumentasi || '');
   const categoryRow = [
-    (shift || 'OPENING').toUpperCase(),
-    (storeName || 'BEKASI KP. BULU').toUpperCase(),
-    data.kategoriInduk.toUpperCase(),
+    toUpper(shift || 'OPENING'),
+    toUpper(storeName || 'BEKASI KP. BULU'),
+    toUpper(data.kategoriInduk),
     productNames, productCodes, quantities, units, methods, reasons,
     formatJamForStorage(data.jamTanggalPemusnahan),
     buildImageFormula(imageUrls.parafQC || ''),

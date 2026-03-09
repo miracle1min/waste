@@ -41,18 +41,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ success: false, message: 'Minimal 1 produk harus diisi!' });
     }
 
-    const shift = fields.shift || 'OPENING';
-    const storeName = fields.storeName || 'BEKASI KP. BULU';
+    const shift = (fields.shift || 'OPENING').toUpperCase();
+    const storeName = (fields.storeName || 'BEKASI KP. BULU').toUpperCase();
+
+    // Force all string data to UPPERCASE for consistency
+    const toUpper = (v: any) => v != null ? String(v).toUpperCase() : '';
+    const mapUpper = (arr: any[]) => arr.map((v: any) => typeof v === 'string' ? v.toUpperCase() : v);
 
     const data = {
       tanggal: fields.tanggal,
-      kategoriInduk: fields.kategoriInduk,
-      productList,
-      kodeProdukList,
+      kategoriInduk: toUpper(fields.kategoriInduk),
+      productList: mapUpper(productList),
+      kodeProdukList: mapUpper(kodeProdukList),
       jumlahProdukList: jumlahProdukList.map((qty: any) => typeof qty === 'string' ? parseInt(qty) || 1 : qty),
-      unitList,
-      metodePemusnahanList,
-      alasanPemusnahanList,
+      unitList: mapUpper(unitList),
+      metodePemusnahanList: mapUpper(metodePemusnahanList),
+      alasanPemusnahanList: mapUpper(alasanPemusnahanList),
       jamTanggalPemusnahan: fields.jamTanggalPemusnahan,
       jamTanggalPemusnahanList: fields.jamTanggalPemusnahanList ? safeJsonParse(fields.jamTanggalPemusnahanList) : null,
     };

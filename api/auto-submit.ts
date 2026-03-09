@@ -23,10 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { fields, files } = await parseForm(req);
 
+    // Force all string data to UPPERCASE for consistency
+    const toUpper = (v: any) => v != null ? String(v).toUpperCase() : '';
+
     const tanggal = fields.tanggal;
-    const kategoriInduk = fields.kategoriInduk;
-    const shift = fields.shift || 'OPENING';
-    const storeName = fields.storeName || 'BEKASI KP. BULU';
+    const kategoriInduk = toUpper(fields.kategoriInduk);
+    const shift = toUpper(fields.shift || 'OPENING');
+    const storeName = toUpper(fields.storeName || 'BEKASI KP. BULU');
 
     // BUG-025 fix: Validate required fields
     if (!tanggal) {
@@ -39,12 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const parafQCUrl = fields.parafQCUrl || '';
     const parafManagerUrl = fields.parafManagerUrl || '';
 
-    const productList = safeJsonParse(fields.productList);
-    const kodeProdukList = safeJsonParse(fields.kodeProdukList);
+    const mapUpper = (arr: any[]) => arr.map((v: any) => typeof v === 'string' ? v.toUpperCase() : v);
+    const productList = mapUpper(safeJsonParse(fields.productList));
+    const kodeProdukList = mapUpper(safeJsonParse(fields.kodeProdukList));
     const jumlahProdukList = safeJsonParse(fields.jumlahProdukList);
-    const unitList = safeJsonParse(fields.unitList);
-    const metodePemusnahanList = safeJsonParse(fields.metodePemusnahanList);
-    const alasanPemusnahanList = safeJsonParse(fields.alasanPemusnahanList);
+    const unitList = mapUpper(safeJsonParse(fields.unitList));
+    const metodePemusnahanList = mapUpper(safeJsonParse(fields.metodePemusnahanList));
+    const alasanPemusnahanList = mapUpper(safeJsonParse(fields.alasanPemusnahanList));
     const jamTanggalPemusnahanList = fields.jamTanggalPemusnahanList
       ? safeJsonParse(fields.jamTanggalPemusnahanList)
       : null;
