@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { parseForm, fileToBuffer } from './lib/parse-form.js';
-import { uploadToR2 } from './lib/r2.js';
-import { appendGroupedToGoogleSheets } from './lib/google-sheets.js';
+import { parseForm, fileToBuffer } from './_lib/parse-form.js';
+import { uploadToR2 } from './_lib/r2.js';
+import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 
 export const config = { api: { bodyParser: false } };
 
