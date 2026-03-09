@@ -9,13 +9,17 @@ import { LoginForm } from "@/components/ui/login-form";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import NotFound from "@/pages/not-found";
+import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
+import AutoWaste from "@/pages/auto-waste";
 import Dashboard from "@/pages/dashboard";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={ProductDestruction} />
+      <Route path="/" component={ModeSelector} />
+      <Route path="/manual-waste" component={ProductDestruction} />
+      <Route path="/auto-waste" component={AutoWaste} />
       <Route path="/dashboard" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
@@ -25,7 +29,6 @@ function Router() {
 function AuthenticatedApp() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Remove duplicate header - using the one from ProductDestruction page */}
       <main>
         <Toaster />
         <Router />

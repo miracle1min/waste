@@ -1142,6 +1142,13 @@ export default function ProductDestruction() {
         <div className="max-w-6xl mx-auto px-4 py-1.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
+              <button
+                onClick={() => window.location.href = "/"}
+                className="flex-shrink-0 p-1.5 text-slate-400 hover:text-cyan-400 transition-colors"
+                title="Kembali ke Menu"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
               <div className="flex-shrink-0 relative">
                 <img 
                   src={wasteLogo} 
