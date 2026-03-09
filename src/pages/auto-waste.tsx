@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, ClipboardPaste, X, Copy } from "lucide-react";
+import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, ClipboardPaste, X, Copy, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
@@ -19,9 +19,6 @@ type AutoStep = "config" | "paste" | "preview" | "success";
 
 const VALID_SHIFTS: Shift[] = ["OPENING", "MIDDLE", "CLOSING", "MIDNIGHT"];
 const VALID_STATIONS: Station[] = ["NOODLE", "DIMSUM", "BAR", "PRODUKSI"];
-// QC & Manager lists loaded dynamically from API
-
-// Store name from logged-in user tenant
 
 const STATION_ICONS: Record<Station, string> = {
   NOODLE: "🍜", DIMSUM: "🥟", BAR: "🍹", PRODUKSI: "🏭",
@@ -39,6 +36,9 @@ type ParseError = {
   line: number;
   message: string;
 };
+
+// Per-station submission status
+type StationSubmitStatus = "pending" | "uploading" | "success" | "error";
 
 // ========================
 // ITEM-ONLY PARSER
@@ -116,35 +116,61 @@ export default function AutoWaste() {
   const [selectedDate, setSelectedDate] = useState(getCurrentWIBDateString());
   const [storeName, setStoreName] = useState("");
 
-  // Set store name from logged-in user's tenant
   useEffect(() => {
     if (tenantName) setStoreName(tenantName);
   }, [tenantName]);
+
   const [selectedShift, setSelectedShift] = useState<Shift | "">("");
-  // Dynamic QC & Manager lists from DB
   const [validQC, setValidQC] = useState<string[]>([]);
   const [validManagers, setValidManagers] = useState<string[]>([]);
   const [personnelLoading, setPersonnelLoading] = useState(true);
   const [selectedQC, setSelectedQC] = useState<string>("");
   const [selectedManajer, setSelectedManajer] = useState<string>("");
-  const [selectedStation, setSelectedStation] = useState<Station | "">("");
   const [jam, setJam] = useState("");
 
-  // Paste state
-  const [rawText, setRawText] = useState("");
-  const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
-  const [parseErrors, setParseErrors] = useState<ParseError[]>([]);
+  // Multi-station selection
+  const [selectedStations, setSelectedStations] = useState<Station[]>([]);
+  const allStationsSelected = selectedStations.length === VALID_STATIONS.length;
+
+  // Per-station paste state
+  const [rawTexts, setRawTexts] = useState<Record<Station, string>>({
+    NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "",
+  });
+  const [parsedItemsMap, setParsedItemsMap] = useState<Record<Station, ParsedItem[]>>({
+    NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [],
+  });
+  const [parseErrorsMap, setParseErrorsMap] = useState<Record<Station, ParseError[]>>({
+    NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [],
+  });
+
+  // Per-station doc files
+  const [dokumentasiFilesMap, setDokumentasiFilesMap] = useState<Record<Station, File[]>>({
+    NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [],
+  });
 
   // Submit state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dokumentasiFiles, setDokumentasiFiles] = useState<File[]>([]);
+  const [submitStatusMap, setSubmitStatusMap] = useState<Record<Station, StationSubmitStatus>>({
+    NOODLE: "pending", DIMSUM: "pending", BAR: "pending", PRODUKSI: "pending",
+  });
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
 
   // Config validation
-  const configReady = selectedShift && selectedQC && selectedManajer && selectedStation && jam;
+  const configReady = selectedShift && selectedQC && selectedManajer && selectedStations.length > 0 && jam;
 
-  // Fetch all signature URLs on mount
+  // Toggle station selection
+  const toggleStation = (station: Station) => {
+    setSelectedStations(prev =>
+      prev.includes(station) ? prev.filter(s => s !== station) : [...prev, station]
+    );
+  };
+
+  const toggleAllStations = () => {
+    setSelectedStations(allStationsSelected ? [] : [...VALID_STATIONS]);
+  };
+
+  // Fetch signatures
   useEffect(() => {
     async function fetchSignatures() {
       setIsLoadingSignatures(true);
@@ -163,7 +189,7 @@ export default function AutoWaste() {
     fetchSignatures();
   }, []);
 
-  // Fetch QC & Manager lists from DB
+  // Fetch QC & Manager lists
   useEffect(() => {
     async function fetchPersonnel() {
       setPersonnelLoading(true);
@@ -184,86 +210,135 @@ export default function AutoWaste() {
     fetchPersonnel();
   }, []);
 
+  // Parse all stations' items
+  const handleParseAll = useCallback(() => {
+    const newParsedMap = { ...parsedItemsMap };
+    const newErrorsMap = { ...parseErrorsMap };
+    let hasItems = false;
+    let hasErrors = false;
 
-  // Parse items
-  const handleParse = useCallback(() => {
-    const { items, errors } = parseItems(rawText);
-    setParsedItems(items);
-    setParseErrors(errors);
-    if (items.length > 0 && errors.length === 0) {
+    for (const station of selectedStations) {
+      const text = rawTexts[station];
+      if (!text.trim()) {
+        newParsedMap[station] = [];
+        newErrorsMap[station] = [{ line: 0, message: `Data ${station} kosong. Paste minimal 1 item.` }];
+        hasErrors = true;
+        continue;
+      }
+      const { items, errors } = parseItems(text);
+      newParsedMap[station] = items;
+      newErrorsMap[station] = errors;
+      if (items.length > 0) hasItems = true;
+      if (errors.length > 0) hasErrors = true;
+    }
+
+    setParsedItemsMap(newParsedMap);
+    setParseErrorsMap(newErrorsMap);
+
+    if (hasItems && !hasErrors) {
       setStep("preview");
     }
-  }, [rawText]);
+  }, [rawTexts, selectedStations, parsedItemsMap, parseErrorsMap]);
 
-  // Submit data
+  // Submit all stations sequentially
   const handleSubmit = useCallback(async () => {
-    if (!parsedItems.length || !selectedStation || !selectedShift || !selectedQC || !selectedManajer) return;
-    if (dokumentasiFiles.length === 0) {
+    // Validate all stations have docs
+    const missingDocs = selectedStations.filter(st => dokumentasiFilesMap[st].length === 0);
+    if (missingDocs.length > 0) {
       toast({
         title: "📸 Foto Dokumentasi Dong",
-        description: "Upload minimal 1 foto dokumentasi dulu ya!",
+        description: `Upload foto untuk: ${missingDocs.join(", ")}`,
         variant: "destructive",
       });
       return;
     }
+
     setIsSubmitting(true);
+    const newStatusMap: Record<Station, StationSubmitStatus> = { ...submitStatusMap };
+    selectedStations.forEach(st => { newStatusMap[st] = "pending"; });
+    setSubmitStatusMap(newStatusMap);
 
-    try {
-      const qcUrl = signatureUrls[selectedQC] || "";
-      const mgrUrl = signatureUrls[selectedManajer] || "";
+    const qcUrl = signatureUrls[selectedQC] || "";
+    const mgrUrl = signatureUrls[selectedManajer] || "";
 
-      if (!qcUrl) throw new Error(`TTD untuk QC "${selectedQC}" ga ketemu`);
-      if (!mgrUrl) throw new Error(`TTD untuk Manajer "${selectedManajer}" ga ketemu`);
+    if (!qcUrl) {
+      toast({ title: "❌ Error", description: `TTD untuk QC "${selectedQC}" ga ketemu`, variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!mgrUrl) {
+      toast({ title: "❌ Error", description: `TTD untuk Manajer "${selectedManajer}" ga ketemu`, variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
 
-      const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
-      const jamList = parsedItems.map(() => jamFormatted);
+    const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
+    let allSuccess = true;
+    const errors: string[] = [];
 
-      const formData = new FormData();
-      formData.append("tanggal", selectedDate);
-      formData.append("kategoriInduk", selectedStation);
-      formData.append("shift", selectedShift);
-      formData.append("storeName", storeName);
-      formData.append("parafQCUrl", qcUrl);
-      formData.append("parafManagerUrl", mgrUrl);
-      formData.append("productList", JSON.stringify(parsedItems.map(i => i.namaProduk)));
-      formData.append("kodeProdukList", JSON.stringify(parsedItems.map(i => i.kodeLot)));
-      formData.append("jumlahProdukList", JSON.stringify(parsedItems.map(i => i.qty)));
-      formData.append("unitList", JSON.stringify(parsedItems.map(i => i.unit)));
-      formData.append("metodePemusnahanList", JSON.stringify(parsedItems.map(() => "DIBUANG")));
-      formData.append("alasanPemusnahanList", JSON.stringify(parsedItems.map(i => i.alasan)));
-      formData.append("jamTanggalPemusnahan", jamFormatted);
-      formData.append("jamTanggalPemusnahanList", JSON.stringify(jamList));
+    for (const station of selectedStations) {
+      setSubmitStatusMap(prev => ({ ...prev, [station]: "uploading" }));
 
-      dokumentasiFiles.forEach((file, idx) => {
-        formData.append(`dokumentasi_${idx}`, file);
-      });
+      try {
+        const items = parsedItemsMap[station];
+        const files = dokumentasiFilesMap[station];
+        const jamList = items.map(() => jamFormatted);
 
-      const res = await apiFetch("/api/auto-submit", {
-        method: "POST",
-        body: formData,
-      });
+        const formData = new FormData();
+        formData.append("tanggal", selectedDate);
+        formData.append("kategoriInduk", station);
+        formData.append("shift", selectedShift);
+        formData.append("storeName", storeName);
+        formData.append("parafQCUrl", qcUrl);
+        formData.append("parafManagerUrl", mgrUrl);
+        formData.append("productList", JSON.stringify(items.map(i => i.namaProduk)));
+        formData.append("kodeProdukList", JSON.stringify(items.map(i => i.kodeLot)));
+        formData.append("jumlahProdukList", JSON.stringify(items.map(i => i.qty)));
+        formData.append("unitList", JSON.stringify(items.map(i => i.unit)));
+        formData.append("metodePemusnahanList", JSON.stringify(items.map(() => "DIBUANG")));
+        formData.append("alasanPemusnahanList", JSON.stringify(items.map(i => i.alasan)));
+        formData.append("jamTanggalPemusnahan", jamFormatted);
+        formData.append("jamTanggalPemusnahanList", JSON.stringify(jamList));
 
-      const result = await res.json();
+        files.forEach((file, idx) => {
+          formData.append(`dokumentasi_${idx}`, file);
+        });
 
-      if (!res.ok || !result.success) {
-        throw new Error(result.message || "Gagal menyimpan data");
+        const res = await apiFetch("/api/auto-submit", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+          throw new Error(result.message || `Gagal menyimpan data ${station}`);
+        }
+
+        setSubmitStatusMap(prev => ({ ...prev, [station]: "success" }));
+      } catch (error) {
+        allSuccess = false;
+        setSubmitStatusMap(prev => ({ ...prev, [station]: "error" }));
+        errors.push(`${station}: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
+    }
 
+    setIsSubmitting(false);
+
+    if (allSuccess) {
       setStep("success");
       toast({
-        title: "✅ Berhasil!",
-        description: `Data ${selectedStation} - ${selectedShift} berhasil disimpan`,
+        title: "✅ Semua Berhasil!",
+        description: `${selectedStations.length} station berhasil disimpan`,
       });
-    } catch (error) {
+    } else {
       toast({
-        title: "❌ Gagal",
-        description: error instanceof Error ? error.message : "Terjadi kesalahan",
+        title: "⚠️ Sebagian Gagal",
+        description: errors.join("\n"),
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [parsedItems, signatureUrls, selectedDate, storeName, selectedStation, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFiles, toast]);
+  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap]);
 
   // Copy format template
   const copyTemplate = useCallback(() => {
@@ -275,11 +350,12 @@ export default function AutoWaste() {
 
   // Reset for new entry
   const handleNewEntry = useCallback(() => {
-    setRawText("");
-    setParsedItems([]);
-    setParseErrors([]);
-    setDokumentasiFiles([]);
-    setSelectedStation("");
+    setRawTexts({ NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "" });
+    setParsedItemsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
+    setParseErrorsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
+    setDokumentasiFilesMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
+    setSubmitStatusMap({ NOODLE: "pending", DIMSUM: "pending", BAR: "pending", PRODUKSI: "pending" });
+    setSelectedStations([]);
     setSelectedShift("");
     setSelectedQC("");
     setSelectedManajer("");
@@ -294,6 +370,9 @@ export default function AutoWaste() {
     else if (step === "preview") setStep("paste");
     else setStep("config");
   }, [step, setLocation]);
+
+  // Count total items across all selected stations
+  const totalItems = selectedStations.reduce((sum, st) => sum + parsedItemsMap[st].length, 0);
 
   // ========================
   // RENDER
@@ -316,7 +395,7 @@ export default function AutoWaste() {
             <Zap className="w-5 h-5 text-cyan-400" />
             <div>
               <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Waste Otomatis</h1>
-              <p className="text-[10px] text-slate-500">Fast Mode • Paste & Go</p>
+              <p className="text-[10px] text-slate-500">Fast Mode • Batch Submit</p>
               {tenantName && <p className="text-[10px] text-cyan-500/70 font-mono truncate">{tenantName}</p>}
             </div>
           </div>
@@ -363,25 +442,46 @@ export default function AutoWaste() {
               </div>
             </div>
 
-            {/* Station picker */}
+            {/* Station picker — multi select */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">🏭 Station</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-400">🏭 Station</label>
+                <button
+                  onClick={toggleAllStations}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                    allStationsSelected
+                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+                      : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-cyan-700/50 hover:text-cyan-400"
+                  }`}
+                >
+                  <CheckCheck className="w-3 h-3" />
+                  {allStationsSelected ? "Semua Dipilih" : "Pilih Semua"}
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 {VALID_STATIONS.map(st => (
                   <button
                     key={st}
-                    onClick={() => setSelectedStation(st)}
+                    onClick={() => toggleStation(st)}
                     className={`p-3 rounded-lg border-2 text-center transition-all duration-200 ${
-                      selectedStation === st
+                      selectedStations.includes(st)
                         ? "border-cyan-500 bg-cyan-950/40 text-cyan-400 shadow-lg shadow-cyan-500/10"
                         : "border-slate-700/50 bg-slate-900/30 text-slate-400 hover:border-slate-600"
                     }`}
                   >
                     <div className="text-xl">{STATION_ICONS[st]}</div>
                     <div className="text-[10px] font-bold mt-0.5">{st}</div>
+                    {selectedStations.includes(st) && (
+                      <div className="text-[8px] text-cyan-500 mt-0.5">✓</div>
+                    )}
                   </button>
                 ))}
               </div>
+              {selectedStations.length > 0 && (
+                <p className="text-[10px] text-cyan-400/70 text-center">
+                  {selectedStations.length} station dipilih — data akan disubmit terpisah per station
+                </p>
+              )}
             </div>
 
             {/* Shift & Jam row */}
@@ -457,7 +557,7 @@ export default function AutoWaste() {
               disabled={!configReady}
               className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-5 text-base font-bold disabled:opacity-40"
             >
-              Gas, Paste Data Item →
+              Gas, Paste Data Item ({selectedStations.length} Station) →
             </Button>
           </div>
         )}
@@ -468,7 +568,7 @@ export default function AutoWaste() {
             <div className="text-center">
               <h2 className="text-lg font-bold text-cyan-400 mb-1">📋 Paste Data Item</h2>
               <p className="text-xs text-slate-400">
-                {STATION_ICONS[selectedStation as Station]} <span className="text-white font-bold">{selectedStation}</span> • {selectedShift} • {selectedDate}
+                {selectedShift} • {selectedDate} • {selectedStations.length} station
               </p>
             </div>
 
@@ -494,65 +594,83 @@ Contoh:
               }</pre>
             </div>
 
-            {/* Text input */}
-            <div className="relative">
-              <textarea
-                value={rawText}
-                onChange={e => { setRawText(e.target.value); setParseErrors([]); }}
-                placeholder={`Paste item di sini...\n\nContoh:\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Dimsum Ayam (2025-03-09): 3 PACK Rusak\n- Bakso Ikan (2025-03-09): 2 PACK Stale`}
-                className="w-full h-52 px-4 py-3 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white font-mono text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none placeholder:text-slate-600"
-              />
-              {rawText && (
-                <button
-                  onClick={() => { setRawText(""); setParseErrors([]); }}
-                  className="absolute top-2 right-2 p-1 text-slate-500 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Parse errors */}
-            {parseErrors.length > 0 && (
-              <div className="p-3 rounded-lg border border-red-800/50 bg-red-950/20 space-y-1">
-                <div className="flex items-center gap-2 text-red-400 text-sm font-bold mb-1">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Error ({parseErrors.length})</span>
+            {/* Per-station textareas */}
+            {selectedStations.map(station => (
+              <div key={station} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{STATION_ICONS[station]}</span>
+                  <span className="text-sm font-bold text-white">{station}</span>
+                  {rawTexts[station].trim() && (
+                    <span className="text-[10px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded">ada data</span>
+                  )}
                 </div>
-                {parseErrors.map((err, i) => (
-                  <p key={i} className="text-xs text-red-300">
-                    {err.line > 0 && <span className="text-red-500">Baris {err.line}: </span>}
-                    {err.message}
-                  </p>
-                ))}
-              </div>
-            )}
+                <div className="relative">
+                  <textarea
+                    value={rawTexts[station]}
+                    onChange={e => {
+                      setRawTexts(prev => ({ ...prev, [station]: e.target.value }));
+                      setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+                    }}
+                    placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
+                    className="w-full h-36 px-4 py-3 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white font-mono text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none placeholder:text-slate-600"
+                  />
+                  {rawTexts[station] && (
+                    <button
+                      onClick={() => {
+                        setRawTexts(prev => ({ ...prev, [station]: "" }));
+                        setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+                      }}
+                      className="absolute top-2 right-2 p-1 text-slate-500 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    setRawText(text);
-                    toast({ title: "📋 Pasted!", description: "Teks clipboard sukses ke-paste" });
-                  } catch {
-                    toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste sendiri ya.", variant: "destructive" });
-                  }
-                }}
-                className="flex-1 border-cyan-800/50 text-cyan-400 hover:bg-cyan-950/30"
-              >
-                <ClipboardPaste className="w-4 h-4 mr-2" /> Paste
-              </Button>
-              <Button
-                onClick={handleParse}
-                disabled={!rawText.trim()}
-                className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold"
-              >
-                <Zap className="w-4 h-4 mr-2" /> Parse & Cek
-              </Button>
-            </div>
+                {/* Per-station paste button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      setRawTexts(prev => ({ ...prev, [station]: text }));
+                      toast({ title: "📋 Pasted!", description: `Teks clipboard ke-paste ke ${station}` });
+                    } catch {
+                      toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "destructive" });
+                    }
+                  }}
+                  className="w-full border-cyan-800/30 text-cyan-400 hover:bg-cyan-950/30 h-8 text-xs"
+                >
+                  <ClipboardPaste className="w-3 h-3 mr-1" /> Paste dari Clipboard ke {station}
+                </Button>
+
+                {/* Parse errors for this station */}
+                {parseErrorsMap[station].length > 0 && (
+                  <div className="p-2 rounded-lg border border-red-800/50 bg-red-950/20 space-y-1">
+                    <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>{station} — Error ({parseErrorsMap[station].length})</span>
+                    </div>
+                    {parseErrorsMap[station].map((err, i) => (
+                      <p key={i} className="text-[10px] text-red-300">
+                        {err.line > 0 && <span className="text-red-500">Baris {err.line}: </span>}
+                        {err.message}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Parse all & proceed */}
+            <Button
+              onClick={handleParseAll}
+              disabled={selectedStations.every(st => !rawTexts[st].trim())}
+              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-5"
+            >
+              <Zap className="w-4 h-4 mr-2" /> Parse & Cek Semua Station
+            </Button>
           </div>
         )}
 
@@ -561,14 +679,16 @@ Contoh:
           <div className="space-y-4 w-full">
             <div className="text-center">
               <h2 className="text-lg font-bold text-green-400 mb-1">✅ Cek Data</h2>
-              <p className="text-xs text-slate-400">Cek dulu sebelum kirim</p>
+              <p className="text-xs text-slate-400">
+                {selectedStations.length} station • {totalItems} total item
+              </p>
             </div>
 
             {/* Info cards */}
             <div className="grid grid-cols-3 gap-2">
               <div className="p-2.5 rounded-lg border border-slate-700/50 bg-slate-900/30 text-center">
                 <p className="text-[10px] text-slate-500">Station</p>
-                <p className="text-sm font-bold text-white">{STATION_ICONS[selectedStation as Station]} {selectedStation}</p>
+                <p className="text-sm font-bold text-white">{selectedStations.length}x</p>
               </div>
               <div className="p-2.5 rounded-lg border border-slate-700/50 bg-slate-900/30 text-center">
                 <p className="text-[10px] text-slate-500">Shift</p>
@@ -602,73 +722,102 @@ Contoh:
               </div>
             </div>
 
-            {/* Items table */}
-            <div className="rounded-lg border border-slate-700/50 overflow-hidden">
-              <div className="bg-slate-800/50 px-3 py-2 text-xs font-bold text-cyan-400">
-                📦 Data Item ({parsedItems.length} produk)
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-slate-800/30 text-slate-400">
-                      <th className="px-2 py-1.5 text-left">#</th>
-                      <th className="px-2 py-1.5 text-left">Produk</th>
-                      <th className="px-2 py-1.5 text-left">Lot</th>
-                      <th className="px-2 py-1.5 text-center">Qty</th>
-                      <th className="px-2 py-1.5 text-left">Satuan</th>
-                      <th className="px-2 py-1.5 text-left">Alasan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedItems.map((item, i) => (
-                      <tr key={i} className="border-t border-slate-800/30 hover:bg-slate-800/20">
-                        <td className="px-2 py-1.5 text-slate-500">{i + 1}</td>
-                        <td className="px-2 py-1.5 text-white font-medium truncate max-w-[100px]">{item.namaProduk}</td>
-                        <td className="px-2 py-1.5 text-slate-300 text-[11px]">{item.kodeLot || "-"}</td>
-                        <td className="px-2 py-1.5 text-center text-yellow-400 font-bold">{item.qty}</td>
-                        <td className="px-2 py-1.5 text-slate-300">{item.unit}</td>
-                        <td className="px-2 py-1.5 text-slate-300 truncate max-w-[80px]">{item.alasan}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {/* Per-station items + documentation */}
+            {selectedStations.map(station => (
+              <div key={station} className="space-y-3">
+                {/* Station header */}
+                <div className="flex items-center gap-2 pt-2">
+                  <span className="text-xl">{STATION_ICONS[station]}</span>
+                  <span className="text-base font-bold text-white">{station}</span>
+                  <span className="text-xs text-slate-500">({parsedItemsMap[station].length} item)</span>
+                  {isSubmitting && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      submitStatusMap[station] === "uploading" ? "bg-yellow-900/30 text-yellow-400" :
+                      submitStatusMap[station] === "success" ? "bg-green-900/30 text-green-400" :
+                      submitStatusMap[station] === "error" ? "bg-red-900/30 text-red-400" :
+                      "bg-slate-800/50 text-slate-500"
+                    }`}>
+                      {submitStatusMap[station] === "uploading" ? "⏳ Uploading..." :
+                       submitStatusMap[station] === "success" ? "✅ Done" :
+                       submitStatusMap[station] === "error" ? "❌ Error" : "⏸ Waiting"}
+                    </span>
+                  )}
+                </div>
 
-            {/* Documentation photos */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">📸 Foto Dokumentasi <span className="text-red-400">*wajib ya</span></label>
-              <MultiFileUpload
-                onFilesSelect={setDokumentasiFiles}
-                maxFiles={10}
-                accept="image/*"
-                label="Foto Dokumentasi"
-              />
-              {dokumentasiFiles.length === 0 ? (
-                <p className="text-xs text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto dulu ya bro</p>
-              ) : (
-                <p className="text-xs text-green-400 flex items-center gap-1">✅ {dokumentasiFiles.length} foto udah siap</p>
-              )}
-            </div>
+                {/* Items table */}
+                <div className="rounded-lg border border-slate-700/50 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-slate-800/30 text-slate-400">
+                          <th className="px-2 py-1.5 text-left">#</th>
+                          <th className="px-2 py-1.5 text-left">Produk</th>
+                          <th className="px-2 py-1.5 text-left">Lot</th>
+                          <th className="px-2 py-1.5 text-center">Qty</th>
+                          <th className="px-2 py-1.5 text-left">Satuan</th>
+                          <th className="px-2 py-1.5 text-left">Alasan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedItemsMap[station].map((item, i) => (
+                          <tr key={i} className="border-t border-slate-800/30 hover:bg-slate-800/20">
+                            <td className="px-2 py-1.5 text-slate-500">{i + 1}</td>
+                            <td className="px-2 py-1.5 text-white font-medium truncate max-w-[100px]">{item.namaProduk}</td>
+                            <td className="px-2 py-1.5 text-slate-300 text-[11px]">{item.kodeLot || "-"}</td>
+                            <td className="px-2 py-1.5 text-center text-yellow-400 font-bold">{item.qty}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{item.unit}</td>
+                            <td className="px-2 py-1.5 text-slate-300 truncate max-w-[80px]">{item.alasan}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Documentation photos per station */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-300">
+                    📸 Foto Dokumentasi {station} <span className="text-red-400">*wajib</span>
+                  </label>
+                  <MultiFileUpload
+                    onFilesSelect={(files) => setDokumentasiFilesMap(prev => ({ ...prev, [station]: files }))}
+                    maxFiles={10}
+                    accept="image/*"
+                    label={`Foto ${station}`}
+                  />
+                  {dokumentasiFilesMap[station].length === 0 ? (
+                    <p className="text-[10px] text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto untuk {station}</p>
+                  ) : (
+                    <p className="text-[10px] text-green-400 flex items-center gap-1">✅ {dokumentasiFilesMap[station].length} foto siap</p>
+                  )}
+                </div>
+
+                {/* Divider between stations */}
+                {station !== selectedStations[selectedStations.length - 1] && (
+                  <div className="border-t border-dashed border-slate-700/50 my-2" />
+                )}
+              </div>
+            ))}
 
             {/* Action buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => setStep("paste")}
+                disabled={isSubmitting}
                 className="flex-1 border-slate-700/50 text-slate-400"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || dokumentasiFiles.length === 0}
+                disabled={isSubmitting || selectedStations.some(st => dokumentasiFilesMap[st].length === 0)}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
                 ) : (
-                  <><Send className="w-4 h-4 mr-2" /> Kirim ke Spreadsheet</>
+                  <><Send className="w-4 h-4 mr-2" /> Kirim {selectedStations.length} Station</>
                 )}
               </Button>
             </div>
@@ -682,21 +831,32 @@ Contoh:
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-green-400 mb-2">Data Tersimpan! 🎉</h2>
+              <h2 className="text-2xl font-bold text-green-400 mb-2">Semua Data Tersimpan! 🎉</h2>
               <p className="text-sm text-slate-400">
-                {selectedStation} - {selectedShift} udah ke-record di Google Sheets
+                {selectedStations.length} station — {selectedShift} udah ke-record
               </p>
             </div>
 
             <div className="p-4 rounded-lg border border-green-800/30 bg-green-950/20 text-left space-y-1 text-sm">
               <p><span className="text-slate-400">Tanggal:</span> <span className="text-white">{selectedDate}</span></p>
               <p><span className="text-slate-400">Resto:</span> <span className="text-white">{storeName}</span></p>
-              <p><span className="text-slate-400">Station:</span> <span className="text-white">{STATION_ICONS[selectedStation as Station]} {selectedStation}</span></p>
               <p><span className="text-slate-400">Shift:</span> <span className="text-white">{selectedShift}</span></p>
               <p><span className="text-slate-400">Jam:</span> <span className="text-yellow-400">{jam} WIB</span></p>
-              <p><span className="text-slate-400">Items:</span> <span className="text-white">{parsedItems.length} produk</span></p>
               <p><span className="text-slate-400">QC:</span> <span className="text-cyan-400">{selectedQC}</span></p>
               <p><span className="text-slate-400">Manajer:</span> <span className="text-purple-400">{selectedManajer}</span></p>
+              <div className="border-t border-green-800/30 my-2" />
+              {selectedStations.map(station => (
+                <div key={station} className="flex items-center justify-between">
+                  <span className="text-white">{STATION_ICONS[station]} {station}</span>
+                  <span className={`text-xs font-bold ${
+                    submitStatusMap[station] === "success" ? "text-green-400" : "text-red-400"
+                  }`}>
+                    {submitStatusMap[station] === "success" ? `✅ ${parsedItemsMap[station].length} item` : "❌ Error"}
+                  </span>
+                </div>
+              ))}
+              <div className="border-t border-green-800/30 my-2" />
+              <p><span className="text-slate-400">Total:</span> <span className="text-white font-bold">{totalItems} produk</span></p>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -704,7 +864,7 @@ Contoh:
                 onClick={handleNewEntry}
                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-5 text-base font-bold"
               >
-                <Zap className="w-5 h-5 mr-2" /> Lanjut Station Lain
+                <Zap className="w-5 h-5 mr-2" /> Shift Baru
               </Button>
               <Button
                 variant="outline"
