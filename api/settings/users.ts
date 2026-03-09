@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
-import { getAllUsers, createUser, updateUser, deleteUser } from "../_lib/db";
+import { getAllUsers, createUser, updateUser, deleteUser } from "../lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const role = req.headers["x-user-role"] as string;

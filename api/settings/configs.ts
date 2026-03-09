@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db";
+import { getAllConfigs, upsertConfig, deleteConfig } from "../lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const role = req.headers["x-user-role"] as string;

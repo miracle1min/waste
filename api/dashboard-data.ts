@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
+import { resolveTenantCredentials, extractTenantId } from './lib/tenant-resolver.js';
 import crypto from 'crypto';
 
 function base64url(input: string | Buffer): string {

@@ -1,18 +1,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import crypto from "crypto";
+import { getUserByUsername, getTenantById } from "../lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // Try importing from db.ts
-    const { getUserByUsername, getTenantById } = await import("../_lib/db");
-    
     const { username, password } = req.body || {};
     if (!username || !password) {
       return res.status(400).json({ error: "Username & password wajib diisi dong!" });
     }
 
-    const crypto = await import("crypto");
     const hash = crypto.createHash("sha256").update(password).digest("hex");
 
     const user = await getUserByUsername(username);
@@ -41,6 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: "Error: " + err.message, stack: err.stack?.split('\n').slice(0,5) });
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Server error: " + (err?.message || "Unknown") });
   }
 }
