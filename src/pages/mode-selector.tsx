@@ -87,12 +87,6 @@ export default function ModeSelector() {
         </div>
 
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
-            Mau Pakai Yang Mana?
-          </h2>
-          <p className="text-sm text-slate-400">
-            Tinggal pilih, langsung gas bro!
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg px-4">
