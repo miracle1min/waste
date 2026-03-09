@@ -45,11 +45,7 @@ const SHIFTS: { id: Shift; label: string; active: string; inactive: string }[] =
   { id: 'MIDNIGHT', label: 'Midnight', active: 'bg-gray-500 border-gray-400 text-white shadow-lg shadow-gray-500/30', inactive: 'bg-gray-900/20 border-gray-700/50 text-gray-300 hover:bg-gray-900/40 hover:border-gray-500' },
 ];
 
-const STORES = [
-  'BEKASI KP. BULU',
-  'BEKASI JATIASIH',
-  'CIKARANG',
-];
+// Store name from logged-in user tenant
 
 type WasteItem = z.infer<typeof insertIndividualProductWithFilesSchema>;
 type Category = "NOODLE" | "DIMSUM" | "BAR" | "PRODUKSI";
@@ -82,7 +78,7 @@ const STEPS = [
 
 // Simple logout button component
 function LogoutButton() {
-  const { logout, isLoggingOut } = useAuth();
+  const { logout, isLoggingOut, tenantName} = useAuth();
   
   const handleLogout = async () => {
     console.log("Logout button clicked");
@@ -130,7 +126,12 @@ export default function ProductDestruction() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift>('OPENING');
-  const [storeName, setStoreName] = useState<string>('BEKASI KP. BULU');
+  const [storeName, setStoreName] = useState<string>('');
+
+  // Set store name from logged-in user's tenant
+  useEffect(() => {
+    if (tenantName) setStoreName(tenantName);
+  }, [tenantName]);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
   const [showPdfButton, setShowPdfButton] = useState(false);
@@ -1225,19 +1226,12 @@ export default function ProductDestruction() {
                     </div>
                   </div>
 
-                  {/* Store Selector */}
+                  {/* Resto Selector */}
                   <div className="space-y-3">
-                    <Label className="text-base sm:text-lg font-medium">Store / Outlet</Label>
-                    <Select value={storeName} onValueChange={setStoreName}>
-                      <SelectTrigger className="text-base h-12 sm:h-14">
-                        <SelectValue placeholder="Pilih store lo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STORES.map((store) => (
-                          <SelectItem key={store} value={store}>{store}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-base sm:text-lg font-medium">Resto / Outlet</Label>
+                    <div className="flex h-12 sm:h-14 w-full items-center rounded-md border border-input bg-background/50 px-3 py-2 text-base font-medium">
+                      {storeName || 'Loading...'}
+                    </div>
                   </div>
 
                   {/* Button Selanjutnya - di atas status */}
@@ -1680,7 +1674,7 @@ export default function ProductDestruction() {
                         <p className="font-medium">{selectedShift}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Store:</span>
+                        <span className="text-muted-foreground">Resto:</span>
                         <p className="font-medium">{storeName}</p>
                       </div>
                       <div>

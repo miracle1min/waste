@@ -20,7 +20,7 @@ const VALID_SHIFTS: Shift[] = ["OPENING", "MIDDLE", "CLOSING", "MIDNIGHT"];
 const VALID_STATIONS: Station[] = ["NOODLE", "DIMSUM", "BAR", "PRODUKSI"];
 // QC & Manager lists loaded dynamically from API
 
-const STORES = ["BEKASI KP. BULU", "BEKASI JATIASIH", "CIKARANG"];
+// Store name from logged-in user tenant
 
 const STATION_ICONS: Record<Station, string> = {
   NOODLE: "🍜", DIMSUM: "🥟", BAR: "🍹", PRODUKSI: "🏭",
@@ -112,7 +112,12 @@ export default function AutoWaste() {
 
   // Config state
   const [selectedDate, setSelectedDate] = useState(getCurrentWIBDateString());
-  const [storeName, setStoreName] = useState("BEKASI KP. BULU");
+  const [storeName, setStoreName] = useState("");
+
+  // Set store name from logged-in user's tenant
+  useEffect(() => {
+    if (tenantName) setStoreName(tenantName);
+  }, [tenantName]);
   const [selectedShift, setSelectedShift] = useState<Shift | "">("");
   // Dynamic QC & Manager lists from DB
   const [validQC, setValidQC] = useState<string[]>([]);
@@ -336,7 +341,7 @@ export default function AutoWaste() {
               <p className="text-xs text-slate-400">Pilih semua parameter, lalu paste data item</p>
             </div>
 
-            {/* Date & Store row */}
+            {/* Date & Resto row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-400">📅 Tanggal</label>
@@ -348,14 +353,10 @@ export default function AutoWaste() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400">🏪 Store</label>
-                <select
-                  value={storeName}
-                  onChange={e => setStoreName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none appearance-none"
-                >
-                  {STORES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <label className="text-xs font-medium text-slate-400">🏪 Resto</label>
+                <div className="w-full px-3 py-2.5 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white text-sm font-medium">
+                  {storeName || 'Loading...'}
+                </div>
               </div>
             </div>
 
@@ -686,7 +687,7 @@ Contoh:
 
             <div className="p-4 rounded-lg border border-green-800/30 bg-green-950/20 text-left space-y-1 text-sm">
               <p><span className="text-slate-400">Tanggal:</span> <span className="text-white">{selectedDate}</span></p>
-              <p><span className="text-slate-400">Store:</span> <span className="text-white">{storeName}</span></p>
+              <p><span className="text-slate-400">Resto:</span> <span className="text-white">{storeName}</span></p>
               <p><span className="text-slate-400">Station:</span> <span className="text-white">{STATION_ICONS[selectedStation as Station]} {selectedStation}</span></p>
               <p><span className="text-slate-400">Shift:</span> <span className="text-white">{selectedShift}</span></p>
               <p><span className="text-slate-400">Jam:</span> <span className="text-yellow-400">{jam} WIB</span></p>
