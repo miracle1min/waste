@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
 import NotFound from "@/pages/not-found";
 import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
@@ -83,6 +84,7 @@ function App() {
           ) : (
             <LoginForm onLogin={login} />
           )}
+          <PWAInstallPrompt />
           <Analytics />
           <SpeedInsights />
         </TooltipProvider>
