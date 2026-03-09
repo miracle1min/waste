@@ -3,6 +3,7 @@ import { parseForm, fileToBuffer } from './_lib/parse-form.js';
 import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
+import { logActivity, getClientIP } from './_lib/activity-logger.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -137,6 +138,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       return res.status(500).json({ success: false, message: 'Google Sheets belum dikonfigurasi untuk tenant ini.' });
     }
+
+    // Log waste submission
+    logActivity({
+      action: "SUBMIT_WASTE",
+      category: "waste",
+      username: storeName,
+      tenantId: extractTenantId(req) || "",
+      tenantName: storeName,
+      ipAddress: getClientIP(req),
+      userAgent: req.headers["user-agent"] || "",
+      details: {
+        station: data.kategoriInduk,
+        shift,
+        date: data.tanggal,
+        itemCount: productList.length,
+        photoCount: imageUrls.filter(Boolean).length,
+      },
+      status: "success",
+    });
 
     const response: any = { success: true, message: `Data kategori ${data.kategoriInduk} berhasil disimpan`, data };
     // BUG-015 fix: Report warnings for failed uploads

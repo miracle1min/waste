@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserByUsername, getTenantById, updateUser, getAllTenants } from "../_lib/db.js";
 import { verifyPassword, isLegacyHash, hashPassword, createToken } from "../_lib/auth.js";
+import { logActivity, getClientIP } from "../_lib/activity-logger.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET = return tenant list for login dropdown (was /api/auth/tenants)
@@ -31,6 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // BUG-009 fix: Generic error message — no username enumeration
     if (!user || !verifyPassword(password, user.password_hash)) {
+      await logActivity({
+        action: "LOGIN_FAILED",
+        category: "auth",
+        username: username,
+        tenantId: tenant_id || "",
+        ipAddress: getClientIP(req),
+        userAgent: req.headers["user-agent"] || "",
+        details: { reason: "Invalid credentials" },
+        status: "failed",
+      });
       return res.status(401).json({ error: "Username atau password salah!" });
     }
 
@@ -52,6 +63,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       username: user.username,
       role: user.role,
       tenantId: user.tenant_id || "",
+    });
+
+    // Log successful login
+    logActivity({
+      action: "LOGIN",
+      category: "auth",
+      userId: user.id,
+      username: user.username,
+      tenantId: user.tenant_id || "",
+      tenantName: tenantName,
+      ipAddress: getClientIP(req),
+      userAgent: req.headers["user-agent"] || "",
+      details: { role: user.role },
+      status: "success",
     });
 
     return res.status(200).json({

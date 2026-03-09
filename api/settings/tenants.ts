@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../_lib/db.js";
 import { clearTenantDbCache } from "../_lib/tenant-db.js";
-import { requireRole, handleAuthError } from "../_lib/auth.js";
+import { requireRole, handleAuthError, verifyToken, extractToken } from "../_lib/auth.js";
+import { logActivity, getClientIP } from "../_lib/activity-logger.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -20,6 +21,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { id, name, address, phone, status, neon_database_url } = req.body || {};
       if (!id || !name) return res.status(400).json({ error: "ID & nama store wajib diisi!" });
       const tenant = await createTenant({ id, name, address: address || "", phone: phone || "", status: status || "active", neon_database_url: neon_database_url || "" });
+      const jwt = verifyToken(extractToken(req) || "");
+      logActivity({ action: "CREATE_TENANT", category: "tenant", userId: jwt?.userId, username: jwt?.username || "", tenantId: id, tenantName: name, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { storeName: name }, status: "success" });
       return res.json({ success: true, tenant });
     }
     if (req.method === "PUT") {
@@ -36,6 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!id) return res.status(400).json({ error: "ID store wajib diisi!" });
       const ok = await deleteTenant(id);
       if (!ok) return res.status(404).json({ error: "Store ga ketemu!" });
+      const jwt2 = verifyToken(extractToken(req) || "");
+      logActivity({ action: "DELETE_TENANT", category: "tenant", userId: jwt2?.userId, username: jwt2?.username || "", tenantId: id, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { deletedStoreId: id }, status: "success" });
       return res.json({ success: true });
     }
     return res.status(405).json({ error: "Method not allowed" });

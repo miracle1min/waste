@@ -4,7 +4,8 @@ import {
   Store, Users, Database, UserCheck, HardDrive, LayoutDashboard,
   Plus, Pencil, Trash2, Save, X, Loader2, Eye, EyeOff, RefreshCw,
   Shield, CheckCircle, AlertCircle, Zap, Upload, LogOut, Menu,
-  Building2, UserCog, KeyRound, Server, ChevronRight, MoreHorizontal
+  Building2, UserCog, KeyRound, Server, ChevronRight, MoreHorizontal,
+  Activity, Search, Filter, ChevronLeft, Clock, Globe, Monitor, FileText
 } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
@@ -117,7 +118,7 @@ function RefreshBtn({ onClick }: { onClick: () => void }) {
 }
 
 // ===== Menu Items =====
-type PageKey = "overview" | "tenants" | "users" | "personnel" | "configs" | "database";
+type PageKey = "overview" | "tenants" | "users" | "personnel" | "configs" | "database" | "activity";
 const MENU_ITEMS: { key: PageKey; label: string; shortLabel: string; icon: any; desc: string }[] = [
   { key: "overview", label: "Overview", shortLabel: "Home", icon: LayoutDashboard, desc: "Ringkasan sistem" },
   { key: "tenants", label: "Store", shortLabel: "Store", icon: Building2, desc: "Kelola resto/store" },
@@ -125,6 +126,7 @@ const MENU_ITEMS: { key: PageKey; label: string; shortLabel: string; icon: any; 
   { key: "personnel", label: "QC & Manager", shortLabel: "QC", icon: UserCheck, desc: "Personil & TTD" },
   { key: "configs", label: "Config", shortLabel: "Config", icon: KeyRound, desc: "Env & kredensial" },
   { key: "database", label: "Database", shortLabel: "DB", icon: Server, desc: "DB management" },
+  { key: "activity", label: "Activity Log", shortLabel: "Log", icon: Activity, desc: "Riwayat aktivitas" },
 ];
 
 // Mobile bottom nav shows first 4, rest in "More" menu
@@ -258,6 +260,7 @@ export default function AdminPanel() {
               {activePage === "personnel" && <PersonnelPage />}
               {activePage === "configs" && <ConfigsPage />}
               {activePage === "database" && <DatabasePage />}
+              {activePage === "activity" && <ActivityLogPage />}
             </div>
           </main>
 
@@ -1307,6 +1310,358 @@ function DatabasePage() {
           <li>• Balik ke sini → pilih store → klik "Seed Tenant DB"</li>
           <li>• Pastikan pakai <code className="text-cyan-400 bg-cyan-500/5 px-1 rounded">?sslmode=require</code></li>
         </ul>
+      </Card>
+    </div>
+  );
+}
+
+// ===== Activity Log Page =====
+interface ActivityLogItem {
+  id: number;
+  action: string;
+  category: string;
+  user_id: number | null;
+  username: string;
+  tenant_id: string;
+  tenant_name: string;
+  ip_address: string;
+  user_agent: string;
+  details: Record<string, unknown>;
+  status: "success" | "failed" | "warning";
+  created_at: string;
+}
+
+const ACTION_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
+  LOGIN: { icon: UserCog, color: "text-green-400", label: "Login" },
+  LOGIN_FAILED: { icon: AlertCircle, color: "text-red-400", label: "Login Gagal" },
+  LOGOUT: { icon: LogOut, color: "text-yellow-400", label: "Logout" },
+  SUBMIT_WASTE: { icon: FileText, color: "text-cyan-400", label: "Submit Waste" },
+  CREATE_USER: { icon: Plus, color: "text-blue-400", label: "Buat User" },
+  DELETE_USER: { icon: Trash2, color: "text-red-400", label: "Hapus User" },
+  CREATE_TENANT: { icon: Building2, color: "text-purple-400", label: "Buat Store" },
+  DELETE_TENANT: { icon: Trash2, color: "text-red-400", label: "Hapus Store" },
+};
+
+const CATEGORY_OPTIONS = [
+  { value: "", label: "Semua" },
+  { value: "auth", label: "🔐 Auth" },
+  { value: "waste", label: "🗑️ Waste" },
+  { value: "user", label: "👤 User" },
+  { value: "tenant", label: "🏪 Tenant" },
+  { value: "system", label: "⚙️ System" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "", label: "Semua" },
+  { value: "success", label: "✅ Success" },
+  { value: "failed", label: "❌ Failed" },
+  { value: "warning", label: "⚠️ Warning" },
+];
+
+function ActivityLogPage() {
+  const [logs, setLogs] = useState<ActivityLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [status, setStatus] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  const fetchLogs = async (p = page) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(p));
+      params.set("limit", "30");
+      if (search) params.set("search", search);
+      if (category) params.set("category", category);
+      if (status) params.set("status", status);
+      if (dateFrom) params.set("date_from", dateFrom);
+      if (dateTo) params.set("date_to", dateTo);
+      const data = await api(`/api/activity-log?${params}`);
+      if (data.success) {
+        setLogs(data.logs || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+        setPage(p);
+      }
+    } catch (err) {
+      console.error("Failed to fetch logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchLogs(1); }, [category, status, dateFrom, dateTo]);
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => fetchLogs(1), 400);
+  };
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    if (diff < 60_000) return "Baru saja";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} menit lalu`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} jam lalu`;
+    if (diff < 172_800_000) return "Kemarin";
+    return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) + " " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const getActionConfig = (action: string) => ACTION_CONFIG[action] || { icon: Activity, color: "text-cyan-500", label: action };
+  
+  const getStatusBadge = (s: string): "success" | "danger" | "warning" => {
+    if (s === "success") return "success";
+    if (s === "failed") return "danger";
+    return "warning";
+  };
+
+  const getBrowserInfo = (ua: string) => {
+    if (!ua) return "Unknown";
+    if (ua.includes("Chrome") && !ua.includes("Edg")) return "Chrome";
+    if (ua.includes("Edg")) return "Edge";
+    if (ua.includes("Firefox")) return "Firefox";
+    if (ua.includes("Safari") && !ua.includes("Chrome")) return "Safari";
+    return "Browser";
+  };
+
+  const getDeviceInfo = (ua: string) => {
+    if (!ua) return "Unknown";
+    if (ua.includes("iPhone") || ua.includes("iPad")) return "iOS";
+    if (ua.includes("Android")) return "Android";
+    if (ua.includes("Windows")) return "Windows";
+    if (ua.includes("Mac")) return "Mac";
+    if (ua.includes("Linux")) return "Linux";
+    return "Other";
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold font-mono text-cyan-100 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-cyan-400" />
+            Activity Log
+          </h2>
+          <p className="text-xs font-mono text-cyan-600 mt-0.5">
+            Riwayat semua aktivitas sistem • {total} total log
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Btn variant="secondary" size="sm" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="h-3.5 w-3.5" />
+            Filter
+          </Btn>
+          <Btn variant="primary" size="sm" onClick={() => fetchLogs(1)}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Btn>
+        </div>
+      </div>
+
+      {/* Search */}
+      <Card>
+        <div className="p-3 sm:p-4">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-600" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Cari username, action, atau store..."
+              className="w-full h-11 pl-10 pr-4 bg-black/30 border border-cyan-900/40 rounded-xl font-mono text-sm text-cyan-100 placeholder:text-cyan-800 focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20 focus:outline-none transition-all"
+            />
+          </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <div className="mt-3 pt-3 border-t border-cyan-900/20 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[10px] font-mono text-cyan-600 mb-1">Kategori</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full h-9 px-2.5 bg-black/30 border border-cyan-900/40 rounded-lg font-mono text-xs text-cyan-100 focus:border-cyan-500/60 focus:outline-none appearance-none"
+                >
+                  {CATEGORY_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-gray-950">{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-cyan-600 mb-1">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full h-9 px-2.5 bg-black/30 border border-cyan-900/40 rounded-lg font-mono text-xs text-cyan-100 focus:border-cyan-500/60 focus:outline-none appearance-none"
+                >
+                  {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-gray-950">{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-cyan-600 mb-1">Dari Tanggal</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full h-9 px-2.5 bg-black/30 border border-cyan-900/40 rounded-lg font-mono text-xs text-cyan-100 focus:border-cyan-500/60 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-cyan-600 mb-1">Sampai Tanggal</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full h-9 px-2.5 bg-black/30 border border-cyan-900/40 rounded-lg font-mono text-xs text-cyan-100 focus:border-cyan-500/60 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Log List */}
+      <Card>
+        {loading ? (
+          <div className="flex items-center justify-center py-16 gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-cyan-500" />
+            <span className="text-sm font-mono text-cyan-500">Memuat activity log...</span>
+          </div>
+        ) : logs.length === 0 ? (
+          <EmptyState icon={Activity} text="Belum ada activity log" />
+        ) : (
+          <div className="divide-y divide-cyan-900/15">
+            {logs.map((log) => {
+              const cfg = getActionConfig(log.action);
+              const Icon = cfg.icon;
+              const isExpanded = expandedId === log.id;
+              return (
+                <div
+                  key={log.id}
+                  className="px-4 py-3 sm:px-5 hover:bg-cyan-500/[0.02] transition-colors cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg border border-cyan-900/30 flex items-center justify-center ${
+                      log.status === "failed" ? "bg-red-500/10" : log.status === "warning" ? "bg-yellow-500/10" : "bg-cyan-500/5"
+                    }`}>
+                      <Icon className={`h-4 w-4 ${cfg.color}`} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-mono font-medium text-cyan-100">{cfg.label}</span>
+                        <Badge variant={getStatusBadge(log.status)}>{log.status}</Badge>
+                        <Badge variant="default">{log.category}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {log.username && (
+                          <span className="text-xs font-mono text-cyan-400 flex items-center gap-1">
+                            <UserCog className="h-3 w-3" />
+                            {log.username}
+                          </span>
+                        )}
+                        {log.tenant_name && (
+                          <span className="text-xs font-mono text-purple-400 flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {log.tenant_name}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono text-cyan-700 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatTime(log.created_at)}
+                        </span>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="mt-3 p-3 rounded-lg bg-black/30 border border-cyan-900/20 space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                            <div>
+                              <span className="text-cyan-700">IP Address: </span>
+                              <span className="text-cyan-300 flex items-center gap-1 inline-flex">
+                                <Globe className="h-3 w-3" />
+                                {log.ip_address || "—"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-cyan-700">Device: </span>
+                              <span className="text-cyan-300 flex items-center gap-1 inline-flex">
+                                <Monitor className="h-3 w-3" />
+                                {getDeviceInfo(log.user_agent)} • {getBrowserInfo(log.user_agent)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-cyan-700">Tenant ID: </span>
+                              <span className="text-cyan-300">{log.tenant_id || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-cyan-700">User ID: </span>
+                              <span className="text-cyan-300">{log.user_id ?? "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-cyan-700">Waktu: </span>
+                              <span className="text-cyan-300">{new Date(log.created_at).toLocaleString("id-ID")}</span>
+                            </div>
+                          </div>
+                          {log.details && Object.keys(log.details).length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-mono text-cyan-700 block mb-1">Detail:</span>
+                              <pre className="text-[11px] font-mono text-cyan-400 bg-black/40 rounded-md p-2 overflow-x-auto">
+                                {JSON.stringify(log.details, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expand indicator */}
+                    <ChevronRight className={`h-4 w-4 text-cyan-700 flex-shrink-0 mt-1 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 sm:px-5 border-t border-cyan-900/20 flex items-center justify-between">
+            <span className="text-xs font-mono text-cyan-600">
+              Hal {page}/{totalPages} • {total} log
+            </span>
+            <div className="flex gap-2">
+              <Btn
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => fetchLogs(page - 1)}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Prev
+              </Btn>
+              <Btn
+                variant="secondary"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => fetchLogs(page + 1)}
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </Btn>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

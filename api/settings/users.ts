@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllUsers, getUsersByTenant, createUser, updateUser, deleteUser } from "../_lib/db.js";
-import { requireRole, hashPassword, handleAuthError } from "../_lib/auth.js";
+import { requireRole, hashPassword, handleAuthError, verifyToken, extractToken } from "../_lib/auth.js";
+import { logActivity, getClientIP } from "../_lib/activity-logger.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -38,6 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tenant_id: tenant_id || null,
       });
       const { password_hash, ...safe } = user;
+      const jwt = verifyToken(extractToken(req) || "");
+      logActivity({ action: "CREATE_USER", category: "user", userId: jwt?.userId, username: jwt?.username || "", tenantId: tenant_id || "", ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { newUser: username, role: userRole }, status: "success" });
       return res.json({ success: true, user: safe });
     }
 
@@ -60,6 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!id) return res.status(400).json({ error: "User ID wajib!" });
       const ok = await deleteUser(Number(id), tenantId || undefined);
       if (!ok) return res.status(404).json({ error: "User ga ketemu!" });
+      const jwt2 = verifyToken(extractToken(req) || "");
+      logActivity({ action: "DELETE_USER", category: "user", userId: jwt2?.userId, username: jwt2?.username || "", tenantId: tenantId || "", ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { deletedUserId: id }, status: "success" });
       return res.json({ success: true });
     }
 
