@@ -75,6 +75,16 @@ export default function ModeSelector() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+        {/* Sapaan */}
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-bold text-cyan-400">
+            Halo, {qcName || 'Kawan'}! 👋
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Kamu akan buat BA Waste untuk Resto <span className="font-semibold text-cyan-300">{tenantName || '-'}</span>. Semangat! 💪
+          </p>
+        </div>
+
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
             Mau Pakai Yang Mana?
