@@ -468,11 +468,11 @@ export default function Dashboard() {
   }, [dateRange.startDate, dateRange.endDate]);
 
   const rangeLabels: Record<RangeOption, string> = {
-    "7": "7 Hari Terakhir",
-    "14": "14 Hari Terakhir",
-    "30": "30 Hari Terakhir",
-    all: "Semua Data",
-    custom: "Custom Range",
+    "7": "7 Hari",
+    "14": "14 Hari",
+    "30": "30 Hari",
+    all: "Semua",
+    custom: "Custom",
   };
 
   const lineData = data?.dailyData.map((d) => ({
@@ -632,13 +632,13 @@ export default function Dashboard() {
           </div>
         </div>
         {/* Bottom row: date range controls */}
-        <div className="w-full px-3 pb-2 flex items-center gap-2">
-          <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-hide">
+        <div className="w-full px-3 pb-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5" style={{ WebkitOverflowScrolling: 'touch' }}>
             {(["7", "14", "30", "all"] as RangeOption[]).map((opt) => (
               <button
                 key={opt}
                 onClick={() => setRange(opt)}
-                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   range === opt
                     ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
                     : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
@@ -650,7 +650,7 @@ export default function Dashboard() {
             <div className="relative">
               <button
                 onClick={() => setShowRangeMenu(!showRangeMenu)}
-                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1 ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1 ${
                   range === "custom"
                     ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
                     : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
