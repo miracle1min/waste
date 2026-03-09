@@ -548,22 +548,7 @@ export default function Dashboard() {
           URL.revokeObjectURL(url);
           successCount++;
 
-          // Backup to Google Drive
-          try {
-            const reader = new FileReader();
-            const base64 = await new Promise<string>((resolve) => {
-              reader.onload = () => {
-                const dataUrl = reader.result as string;
-                resolve(dataUrl.split(',')[1]);
-              };
-              reader.readAsDataURL(result.blob);
-            });
-            await fetch('/api/upload-to-drive', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileName: result.fileName, pdfBase64: base64 }),
-            });
-          } catch {}
+
 
           // Delay between downloads so browser doesn't block
           if (i < dates.length - 1) await new Promise(r => setTimeout(r, 1500));
@@ -582,7 +567,7 @@ export default function Dashboard() {
 
     toast({
       title: `📄 Batch PDF Selesai!`,
-      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — juga di-backup ke Google Drive`,
+      description: `${successCount} berhasil${failCount > 0 ? `, ${failCount} gagal` : ''} — PDF berhasil didownload`,
     });
   };
 
