@@ -1160,7 +1160,7 @@ export default function ProductDestruction() {
                     rel="noopener noreferrer"
                     className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 font-semibold"
                   >
-                    Pajar
+                    DirgaX
                   </a>
                 </p>
               </div>

@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
               rel="noopener noreferrer"
               className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 font-semibold"
             >
-              ~/Pajar
+              ~/DirgaX
             </a>
           </p>
           <div className="h-px w-8 bg-gradient-to-l from-transparent to-cyan-500/40"></div>
