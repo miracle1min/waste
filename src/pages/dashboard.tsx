@@ -347,6 +347,14 @@ async function generatePdfForDate(
   doc.setFont('helvetica', 'normal');
   doc.text(displayPelapor, rightX + 5, startY + 20);
 
+  // Disclaimer footer
+  const disclaimerY = startY + 28;
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(120, 120, 120);
+  doc.text('Data waste ini bersifat Internal & Rahasia serta terjaga keamanannya di database QC.', pageWidth / 2, disclaimerY, { align: 'center' });
+  doc.setTextColor(0, 0, 0); // reset
+
   const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
   return { blob: doc.output('blob'), fileName };
 }
