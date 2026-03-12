@@ -1057,8 +1057,19 @@ export default function ProductDestruction() {
       // Save locally
       const fileName = `BA_WASTE_${selectedDate.replace(/-/g, '')}.pdf`;
       doc.save(fileName);
-      
-      toast({ title: "PDF Jadi!", description: `File ${fileName} berhasil ke-download` });
+
+      // Backup PDF to R2
+      try {
+        const pdfBlob = doc.output('blob');
+        const formData = new FormData();
+        formData.append('pdfFile', pdfBlob, fileName);
+        formData.append('fileName', fileName);
+        await apiFetch('/api/upload-pdf', { method: 'POST', body: formData });
+        toast({ title: "PDF Jadi! ☁️", description: `${fileName} ke-download + backup cloud ✅` });
+      } catch (backupErr) {
+        console.warn('PDF backup to R2 failed:', backupErr);
+        toast({ title: "PDF Jadi!", description: `${fileName} ke-download (backup cloud gagal)` });
+      }
 
 
     } catch (error) {

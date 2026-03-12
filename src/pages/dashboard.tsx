@@ -659,7 +659,16 @@ export default function Dashboard() {
           URL.revokeObjectURL(url);
           successCount++;
 
-
+          // Backup PDF to R2
+          try {
+            setPdfProgress(`☁️ Backup ${result.fileName} ke cloud...`);
+            const formData = new FormData();
+            formData.append('pdfFile', result.blob, result.fileName);
+            formData.append('fileName', result.fileName);
+            await apiFetch('/api/upload-pdf', { method: 'POST', body: formData });
+          } catch (backupErr) {
+            console.warn('PDF backup to R2 failed (non-critical):', backupErr);
+          }
 
           // Delay between downloads so browser doesn't block
           if (i < dates.length - 1) await new Promise(r => setTimeout(r, 1500));
