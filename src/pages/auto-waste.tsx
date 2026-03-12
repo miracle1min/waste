@@ -156,6 +156,15 @@ export default function AutoWaste() {
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
 
+  // Global progress state
+  const [globalProgress, setGlobalProgress] = useState({
+    current: 0,
+    total: 0,
+    currentStation: "" as string,
+    phase: "" as "uploading" | "processing" | "",
+    percent: 0,
+  });
+
   // Config validation
   const configReady = selectedShift && selectedQC && selectedManajer && selectedStations.length > 0 && jam;
 
@@ -257,6 +266,7 @@ export default function AutoWaste() {
     const newStatusMap: Record<Station, StationSubmitStatus> = { ...submitStatusMap };
     selectedStations.forEach(st => { newStatusMap[st] = "pending"; });
     setSubmitStatusMap(newStatusMap);
+    setGlobalProgress({ current: 0, total: selectedStations.length, currentStation: "", phase: "", percent: 0 });
 
     const qcUrl = signatureUrls[selectedQC] || "";
     const mgrUrl = signatureUrls[selectedManajer] || "";
@@ -276,7 +286,10 @@ export default function AutoWaste() {
     let allSuccess = true;
     const errors: string[] = [];
 
-    for (const station of selectedStations) {
+    for (let idx = 0; idx < selectedStations.length; idx++) {
+      const station = selectedStations[idx];
+      const progressPercent = Math.round((idx / selectedStations.length) * 100);
+      setGlobalProgress({ current: idx + 1, total: selectedStations.length, currentStation: station, phase: "uploading", percent: progressPercent });
       setSubmitStatusMap(prev => ({ ...prev, [station]: "uploading" }));
 
       try {
@@ -316,13 +329,16 @@ export default function AutoWaste() {
         }
 
         setSubmitStatusMap(prev => ({ ...prev, [station]: "success" }));
+        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / selectedStations.length) * 100) }));
       } catch (error) {
         allSuccess = false;
         setSubmitStatusMap(prev => ({ ...prev, [station]: "error" }));
+        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / selectedStations.length) * 100) }));
         errors.push(`${station}: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     }
 
+    setGlobalProgress(prev => ({ ...prev, percent: 100, phase: "" }));
     setIsSubmitting(false);
 
     if (allSuccess) {
@@ -413,6 +429,85 @@ export default function AutoWaste() {
           </div>
         </div>
       </header>
+
+      {/* ========== GLOBAL PROGRESS OVERLAY ========== */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-sm space-y-6">
+            {/* Animated icon */}
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full bg-cyan-500/20 border-2 border-cyan-500/50 flex items-center justify-center animate-pulse">
+                <Send className="w-8 h-8 text-cyan-400" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white mb-1">Mengirim Data...</h3>
+              <p className="text-xs text-slate-400">Jangan tutup halaman ini</p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${globalProgress.percent}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-cyan-400 font-mono font-bold">{globalProgress.percent}%</span>
+                <span className="text-slate-400">
+                  Station {globalProgress.current}/{globalProgress.total}
+                </span>
+              </div>
+            </div>
+
+            {/* Current station status */}
+            {globalProgress.currentStation && (
+              <div className="p-3 rounded-lg border border-cyan-800/30 bg-cyan-950/20 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                  <span className="text-sm text-white font-medium">
+                    {STATION_ICONS[globalProgress.currentStation as Station]} {globalProgress.currentStation}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Upload {dokumentasiFilesMap[globalProgress.currentStation as Station]?.length || 0} foto + {parsedItemsMap[globalProgress.currentStation as Station]?.length || 0} item...
+                </p>
+              </div>
+            )}
+
+            {/* Station checklist */}
+            <div className="space-y-1.5">
+              {selectedStations.map((st) => (
+                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
+                  submitStatusMap[st] === "success" ? "bg-green-950/30 border border-green-800/30" :
+                  submitStatusMap[st] === "uploading" ? "bg-cyan-950/30 border border-cyan-800/30" :
+                  submitStatusMap[st] === "error" ? "bg-red-950/30 border border-red-800/30" :
+                  "bg-slate-900/30 border border-slate-800/30"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{STATION_ICONS[st]}</span>
+                    <span className={`text-xs font-medium ${
+                      submitStatusMap[st] === "success" ? "text-green-400" :
+                      submitStatusMap[st] === "uploading" ? "text-cyan-400" :
+                      submitStatusMap[st] === "error" ? "text-red-400" :
+                      "text-slate-500"
+                    }`}>{st}</span>
+                  </div>
+                  <div className="text-xs">
+                    {submitStatusMap[st] === "success" && <span className="text-green-400">✅</span>}
+                    {submitStatusMap[st] === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />}
+                    {submitStatusMap[st] === "error" && <span className="text-red-400">❌</span>}
+                    {submitStatusMap[st] === "pending" && <span className="text-slate-600">⏳</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 w-full px-4 py-4 space-y-4">
         {/* ========== STEP: CONFIG ========== */}
