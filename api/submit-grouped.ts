@@ -129,6 +129,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         warnings.push('Gagal upload dokumentasi');
       }
     }
+    // Support pre-uploaded dokumentasi URLs
+    if (fields.dokumentasiUrls) {
+      try {
+        const preUploadedUrls = JSON.parse(fields.dokumentasiUrls);
+        if (Array.isArray(preUploadedUrls)) {
+          dokumentasiUrls.push(...preUploadedUrls);
+        }
+      } catch {}
+    }
     if (dokumentasiUrls.length > 0) imageUrls.dokumentasi = dokumentasiUrls.join('\n');
 
     // Submit to Google Sheets — BUG-014 fix: Don't silently swallow errors

@@ -313,9 +313,29 @@ export default function AutoWaste() {
         formData.append("jamTanggalPemusnahan", jamFormatted);
         formData.append("jamTanggalPemusnahanList", JSON.stringify(jamList));
 
-        files.forEach((file, idx) => {
-          formData.append(`dokumentasi_${idx}`, file);
-        });
+        // Upload photos one-by-one to avoid body size limit
+        const uploadedUrls: string[] = [];
+        for (let fi = 0; fi < files.length; fi++) {
+          const file = files[fi];
+          const photoForm = new FormData();
+          photoForm.append('mode', 'upload-photo');
+          photoForm.append('photo', file);
+          try {
+            const photoRes = await apiFetch("/api/auto-submit", {
+              method: "POST",
+              body: photoForm,
+            });
+            const photoResult = await photoRes.json();
+            if (photoResult.success && photoResult.url) {
+              uploadedUrls.push(photoResult.url);
+            }
+          } catch (e) {
+            console.error(`Photo upload ${fi} failed:`, e);
+          }
+        }
+        if (uploadedUrls.length > 0) {
+          formData.append('dokumentasiUrls', JSON.stringify(uploadedUrls));
+        }
 
         const res = await apiFetch("/api/auto-submit", {
           method: "POST",

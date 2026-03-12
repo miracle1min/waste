@@ -40,6 +40,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true, url, key, fileName });
     }
 
+    // === Single Photo Upload Mode ===
+    if (fields.mode === 'upload-photo') {
+      const tenantId = extractTenantId(req);
+      const tenantCreds = await resolveTenantCredentials(tenantId);
+      const photoFile = files.photo;
+
+      if (!photoFile || Array.isArray(photoFile) || photoFile.size === 0) {
+        return res.status(400).json({ success: false, message: 'No photo file provided' });
+      }
+
+      const { buffer, name, type } = await fileToBuffer(photoFile);
+      const folder = fields.folder || 'waste-management/dokumentasi';
+      const url = await uploadToR2(buffer, name, type, folder, {
+        accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
+        secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
+      });
+
+      return res.json({ success: true, url });
+    }
+
     // Force all string data to UPPERCASE for consistency
     const toUpper = (v: any) => v != null ? String(v).toUpperCase() : '';
 
@@ -127,6 +147,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('Single docs upload error:', e);
         warnings.push('Gagal upload dokumentasi');
       }
+    }
+    // Support pre-uploaded dokumentasi URLs
+    if (fields.dokumentasiUrls) {
+      try {
+        const preUploadedUrls = JSON.parse(fields.dokumentasiUrls);
+        if (Array.isArray(preUploadedUrls)) {
+          dokumentasiUrls.push(...preUploadedUrls);
+        }
+      } catch {}
     }
     if (dokumentasiUrls.length > 0) {
       imageUrls.dokumentasi = dokumentasiUrls.join('\n');

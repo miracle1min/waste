@@ -370,13 +370,34 @@ export default function ProductDestruction() {
         formData.append('parafManager', firstItem.parafManagerName);
       }
       // Handle multiple documentation files
-      if (firstItem.dokumentasiFiles && firstItem.dokumentasiFiles.length > 0) {
-        firstItem.dokumentasiFiles.forEach((file, index) => {
-          formData.append(`dokumentasi_${index}`, file);
-        });
-        formData.append('dokumentasiCount', firstItem.dokumentasiFiles.length.toString());
-      } else if (firstItem.dokumentasiFile) {
-        formData.append('dokumentasi', firstItem.dokumentasiFile);
+      // Upload documentation photos one-by-one to avoid body size limit
+      const dokumentasiFiles = firstItem.dokumentasiFiles && firstItem.dokumentasiFiles.length > 0
+        ? firstItem.dokumentasiFiles
+        : firstItem.dokumentasiFile ? [firstItem.dokumentasiFile] : [];
+      
+      if (dokumentasiFiles.length > 0) {
+        const uploadedUrls: string[] = [];
+        for (let fi = 0; fi < dokumentasiFiles.length; fi++) {
+          const file = dokumentasiFiles[fi];
+          const photoForm = new FormData();
+          photoForm.append('mode', 'upload-photo');
+          photoForm.append('photo', file);
+          try {
+            const photoRes = await fetch('/api/auto-submit', {
+              method: 'POST',
+              body: photoForm,
+            });
+            const photoResult = await photoRes.json();
+            if (photoResult.success && photoResult.url) {
+              uploadedUrls.push(photoResult.url);
+            }
+          } catch (e) {
+            console.error(`Photo upload ${fi} failed:`, e);
+          }
+        }
+        if (uploadedUrls.length > 0) {
+          formData.append('dokumentasiUrls', JSON.stringify(uploadedUrls));
+        }
       }
 
       const response = await fetch('/api/submit-grouped', {
