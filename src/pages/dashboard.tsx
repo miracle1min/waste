@@ -665,7 +665,8 @@ export default function Dashboard() {
             const formData = new FormData();
             formData.append('pdfFile', result.blob, result.fileName);
             formData.append('fileName', result.fileName);
-            await apiFetch('/api/upload-pdf', { method: 'POST', body: formData });
+            formData.append('mode', 'upload-pdf');
+            await apiFetch('/api/auto-submit', { method: 'POST', body: formData });
           } catch (backupErr) {
             console.warn('PDF backup to R2 failed (non-critical):', backupErr);
           }

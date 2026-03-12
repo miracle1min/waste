@@ -23,6 +23,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { fields, files } = await parseForm(req);
 
+    // === PDF Backup Mode ===
+    if (fields.mode === 'upload-pdf') {
+      const tenantId = extractTenantId(req);
+      const pdfFile = files.pdfFile;
+      const fileName = fields.fileName || `report_${Date.now()}.pdf`;
+
+      if (!pdfFile) {
+        return res.status(400).json({ success: false, message: 'No PDF file provided' });
+      }
+
+      const buffer = await fileToBuffer(pdfFile);
+      const key = `${tenantId}/pdf-reports/${fileName}`;
+      const url = await uploadToR2(buffer, key, 'application/pdf');
+
+      return res.json({ success: true, url, key, fileName });
+    }
+
     // Force all string data to UPPERCASE for consistency
     const toUpper = (v: any) => v != null ? String(v).toUpperCase() : '';
 

@@ -1064,7 +1064,8 @@ export default function ProductDestruction() {
         const formData = new FormData();
         formData.append('pdfFile', pdfBlob, fileName);
         formData.append('fileName', fileName);
-        await apiFetch('/api/upload-pdf', { method: 'POST', body: formData });
+        formData.append('mode', 'upload-pdf');
+        await apiFetch('/api/auto-submit', { method: 'POST', body: formData });
         toast({ title: "PDF Jadi! ☁️", description: `${fileName} ke-download + backup cloud ✅` });
       } catch (backupErr) {
         console.warn('PDF backup to R2 failed:', backupErr);
