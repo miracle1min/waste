@@ -18,7 +18,7 @@ export default function ModeSelector() {
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-        <div className="w-full px-4 py-2 flex items-center justify-between">
+        <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
             <img src={wasteLogo} alt="AWAS Logo" className="w-8 h-8 rounded" />
             <div>
@@ -77,7 +77,7 @@ export default function ModeSelector() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         {/* Sapaan */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 lg:mb-10">
           <h2 className="text-xl font-bold text-cyan-400">
             Halo, {qcName || 'Kawan'}! 👋
           </h2>
@@ -89,11 +89,11 @@ export default function ModeSelector() {
         <div className="text-center mb-8">
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg lg:max-w-3xl px-4">
           {/* Waste Otomatis */}
           <button
             onClick={() => setLocation("/auto-waste")}
-            className="group relative p-6 rounded-xl border-2 border-cyan-800/50 bg-gradient-to-br from-cyan-950/40 to-blue-950/40 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300 text-left"
+            className="group relative p-6 lg:p-8 rounded-xl border-2 border-cyan-800/50 bg-gradient-to-br from-cyan-950/40 to-blue-950/40 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300 text-left"
           >
             <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-wider">
               Fast Mode
@@ -116,7 +116,7 @@ export default function ModeSelector() {
           {/* Waste Manual */}
           <button
             onClick={() => setLocation("/manual-waste")}
-            className="group relative p-6 rounded-xl border-2 border-purple-800/50 bg-gradient-to-br from-purple-950/40 to-pink-950/40 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 text-left"
+            className="group relative p-6 lg:p-8 rounded-xl border-2 border-purple-800/50 bg-gradient-to-br from-purple-950/40 to-pink-950/40 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 text-left"
           >
             <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-[10px] font-bold uppercase tracking-wider">
               Full Control

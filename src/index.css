@@ -45,9 +45,12 @@ html, body, #root {
     @apply ring-2 ring-cyan-500/50 ring-offset-2 ring-offset-background outline-none;
   }
 
-  /* Better mobile touch targets */
-  button, a, input, select, textarea {
-    @apply min-h-[44px] min-w-[44px];
+  /* Better mobile touch targets — only on mobile */
+  @media (max-width: 640px) {
+    button, a, input, select, textarea {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
 
   input[type="date"], input[type="datetime-local"] {
@@ -457,6 +460,40 @@ html, body, #root {
   .paraf-preview-mobile .paraf-text {
     font-size: 10px !important;
     line-height: 1.2 !important;
+  }
+}
+
+/* ─── Desktop Optimizations ─── */
+@media (min-width: 1024px) {
+  .desktop-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .desktop-header-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .desktop-narrow {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  .desktop-container {
+    max-width: 1400px;
+  }
+  .desktop-header-container {
+    max-width: 1400px;
   }
 }
 

@@ -321,7 +321,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       <div className="fixed inset-0 z-[1] pointer-events-none opacity-[0.03]" style={{backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,255,0.1) 2px,rgba(0,255,255,0.1) 4px)"}} />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[100px] z-0" />
 
-      <div className={`relative z-10 w-full max-w-md transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+      <div className={`relative z-10 w-full max-w-md lg:max-w-lg transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
         <div className="relative rounded-2xl border border-cyan-500/20 bg-gray-950/80 backdrop-blur-xl shadow-[0_0_50px_rgba(0,255,255,0.08)] overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
           <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-400/60 rounded-tl-2xl" />
@@ -329,12 +329,12 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-400/60 rounded-bl-2xl" />
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-400/60 rounded-br-2xl" />
 
-          <div className="p-8 space-y-6">
+          <div className="p-8 lg:p-10 space-y-6">
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-cyan-400/20 blur-xl scale-150" />
-                  <img src={logoUrl} alt="Logo" className="relative h-24 w-24 object-contain drop-shadow-[0_0_15px_rgba(0,255,255,0.4)]" />
+                  <img src={logoUrl} alt="Logo" className="relative h-24 w-24 lg:h-28 lg:w-28 object-contain drop-shadow-[0_0_15px_rgba(0,255,255,0.4)]" />
                 </div>
               </div>
 
@@ -342,7 +342,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 <div className="text-xs font-mono text-cyan-500/50 tracking-[0.4em] uppercase mb-2">
                   // akses sistem
                 </div>
-                <h1 className="text-4xl font-black tracking-wider">
+                <h1 className="text-4xl lg:text-5xl font-black tracking-wider">
                   <GlitchText text="AWAS" className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500" />
                 </h1>
                 <p className="text-cyan-400/50 text-xs font-mono mt-2 tracking-widest">

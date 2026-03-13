@@ -418,7 +418,7 @@ export default function AutoWaste() {
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
-        <div className="w-full px-4 py-2 flex items-center justify-between">
+        <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -529,7 +529,7 @@ export default function AutoWaste() {
         </div>
       )}
 
-      <main className="flex-1 w-full px-4 py-4 space-y-4">
+      <main className="flex-1 w-full px-4 py-4 space-y-4 desktop-narrow">
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
@@ -539,7 +539,7 @@ export default function AutoWaste() {
             </div>
 
             {/* Date & Resto row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-400">📅 Tanggal</label>
                 <input
@@ -573,7 +573,7 @@ export default function AutoWaste() {
                   {allStationsSelected ? "Semua Dipilih" : "Pilih Semua"}
                 </button>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2 lg:gap-3">
                 {VALID_STATIONS.map(st => (
                   <button
                     key={st}
@@ -600,7 +600,7 @@ export default function AutoWaste() {
             </div>
 
             {/* Shift & Jam row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-400">🕐 Shift</label>
                 <select
@@ -624,7 +624,7 @@ export default function AutoWaste() {
             </div>
 
             {/* QC & Manajer row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-400">🔍 QC</label>
                 <select
@@ -727,7 +727,7 @@ Contoh:
                       setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                     }}
                     placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
-                    className="w-full h-36 px-4 py-3 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white font-mono text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none placeholder:text-slate-600"
+                    className="w-full h-36 lg:h-48 px-4 py-3 bg-slate-900/50 border border-cyan-800/50 rounded-lg text-white font-mono text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none placeholder:text-slate-600"
                   />
                   {rawTexts[station] && (
                     <button
@@ -800,7 +800,7 @@ Contoh:
             </div>
 
             {/* Info cards */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 lg:gap-3">
               <div className="p-2.5 rounded-lg border border-slate-700/50 bg-slate-900/30 text-center">
                 <p className="text-[10px] text-slate-500">Station</p>
                 <p className="text-sm font-bold text-white">{selectedStations.length}x</p>

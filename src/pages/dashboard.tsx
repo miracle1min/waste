@@ -705,7 +705,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         {/* Top row: branding + actions */}
-        <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between">
+        <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
             <Button
               variant="ghost"
@@ -749,7 +749,7 @@ export default function Dashboard() {
           </div>
         </div>
         {/* Bottom row: date range controls */}
-        <div className="w-full px-3 pb-2">
+        <div className="w-full px-3 pb-2 desktop-header-container">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5" style={{ WebkitOverflowScrolling: 'touch' }}>
             {(["7", "14", "30", "all"] as RangeOption[]).map((opt) => (
               <button
@@ -825,7 +825,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 w-full px-3 py-4 space-y-4">
+      <main className="flex-1 w-full px-3 py-4 space-y-4 desktop-container">
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mr-3" />
@@ -868,7 +868,7 @@ export default function Dashboard() {
               {/* Date grid */}
               {availableDates.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-4 max-h-64 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 mb-4 max-h-64 overflow-y-auto pr-1">
                     {availableDates.map((date) => {
                       const isSelected = selectedPdfDates.has(date);
                       const { display, dayName } = formatTabDate(date);
