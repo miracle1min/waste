@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut, Download, AlertTriangle, BarChart3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle, FileText, Upload, Save, RotateCcw, Send, Sparkles, Edit, Trash2, X, LogOut, Download, AlertTriangle, BarChart3, ClipboardEdit } from "lucide-react";
 import { useStableCallback, useDebounce, usePerformanceMonitor } from "@/hooks/usePerformanceOptimization";
 import { parseApiError, getUserFriendlyErrorMessage, retryRequest } from "@/utils/errorHandler";
 
