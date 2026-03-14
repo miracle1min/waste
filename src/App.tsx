@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
+import { AppLayout } from "@/components/ui/app-layout";
 import NotFound from "@/pages/not-found";
 import ModeSelector from "@/pages/mode-selector";
 import ProductDestruction from "@/pages/product-destruction";
@@ -43,12 +44,12 @@ function AuthenticatedApp() {
   const { isSuperAdmin } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <AppLayout>
       <main>
         <Toaster />
         {isSuperAdmin ? <AdminRouter /> : <UserRouter />}
       </main>
-    </div>
+    </AppLayout>
   );
 }
 

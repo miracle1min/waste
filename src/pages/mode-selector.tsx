@@ -16,8 +16,13 @@ export default function ModeSelector() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
+      {/* Desktop page title */}
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/80 backdrop-blur-sm">
+        <h1 className="text-lg font-bold text-cyan-400">🏠 Pilih Mode</h1>
+      </div>
+
+      {/* Header - Mobile only */}
+      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md lg:hidden">
         <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
             <img src={wasteLogo} alt="AWAS Logo" className="w-8 h-8 rounded" />
@@ -138,7 +143,9 @@ export default function ModeSelector() {
         </div>
       </main>
 
-      <Footer />
+      <div className="lg:hidden">
+        <Footer />
+      </div>
     </div>
   );
 }

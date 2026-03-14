@@ -1157,8 +1157,15 @@ export default function ProductDestruction() {
 
   return (
     <div className="min-h-screen bg-cyber-dark cyber-grid-bg flex flex-col">
-      {/* Header - Cyberpunk */}
-      <div className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
+      {/* Desktop page title */}
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/80 backdrop-blur-sm">
+        <ClipboardEdit className="w-5 h-5 text-cyan-400" />
+        <h1 className="text-lg font-bold text-cyan-400">Manual Waste</h1>
+        {tenantName && <span className="text-xs text-cyan-500/70 font-mono ml-auto">{tenantName}</span>}
+      </div>
+
+      {/* Header - Cyberpunk - Mobile only */}
+      <div className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md lg:hidden">
         <div className="w-full px-4 py-1.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1929,7 +1936,9 @@ export default function ProductDestruction() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
+      <div className="lg:hidden">
+        <Footer />
+      </div>
     </div>
   );
 }

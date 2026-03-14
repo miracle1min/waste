@@ -463,6 +463,34 @@ html, body, #root {
   }
 }
 
+/* ─── Sidebar Styles ─── */
+@media (min-width: 1024px) {
+  .sidebar-nav-item {
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  
+  .sidebar-nav-item.active {
+    background: rgba(0, 240, 255, 0.08);
+  }
+  
+  .sidebar-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: #00f0ff;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  }
+  
+  .sidebar-nav-item:hover {
+    background: rgba(0, 240, 255, 0.05);
+  }
+}
+
 /* ─── Desktop Optimizations ─── */
 @media (min-width: 1024px) {
   .desktop-container {

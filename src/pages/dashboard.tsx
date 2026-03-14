@@ -702,8 +702,26 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[hsl(220,45%,6%)] text-white flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
+      {/* Desktop page title */}
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/80 backdrop-blur-sm">
+        <BarChart3 className="w-5 h-5 text-cyan-400" />
+        <h1 className="text-lg font-bold text-cyan-400">Dashboard</h1>
+        {tenantName && <span className="text-xs text-cyan-500/70 font-mono">{tenantName}</span>}
+        <div className="ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchData}
+            className="text-cyan-400 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
+            title="Refresh data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Header - Mobile only */}
+      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md lg:hidden">
         {/* Top row: branding + actions */}
         <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
@@ -1325,7 +1343,9 @@ export default function Dashboard() {
         )}
       </main>
 
-      <Footer />
+      <div className="lg:hidden">
+        <Footer />
+      </div>
     </div>
   );
 }
