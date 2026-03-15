@@ -20,7 +20,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { date } = req.query;
+  // If shift and station params present, handle as check-duplicate
+  const { date, shift, station } = req.query;
+  if (date && shift && station) {
+    return handleCheckDuplicate(req, res);
+  }
+
   if (!date) {
     return res.status(400).json({ error: 'Missing date parameter' });
   }
@@ -103,5 +108,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(504).json({ error: 'Request timeout' });
     }
     return res.status(500).json({ error: 'Failed to fetch data' });
+  }
+}
+
+// === CHECK DUPLICATE HANDLER (merged from check-duplicate.ts) ===
+async function handleCheckDuplicate(req: VercelRequest, res: VercelResponse) {
+  const { date, shift, station } = req.query;
+
+  try {
+    const tenantId = extractTenantId(req);
+    const tenantCreds = await resolveTenantCredentials(tenantId);
+    if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
+      return res.status(500).json({ error: 'Missing Google Sheets config' });
+    }
+
+    const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
+    const accessToken = await getGoogleAccessToken(credentials, 'readonly');
+    const tabName = formatDateToTab(date as string);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${tenantCreds.googleSpreadsheetId}/values/${encodeURIComponent(tabName)}!A:C`;
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return res.json({ isDuplicate: false });
+    }
+
+    const data = (await response.json()) as { values?: string[][] };
+    const rows = data.values || [];
+
+    const isDuplicate = rows.some(row =>
+      row[0]?.toUpperCase() === (shift as string).toUpperCase() &&
+      row[2]?.toUpperCase() === (station as string).toUpperCase()
+    );
+
+    return res.json({ isDuplicate });
+  } catch (error) {
+    console.error('Check duplicate error:', error);
+    return res.json({ isDuplicate: false });
   }
 }

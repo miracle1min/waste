@@ -715,7 +715,7 @@ export default function ProductDestruction() {
     setIsCheckingDuplicate(true);
     setDuplicateWarning(null);
     try {
-      const res = await apiFetch(`/api/check-duplicate?date=${selectedDate}&shift=${selectedShift}&station=${selectedCategory}`);
+      const res = await apiFetch(`/api/get-day-data?date=${selectedDate}&shift=${selectedShift}&station=${selectedCategory}`);
       const data = await res.json();
       if (data.isDuplicate) {
         setDuplicateWarning(`Data untuk shift ${selectedShift} - station ${selectedCategory} pada tanggal ini sudah ada!`);
