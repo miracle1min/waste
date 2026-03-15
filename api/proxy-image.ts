@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth, handleAuthError } from './_lib/auth.js';
+import { checkRateLimit } from './_lib/rate-limit.js';
+import { validate, proxyImageSchema } from './_lib/validators.js';
 
 // BUG-006 fix: Proper URL hostname validation to prevent SSRF
 const ALLOWED_HOSTNAMES = [
@@ -28,6 +30,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  if (checkRateLimit(req, res, { name: "proxy", maxRequests: 60, windowSeconds: 60 })) return;
+
   // SEC-FIX: Require authentication to prevent open proxy abuse
   try {
     requireAuth(req);
@@ -35,10 +39,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleAuthError(err, res);
   }
 
-  const { url } = req.query;
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'Missing url parameter' });
-  }
+  const parsed = validate(proxyImageSchema, req.query, res);
+  if (!parsed) return;
+  const { url } = parsed;
 
   if (!isAllowedUrl(url)) {
     return res.status(403).json({ error: 'URL tidak diizinkan. Hanya Cloudinary dan R2 yang diperbolehkan.' });

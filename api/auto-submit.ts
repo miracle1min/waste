@@ -4,6 +4,7 @@ import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
+import { checkRateLimit } from './_lib/rate-limit.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -20,6 +21,8 @@ function safeJsonParse(input: string | undefined, fallback: any[] = []): any[] {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed' });
+
+  if (checkRateLimit(req, res, { name: "auto-submit", maxRequests: 30, windowSeconds: 60 })) return;
 
   try {
     const { fields, files } = await parseForm(req);

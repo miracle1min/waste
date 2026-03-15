@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
+import { validate, getDayDataQuerySchema } from './_lib/validators.js';
 
 // BUG-016 fix: Parse date string manually
 function formatDateToTab(dateStr: string): string {
@@ -27,9 +28,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleCheckDuplicate(req, res);
   }
 
-  if (!date) {
-    return res.status(400).json({ error: 'Missing date parameter' });
-  }
+  const parsedQuery = validate(getDayDataQuerySchema, req.query, res);
+  if (!parsedQuery) return;
 
   // SEC-FIX: Require authentication
   let jwtPayload;

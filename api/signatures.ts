@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { tenantQuery } from './_lib/tenant-db.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
+import { checkRateLimit } from './_lib/rate-limit.js';
 
 /**
  * Signature lookup API — reads from per-tenant DB (personnel table)
@@ -9,6 +10,8 @@ import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed' });
+
+  if (checkRateLimit(req, res, { name: "signatures", maxRequests: 60, windowSeconds: 60 })) return;
 
   // SEC-FIX: Require authentication and use JWT-based tenant
   let jwtPayload;

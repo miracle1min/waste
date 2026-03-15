@@ -1,12 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { tenantQuery } from '../_lib/tenant-db.js';
 import { requireRole, handleAuthError, getAuthorizedTenantId, extractToken, verifyToken } from '../_lib/auth.js';
+import { checkRateLimit } from '../_lib/rate-limit.js';
+import { validate, createPersonnelSchema } from '../_lib/validators.js';
 
 /**
  * Personnel CRUD API (admin only) — now uses per-tenant DB
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
 
   try {
     requireRole(req, "super_admin", "admin_store");
@@ -29,13 +33,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'POST': {
-        const { tenant_id, name, full_name, role, signature_url, status } = req.body || {};
-        if (!tenant_id || !name || !role) {
-          return res.status(400).json({ success: false, message: 'tenant_id, name, dan role wajib diisi' });
-        }
-        if (!['qc', 'manager'].includes(role)) {
-          return res.status(400).json({ success: false, message: 'role harus qc atau manager' });
-        }
+        const parsed = validate(createPersonnelSchema, req.body, res);
+        if (!parsed) return;
+        const { tenant_id, name, full_name, role, signature_url, status } = parsed;
         const rows = await tenantQuery(tenant_id,
           'INSERT INTO personnel (tenant_id, name, full_name, role, signature_url, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
           [tenant_id, name.toUpperCase(), full_name || name, role, signature_url || null, status || 'active']

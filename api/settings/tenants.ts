@@ -3,8 +3,12 @@ import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../_lib
 import { clearTenantDbCache } from "../_lib/tenant-db.js";
 import { requireRole, handleAuthError, verifyToken, extractToken } from "../_lib/auth.js";
 import { logActivity, getClientIP } from "../_lib/activity-logger.js";
+import { checkRateLimit } from "../_lib/rate-limit.js";
+import { validate, createTenantSchema } from "../_lib/validators.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
+
   try {
     // BUG-003 fix: Server-side JWT auth instead of trusting x-user-role header
     requireRole(req, "super_admin");
@@ -18,9 +22,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ tenants });
     }
     if (req.method === "POST") {
-      const { id, name, address, phone, status, neon_database_url } = req.body || {};
-      if (!id || !name) return res.status(400).json({ error: "ID & nama store wajib diisi!" });
-      const tenant = await createTenant({ id, name, address: address || "", phone: phone || "", status: status || "active", neon_database_url: neon_database_url || "" });
+      const parsed = validate(createTenantSchema, req.body, res);
+      if (!parsed) return;
+      const { id, name, address, phone, status, neon_database_url } = parsed;
+      const tenant = await createTenant({ id, name, address, phone, status, neon_database_url });
       const jwt = verifyToken(extractToken(req) || "");
       logActivity({ action: "CREATE_TENANT", category: "tenant", userId: jwt?.userId, username: jwt?.username || "", tenantId: id, tenantName: name, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { storeName: name }, status: "success" });
       return res.json({ success: true, tenant });

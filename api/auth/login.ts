@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserByUsername, getTenantById, updateUser, getAllTenants } from "../_lib/db.js";
 import { verifyPassword, isLegacyHash, hashPassword, createToken } from "../_lib/auth.js";
 import { logActivity, getClientIP } from "../_lib/activity-logger.js";
+import { checkRateLimit } from "../_lib/rate-limit.js";
+import { validate, loginSchema } from "../_lib/validators.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET = return tenant list for login dropdown (was /api/auth/tenants)
@@ -21,11 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST = login
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  if (checkRateLimit(req, res, { name: "login", maxRequests: 5, windowSeconds: 300 })) return;
+
   try {
-    const { username, password, tenant_id } = req.body || {};
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username & password wajib diisi dong!" });
-    }
+    const parsed = validate(loginSchema, req.body, res);
+    if (!parsed) return;
+    const { username, password, tenant_id } = parsed;
 
     // Look up user — pass tenant_id so it checks the right DB
     const user = await getUserByUsername(username, tenant_id || undefined);

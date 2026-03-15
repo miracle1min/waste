@@ -3,6 +3,7 @@ import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolve
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
 import { requireAuth, requireRole, handleAuthError, getAuthorizedTenantId } from './_lib/auth.js';
 import { getActivityLogs } from './_lib/activity-logger.js';
+import { validate, dashboardQuerySchema } from './_lib/validators.js';
 
 // Parse tab name "DD/MM/YY" to Date
 function parseTabToDate(tab: string): Date | null {
@@ -58,7 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleAuthError(err, res);
   }
 
-  const { startDate, endDate } = req.query;
+  const parsedQuery = validate(dashboardQuerySchema, req.query, res);
+  if (!parsedQuery) return;
+  const { startDate, endDate } = parsedQuery;
 
   try {
     const tenantId = getAuthorizedTenantId(req, jwtPayload);
