@@ -218,6 +218,14 @@ function toUpper(val: any): string {
   return String(val).toUpperCase();
 }
 
+// Helper: normalize unit abbreviations (e.g., GR → GRAM)
+function normalizeUnit(val: any): string {
+  if (val == null) return '';
+  const upper = String(val).toUpperCase().trim();
+  const UNIT_MAP: Record<string, string> = { 'GR': 'GRAM' };
+  return UNIT_MAP[upper] || upper;
+}
+
 function buildDokumentasiColumns(dokumentasiUrl: string): string[] {
   const urls = dokumentasiUrl ? dokumentasiUrl.split('\n').filter((u: string) => u.trim()) : [];
   return Array.from({ length: 10 }, (_, i) =>
@@ -266,7 +274,7 @@ export async function appendToGoogleSheets(
     toUpper(data.namaProduk),
     toUpper(data.kodeProduk),
     data.jumlahProduk,
-    toUpper(data.unit),
+    normalizeUnit(data.unit),
     toUpper(data.metodePemusnahan),
     toUpper(data.alasanPemusnahan),
     (data.jamTanggalPemusnahanList
@@ -305,7 +313,7 @@ export async function appendGroupToGoogleSheets(
       toUpper(item.namaProduk),
       toUpper(item.kodeProduk),
       item.jumlahProduk,
-      toUpper(item.unit),
+      normalizeUnit(item.unit),
       toUpper(item.metodePemusnahan),
       toUpper(item.alasanPemusnahan),
       formatJamForStorage(item.jamTanggalPemusnahan),
@@ -363,7 +371,7 @@ export async function appendGroupedToGoogleSheets(
   const productNames = data.productList.map((v: string) => toUpper(v)).join('\n');
   const productCodes = data.kodeProdukList.map((v: string) => toUpper(v)).join('\n');
   const quantities = data.jumlahProdukList.join('\n');
-  const units = data.unitList.map((v: string) => toUpper(v)).join('\n');
+  const units = data.unitList.map((v: string) => normalizeUnit(v)).join('\n');
   const methods = data.metodePemusnahanList.map((v: string) => toUpper(v)).join('\n');
   const reasons = data.alasanPemusnahanList.map((v: string) => toUpper(v)).join('\n');
 
