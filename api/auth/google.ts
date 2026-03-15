@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createToken, requireRole, handleAuthError } from "../_lib/auth.js";
+import { createToken, requireRole, handleAuthError, hashPassword } from "../_lib/auth.js";
 import { getMasterSQL } from "../_lib/tenant-db.js";
+import { createUser } from "../_lib/db.js";
 
 function decodeBase64Url(str: string): string {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -161,14 +162,56 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
     const masterSql = getMasterSQL();
     const rows = await masterSql`SELECT * FROM google_users WHERE google_email = ${googleUser.email}`;
 
+    let row: any;
+
     if (rows.length === 0) {
-      return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Akun Google belum terdaftar. Hubungi Super Admin untuk menghubungkan akun.")}&email=${encodeURIComponent(googleUser.email)}`);
+      // === SELF-REGISTER: Auto-create new user ===
+      if (!tenantId) {
+        return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Pilih Resto dulu sebelum login dengan Google untuk pendaftaran otomatis.")}`);
+      }
+
+      // Verify tenant exists
+      const tenantRows = await masterSql`SELECT id, name FROM tenants WHERE id = ${tenantId} AND status = 'active'`;
+      if (tenantRows.length === 0) {
+        return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Resto tidak ditemukan atau tidak aktif.")}`);
+      }
+
+      // Generate username from email (before @, sanitized)
+      const emailPrefix = googleUser.email.split("@")[0].replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
+      const username = emailPrefix.substring(0, 50);
+      const displayName = googleUser.name || username;
+
+      // Create random password hash (user will login via Google, not password)
+      const randomPass = hashPassword(crypto.randomUUID());
+
+      // Create user in tenant DB
+      const newUser = await createUser({
+        username,
+        password_hash: randomPass,
+        display_name: displayName,
+        role: "admin_store",
+        tenant_id: tenantId,
+      });
+
+      // Link in google_users master table
+      await masterSql`
+        INSERT INTO google_users (google_email, google_name, google_picture, user_id, username, display_name, role, tenant_id, last_login)
+        VALUES (${googleUser.email}, ${googleUser.name}, ${googleUser.picture}, ${newUser.id}, ${username}, ${displayName}, ${"admin_store"}, ${tenantId}, NOW())
+      `;
+
+      row = {
+        user_id: newUser.id,
+        username,
+        display_name: displayName,
+        role: "admin_store",
+        tenant_id: tenantId,
+      };
+    } else {
+      row = rows[0];
+
+      // Update last_login and google info
+      await masterSql`UPDATE google_users SET last_login = NOW(), google_name = ${googleUser.name}, google_picture = ${googleUser.picture} WHERE google_email = ${googleUser.email}`;
     }
-
-    const row = rows[0];
-
-    // Update last_login and google info
-    await masterSql`UPDATE google_users SET last_login = NOW(), google_name = ${googleUser.name}, google_picture = ${googleUser.picture} WHERE google_email = ${googleUser.email}`;
 
     // Create JWT token
     const token = createToken({
