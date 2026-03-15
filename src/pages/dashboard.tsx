@@ -501,7 +501,7 @@ export default function Dashboard() {
     async function fetchSigs() {
       try {
         const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
-        const res = await fetch(`/api/signatures?role=qc&tenant_id=${encodeURIComponent(tenantId)}`);
+        const res = await apiFetch(`/api/signatures?role=qc&tenant_id=${encodeURIComponent(tenantId)}`);
         const data = await res.json();
         if (data.success && data.signatures) {
           setPelaporSigUrls(data.signatures);
