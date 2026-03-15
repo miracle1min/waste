@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { tenantQuery } from '../_lib/tenant-db.js';
-import { requireRole, handleAuthError } from '../_lib/auth.js';
+import { requireRole, handleAuthError, getAuthorizedTenantId, extractToken, verifyToken } from '../_lib/auth.js';
 
 /**
  * Personnel CRUD API (admin only) — now uses per-tenant DB
@@ -17,7 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        const tenantId = req.query.tenant_id as string;
+        // SEC-FIX: Use JWT-based tenant isolation
+        const jwt = verifyToken(extractToken(req) || "");
+        const tenantId = jwt ? getAuthorizedTenantId(req, jwt) : (req.query.tenant_id as string);
         if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
         const rows = await tenantQuery(tenantId,
           'SELECT id, tenant_id, name, full_name, role, signature_url, status, created_at FROM personnel WHERE tenant_id = $1 ORDER BY role, name',

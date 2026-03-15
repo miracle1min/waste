@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
+import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 
 // BUG-016 fix: Parse date string manually
 function formatDateToTab(dateStr: string): string {
@@ -30,8 +31,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing date parameter' });
   }
 
+  // SEC-FIX: Require authentication
+  let jwtPayload;
   try {
-    const tenantId = extractTenantId(req);
+    jwtPayload = requireAuth(req);
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
+
+  try {
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
 
     if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
@@ -115,8 +124,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleCheckDuplicate(req: VercelRequest, res: VercelResponse) {
   const { date, shift, station } = req.query;
 
+  // SEC-FIX: Require authentication
+  let jwtPayload;
   try {
-    const tenantId = extractTenantId(req);
+    jwtPayload = requireAuth(req);
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
+
+  try {
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
     if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
       return res.status(500).json({ error: 'Missing Google Sheets config' });

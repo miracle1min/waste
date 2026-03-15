@@ -3,6 +3,7 @@ import { parseForm, fileToBuffer } from './_lib/parse-form.js';
 import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
+import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -24,8 +25,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { fields, files } = await parseForm(req);
 
     // === PDF Backup Mode ===
+    // SEC-FIX: Require authentication for all modes
+    let jwtPayload;
+    try {
+      jwtPayload = requireAuth(req);
+    } catch (err) {
+      return handleAuthError(err, res);
+    }
+
     if (fields.mode === 'upload-pdf') {
-      const tenantId = extractTenantId(req);
+      const tenantId = getAuthorizedTenantId(req, jwtPayload);
       const pdfFile = files.pdfFile;
       const fileName = fields.fileName || `report_${Date.now()}.pdf`;
 
@@ -42,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // === Single Photo Upload Mode ===
     if (fields.mode === 'upload-photo') {
-      const tenantId = extractTenantId(req);
+      const tenantId = getAuthorizedTenantId(req, jwtPayload);
       const tenantCreds = await resolveTenantCredentials(tenantId);
       const photoFile = files.photo;
 
@@ -113,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     const warnings: string[] = [];
-    const tenantId = extractTenantId(req);
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
 
     // Upload documentation photos — BUG-015 fix: Track failures

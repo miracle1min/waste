@@ -4,6 +4,7 @@ import { uploadToR2 } from './_lib/r2.js';
 import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { logActivity, getClientIP } from './_lib/activity-logger.js';
+import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -65,8 +66,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const imageUrls: Record<string, string> = {};
     const warnings: string[] = [];
 
-    // Upload paraf QC — BUG-015 fix: Track upload failures
-    const tenantId = extractTenantId(req);
+    // SEC-FIX: Require authentication and use JWT-based tenant isolation
+    let jwtPayload;
+    try {
+      jwtPayload = requireAuth(req);
+    } catch (err) {
+      return handleAuthError(err, res);
+    }
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
     const qcFile = files.parafQC;
     if (qcFile && !Array.isArray(qcFile) && qcFile.size > 0) {

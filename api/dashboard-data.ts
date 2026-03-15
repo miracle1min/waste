@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
-import { requireRole, handleAuthError } from './_lib/auth.js';
+import { requireAuth, requireRole, handleAuthError, getAuthorizedTenantId } from './_lib/auth.js';
 import { getActivityLogs } from './_lib/activity-logger.js';
 
 // Parse tab name "DD/MM/YY" to Date
@@ -50,10 +50,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // SEC-FIX: Require authentication for dashboard data
+  let jwtPayload;
+  try {
+    jwtPayload = requireAuth(req);
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
+
   const { startDate, endDate } = req.query;
 
   try {
-    const tenantId = extractTenantId(req);
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
     if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
       return res.status(500).json({ error: 'Missing config' });

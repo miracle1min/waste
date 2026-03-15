@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { tenantQuery } from './_lib/tenant-db.js';
+import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 
 /**
  * Signature lookup API — reads from per-tenant DB (personnel table)
@@ -9,8 +10,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed' });
 
+  // SEC-FIX: Require authentication and use JWT-based tenant
+  let jwtPayload;
   try {
-    const tenantId = (req.query.tenant_id as string) || extractTenantId(req);
+    jwtPayload = requireAuth(req);
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
+
+  try {
+    const tenantId = getAuthorizedTenantId(req, jwtPayload);
     if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
 
     const tenantCreds = await resolveTenantCredentials(tenantId);

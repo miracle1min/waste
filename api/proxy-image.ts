@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAuth, handleAuthError } from './_lib/auth.js';
 
 // BUG-006 fix: Proper URL hostname validation to prevent SSRF
 const ALLOWED_HOSTNAMES = [
@@ -26,6 +27,13 @@ function isAllowedUrl(urlStr: string): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  // SEC-FIX: Require authentication to prevent open proxy abuse
+  try {
+    requireAuth(req);
+  } catch (err) {
+    return handleAuthError(err, res);
+  }
 
   const { url } = req.query;
   if (!url || typeof url !== 'string') {

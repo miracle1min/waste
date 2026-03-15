@@ -45,7 +45,12 @@ export function isLegacyHash(stored: string): boolean {
 // ===== JWT (HMAC-SHA256 — built-in crypto, no external deps) =====
 
 function getJwtSecret(): string {
-  return process.env.JWT_SECRET || process.env.NEON_DATABASE_URL || "ba-waste-default-secret-change-me";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error("[SECURITY] JWT_SECRET environment variable is not set! Using fallback.");
+    return process.env.NEON_DATABASE_URL || "ba-waste-default-secret-change-me";
+  }
+  return secret;
 }
 
 function base64urlEncode(input: string | Buffer): string {
@@ -163,4 +168,20 @@ export function handleAuthError(err: unknown, res: VercelResponse): void {
     console.error("Unexpected error:", err);
     res.status(500).json({ error: "Terjadi kesalahan server." });
   }
+}
+
+/**
+ * SEC-FIX: Get tenant ID from JWT payload, with super_admin override.
+ * Regular users (admin_store) ALWAYS use the tenantId embedded in their JWT.
+ * Super admins can override via x-tenant-id header to view different tenants.
+ * This prevents regular users from manipulating the x-tenant-id header to access other tenants' data.
+ */
+export function getAuthorizedTenantId(req: VercelRequest, jwtPayload: JwtPayload): string {
+  if (jwtPayload.role === 'super_admin') {
+    // Super admins can specify which tenant to access
+    const headerTenant = (req.headers["x-tenant-id"] as string) || (req.query?.tenant_id as string);
+    return headerTenant || jwtPayload.tenantId || "";
+  }
+  // Regular users: always use JWT's tenantId (tamper-proof)
+  return jwtPayload.tenantId || "";
 }
