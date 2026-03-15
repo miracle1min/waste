@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
+import { UpdateBanner } from "@/components/ui/update-banner";
 import { AppLayout } from "@/components/ui/app-layout";
 import NotFound from "@/pages/not-found";
 import ModeSelector from "@/pages/mode-selector";
@@ -47,6 +48,7 @@ function AuthenticatedApp() {
     <AppLayout>
       <main>
         <Toaster />
+        <UpdateBanner />
         {isSuperAdmin ? <AdminRouter /> : <UserRouter />}
       </main>
     </AppLayout>

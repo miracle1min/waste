@@ -37,8 +37,8 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
-  // API calls: Network only (don't cache API responses)
-  if (url.pathname.startsWith('/api/')) {
+  // API calls & version.json: Network only (never cache)
+  if (url.pathname.startsWith('/api/') || url.pathname === '/version.json') {
     return;
   }
   
