@@ -383,7 +383,7 @@ export default function ProductDestruction() {
           photoForm.append('mode', 'upload-photo');
           photoForm.append('photo', file);
           try {
-            const photoRes = await fetch('/api/auto-submit', {
+            const photoRes = await apiFetch('/api/auto-submit', {
               method: 'POST',
               body: photoForm,
             });
@@ -400,7 +400,7 @@ export default function ProductDestruction() {
         }
       }
 
-      const response = await fetch('/api/submit-grouped', {
+      const response = await apiFetch('/api/submit-grouped', {
         method: 'POST',
         body: formData,
       });
@@ -860,7 +860,7 @@ export default function ProductDestruction() {
           if (!url || url === '-' || !url.startsWith('http')) return null;
           if (sigCache[url]) return sigCache[url];
           try {
-            const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+            const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
             if (!proxyRes.ok) return null;
             const data = await proxyRes.json();
             if (data.success && data.dataUrl) {
@@ -1039,7 +1039,7 @@ export default function ProductDestruction() {
       let qcSigImg: string | null = null;
       try {
         const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
-        const sigRes = await fetch(`/api/signatures?tenant_id=${tenantId}&name=${encodeURIComponent(loggedInQC)}`);
+        const sigRes = await apiFetch(`/api/signatures?tenant_id=${tenantId}&name=${encodeURIComponent(loggedInQC)}`);
         const sigData = await sigRes.json();
         if (sigData.success && sigData.url) {
           const imgRes = await fetch(sigData.url);
