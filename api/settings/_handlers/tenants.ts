@@ -21,10 +21,16 @@ export async function handleTenants(req: VercelRequest, res: VercelResponse) {
     if (req.method === "POST") {
       const parsed = validate(createTenantSchema, req.body, res);
       if (!parsed) return;
-      const { id, name, address, phone, status, neon_database_url } = parsed;
-      const tenant = await createTenant({ id, name, address, phone, status, neon_database_url });
+      const tenant = await createTenant({
+        id: parsed.id,
+        name: parsed.name,
+        address: parsed.address ?? "",
+        phone: parsed.phone ?? "",
+        status: parsed.status ?? "active",
+        neon_database_url: parsed.neon_database_url ?? "",
+      });
       const jwt = verifyToken(extractToken(req) || "");
-      logActivity({ action: "CREATE_TENANT", category: "tenant", userId: jwt?.userId, username: jwt?.username || "", tenantId: id, tenantName: name, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { storeName: name }, status: "success" });
+      logActivity({ action: "CREATE_TENANT", category: "tenant", userId: jwt?.userId, username: jwt?.username || "", tenantId: parsed.id, tenantName: parsed.name, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { storeName: parsed.name }, status: "success" });
       return res.json({ success: true, tenant });
     }
     if (req.method === "PUT") {

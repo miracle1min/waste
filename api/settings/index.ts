@@ -2,10 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkRateLimit } from "../_lib/rate-limit.js";
 
 // Import all handler logic
-import { handleTenants } from "./handlers/tenants.js";
-import { handleUsers } from "./handlers/users.js";
-import { handleConfigs } from "./handlers/configs.js";
-import { handlePersonnel } from "./handlers/personnel.js";
+import { handleTenants } from "./_handlers/tenants.js";
+import { handleUsers } from "./_handlers/users.js";
+import { handleConfigs } from "./_handlers/configs.js";
+import { handlePersonnel } from "./_handlers/personnel.js";
 
 const VALID_ENTITIES = ["tenants", "users", "configs", "personnel"] as const;
 type Entity = typeof VALID_ENTITIES[number];

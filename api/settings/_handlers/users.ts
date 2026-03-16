@@ -49,12 +49,13 @@ export async function handleUsers(req: VercelRequest, res: VercelResponse) {
     if (req.method === "PUT") {
       const parsed = validate(updateUserSchema, req.body, res);
       if (!parsed) return;
-      const { id, password, tenant_id, ...data } = parsed;
+      const { id, password, tenant_id, ...rest } = parsed;
+      const updateData: Record<string, any> = { ...rest };
       if (password) {
-        data.password_hash = hashPassword(password);
+        updateData.password_hash = hashPassword(password);
       }
       // Pass tenant_id so updateUser knows which DB to update
-      const user = await updateUser(Number(id), data, tenant_id || undefined);
+      const user = await updateUser(Number(id), updateData, tenant_id || undefined);
       if (!user) return res.status(404).json({ error: "User ga ketemu!" });
       const { password_hash, ...safe } = user;
       return res.json({ success: true, user: safe });
