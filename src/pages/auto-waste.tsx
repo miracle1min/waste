@@ -610,9 +610,12 @@ export default function AutoWaste() {
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
-            <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold text-cyan-400 mb-1 lg:mb-2">⚡ Konfigurasi</h2>
-              <p className="text-xs lg:text-sm text-slate-400">Pilih semua parameter, lalu paste data item</p>
+            {/* Desktop: inline title with tagline */}
+            <div className="hidden lg:flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">AUTO WASTE</h2>
+                <span className="text-sm text-slate-500">Fast Mode • Batch Submit</span>
+              </div>
             </div>
 
             {/* Date & Resto row */}
