@@ -1,12 +1,12 @@
 import { useLocation } from "wouter";
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, ClipboardPaste, X, Copy, CheckCheck } from "lucide-react";
+import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, ClipboardPaste, X, Copy, CheckCheck, RefreshCw, WifiOff, ShieldAlert, ServerCrash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 import { getCurrentWIBDateString } from "@shared/timezone";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, ApiRequestError, getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 
 // ========================
@@ -153,6 +153,10 @@ export default function AutoWaste() {
   const [submitStatusMap, setSubmitStatusMap] = useState<Record<Station, StationSubmitStatus>>({
     NOODLE: "pending", DIMSUM: "pending", BAR: "pending", PRODUKSI: "pending",
   });
+  // Per-station error details
+  const [stationErrors, setStationErrors] = useState<Record<Station, string>>({
+    NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "",
+  });
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
 
@@ -191,6 +195,11 @@ export default function AutoWaste() {
         }
       } catch (e) {
         console.error("Failed to load signatures:", e);
+        toast({ 
+          title: "⚠️ Gagal Muat TTD", 
+          description: e instanceof ApiRequestError ? getErrorMessage(e.type) : "Coba refresh halaman.",
+          variant: "destructive" 
+        });
       } finally {
         setIsLoadingSignatures(false);
       }
@@ -212,6 +221,11 @@ export default function AutoWaste() {
         }
       } catch (e) {
         console.error("Failed to load personnel:", e);
+        toast({ 
+          title: "⚠️ Gagal Muat Data QC/Manager", 
+          description: e instanceof ApiRequestError ? getErrorMessage(e.type) : "Coba refresh halaman.", 
+          variant: "destructive" 
+        });
       } finally {
         setPersonnelLoading(false);
       }
@@ -249,47 +263,59 @@ export default function AutoWaste() {
     }
   }, [rawTexts, selectedStations, parsedItemsMap, parseErrorsMap]);
 
-  // Submit all stations sequentially
-  const handleSubmit = useCallback(async () => {
-    // Validate all stations have docs
-    const missingDocs = selectedStations.filter(st => dokumentasiFilesMap[st].length === 0);
-    if (missingDocs.length > 0) {
-      toast({
-        title: "📸 Foto Dokumentasi Dong",
-        description: `Upload foto untuk: ${missingDocs.join(", ")}`,
-        variant: "destructive",
-      });
-      return;
+  // Submit stations (supports retry for failed ones)
+  const handleSubmit = useCallback(async (retryStations?: Station[]) => {
+    const stationsToSubmit = retryStations || selectedStations;
+    
+    // Validate all stations have docs (skip on retry — already validated)
+    if (!retryStations) {
+      const missingDocs = stationsToSubmit.filter(st => dokumentasiFilesMap[st].length === 0);
+      if (missingDocs.length > 0) {
+        toast({
+          title: "📸 Foto Dokumentasi Dong",
+          description: `Upload foto untuk: ${missingDocs.join(", ")}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
-    const newStatusMap: Record<Station, StationSubmitStatus> = { ...submitStatusMap };
-    selectedStations.forEach(st => { newStatusMap[st] = "pending"; });
+    
+    // Reset status for stations being submitted
+    const newStatusMap = { ...submitStatusMap };
+    const newErrors = { ...stationErrors };
+    stationsToSubmit.forEach(st => { 
+      newStatusMap[st] = "pending"; 
+      newErrors[st] = "";
+    });
     setSubmitStatusMap(newStatusMap);
-    setGlobalProgress({ current: 0, total: selectedStations.length, currentStation: "", phase: "", percent: 0 });
+    setStationErrors(newErrors);
+    setGlobalProgress({ current: 0, total: stationsToSubmit.length, currentStation: "", phase: "", percent: 0 });
 
     const qcUrl = signatureUrls[selectedQC] || "";
     const mgrUrl = signatureUrls[selectedManajer] || "";
 
     if (!qcUrl) {
-      toast({ title: "❌ Error", description: `TTD untuk QC "${selectedQC}" ga ketemu`, variant: "destructive" });
+      toast({ title: "❌ TTD QC Ga Ketemu", description: `Tanda tangan "${selectedQC}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
     if (!mgrUrl) {
-      toast({ title: "❌ Error", description: `TTD untuk Manajer "${selectedManajer}" ga ketemu`, variant: "destructive" });
+      toast({ title: "❌ TTD Manajer Ga Ketemu", description: `Tanda tangan "${selectedManajer}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
 
     const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
-    let allSuccess = true;
-    const errors: string[] = [];
+    let successCount = 0;
+    let failCount = 0;
+    const failedStations: Station[] = [];
 
-    for (let idx = 0; idx < selectedStations.length; idx++) {
-      const station = selectedStations[idx];
-      const progressPercent = Math.round((idx / selectedStations.length) * 100);
-      setGlobalProgress({ current: idx + 1, total: selectedStations.length, currentStation: station, phase: "uploading", percent: progressPercent });
+    for (let idx = 0; idx < stationsToSubmit.length; idx++) {
+      const station = stationsToSubmit[idx];
+      const progressPercent = Math.round((idx / stationsToSubmit.length) * 100);
+      setGlobalProgress({ current: idx + 1, total: stationsToSubmit.length, currentStation: station, phase: "uploading", percent: progressPercent });
       setSubmitStatusMap(prev => ({ ...prev, [station]: "uploading" }));
 
       try {
@@ -313,24 +339,24 @@ export default function AutoWaste() {
         formData.append("jamTanggalPemusnahan", jamFormatted);
         formData.append("jamTanggalPemusnahanList", JSON.stringify(jamList));
 
-        // Upload photos one-by-one to avoid body size limit
+        // Upload photos one-by-one with retry
         const uploadedUrls: string[] = [];
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi];
           const photoForm = new FormData();
           photoForm.append('mode', 'upload-photo');
           photoForm.append('photo', file);
-          try {
-            const photoRes = await apiFetch("/api/auto-submit", {
-              method: "POST",
-              body: photoForm,
-            });
-            const photoResult = await photoRes.json();
-            if (photoResult.success && photoResult.url) {
-              uploadedUrls.push(photoResult.url);
-            }
-          } catch (e) {
-            console.error(`Photo upload ${fi} failed:`, e);
+          
+          const photoRes = await apiFetch("/api/auto-submit", {
+            method: "POST",
+            body: photoForm,
+          }, { maxRetries: 3, timeout: 60000 }); // More retries + longer timeout for uploads
+          
+          const photoResult = await photoRes.json();
+          if (photoResult.success && photoResult.url) {
+            uploadedUrls.push(photoResult.url);
+          } else {
+            throw new Error(`Gagal upload foto ${fi + 1}: ${photoResult.message || "Unknown error"}`);
           }
         }
         if (uploadedUrls.length > 0) {
@@ -340,41 +366,70 @@ export default function AutoWaste() {
         const res = await apiFetch("/api/auto-submit", {
           method: "POST",
           body: formData,
-        });
+        }, { maxRetries: 2, timeout: 45000 });
 
         const result = await res.json();
 
         if (!res.ok || !result.success) {
-          throw new Error(result.message || `Gagal menyimpan data ${station}`);
+          // Parse specific error from response
+          const errorMsg = result.message || result.error || `Server error ${res.status}`;
+          throw new Error(errorMsg);
         }
 
         setSubmitStatusMap(prev => ({ ...prev, [station]: "success" }));
-        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / selectedStations.length) * 100) }));
+        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / stationsToSubmit.length) * 100) }));
+        successCount++;
       } catch (error) {
-        allSuccess = false;
+        failCount++;
+        failedStations.push(station);
         setSubmitStatusMap(prev => ({ ...prev, [station]: "error" }));
-        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / selectedStations.length) * 100) }));
-        errors.push(`${station}: ${error instanceof Error ? error.message : "Unknown error"}`);
+        setGlobalProgress(prev => ({ ...prev, percent: Math.round(((idx + 1) / stationsToSubmit.length) * 100) }));
+        
+        // Store detailed error per station
+        let errorMsg = "Terjadi kesalahan";
+        if (error instanceof ApiRequestError) {
+          errorMsg = getErrorMessage(error.type);
+        } else if (error instanceof Error) {
+          errorMsg = error.message;
+        }
+        setStationErrors(prev => ({ ...prev, [station]: errorMsg }));
       }
     }
 
     setGlobalProgress(prev => ({ ...prev, percent: 100, phase: "" }));
     setIsSubmitting(false);
 
-    if (allSuccess) {
+    if (failCount === 0) {
       setStep("success");
       toast({
         title: "✅ Semua Berhasil!",
-        description: `${selectedStations.length} station berhasil disimpan`,
+        description: `${stationsToSubmit.length} station berhasil disimpan`,
+      });
+    } else if (successCount > 0) {
+      // Partial success — show which failed with option to retry
+      toast({
+        title: `⚠️ ${failCount} Station Gagal`,
+        description: `${successCount} berhasil, ${failCount} gagal. Klik "Retry" untuk coba lagi.`,
+        variant: "destructive",
       });
     } else {
+      // All failed
+      const firstError = stationErrors[failedStations[0]] || "Terjadi kesalahan";
       toast({
-        title: "⚠️ Sebagian Gagal",
-        description: errors.join("\n"),
+        title: "❌ Semua Gagal",
+        description: firstError,
         variant: "destructive",
       });
     }
-  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap]);
+  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap, stationErrors]);
+
+  // Retry only failed stations
+  const handleRetryFailed = useCallback(() => {
+    const failedStations = selectedStations.filter(st => submitStatusMap[st] === "error");
+    if (failedStations.length > 0) {
+      handleSubmit(failedStations);
+    }
+  }, [selectedStations, submitStatusMap, handleSubmit]);
 
   // Copy format template
   const copyTemplate = useCallback(() => {
@@ -391,6 +446,7 @@ export default function AutoWaste() {
     setParseErrorsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
     setDokumentasiFilesMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
     setSubmitStatusMap({ NOODLE: "pending", DIMSUM: "pending", BAR: "pending", PRODUKSI: "pending" });
+    setStationErrors({ NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "" });
     setSelectedStations([]);
     setSelectedShift("");
     setSelectedQC("");
@@ -536,7 +592,11 @@ export default function AutoWaste() {
                   <div className="text-xs">
                     {submitStatusMap[st] === "success" && <span className="text-green-400">✅</span>}
                     {submitStatusMap[st] === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />}
-                    {submitStatusMap[st] === "error" && <span className="text-red-400">❌</span>}
+                    {submitStatusMap[st] === "error" && (
+                      <span className="text-red-400 flex items-center gap-1">
+                        ❌ <span className="text-[9px] max-w-[100px] truncate">{stationErrors[st]}</span>
+                      </span>
+                    )}
                     {submitStatusMap[st] === "pending" && <span className="text-slate-600">⏳</span>}
                   </div>
                 </div>
@@ -931,6 +991,30 @@ Contoh:
               </div>
             ))}
 
+            {/* Error summary banner */}
+            {selectedStations.some(st => submitStatusMap[st] === "error") && !isSubmitting && (
+              <div className="p-4 rounded-lg border border-red-800/50 bg-red-950/20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                  <span className="text-sm font-bold text-red-400">
+                    {selectedStations.filter(st => submitStatusMap[st] === "error").length} station gagal
+                  </span>
+                </div>
+                {selectedStations.filter(st => submitStatusMap[st] === "error").map(st => (
+                  <div key={st} className="flex items-start gap-2 text-xs">
+                    <span className="text-red-500 font-bold">{STATION_ICONS[st]} {st}:</span>
+                    <span className="text-red-300">{stationErrors[st] || "Error tidak diketahui"}</span>
+                  </div>
+                ))}
+                <Button
+                  onClick={handleRetryFailed}
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" /> Retry {selectedStations.filter(st => submitStatusMap[st] === "error").length} Station yang Gagal
+                </Button>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-3 pt-2">
               <Button
@@ -942,7 +1026,7 @@ Contoh:
                 <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
               </Button>
               <Button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={isSubmitting || selectedStations.some(st => dokumentasiFilesMap[st].length === 0)}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
               >
