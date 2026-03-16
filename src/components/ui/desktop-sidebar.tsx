@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, BarChart3, Shield, LogOut } from "lucide-react";
+import { Zap, BarChart3, FileDown, User, Shield, LogOut } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 interface NavItem {
@@ -22,6 +22,8 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
   const userNavItems: NavItem[] = [
     { label: "Auto Waste", path: "/", icon: Zap },
     { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
+    { label: "PDF Download", path: "/pdf", icon: FileDown },
+    { label: "Profil", path: "/profile", icon: User },
   ];
 
   const adminNavItems: NavItem[] = [
