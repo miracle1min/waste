@@ -71,15 +71,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const credentials = JSON.parse(tenantCreds.googleSheetsCredentials);
-    // BUG-030 fix: Use shared auth function
     const accessToken = await getGoogleAccessToken(credentials, 'readonly');
     const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
 
-    // BUG-031 fix: Add timeout
+    // 1. Get all sheet tabs
     const controller = new AbortController();
     const spreadsheetTimeout = setTimeout(() => controller.abort(), 20000);
 
-    // 1. Get all sheet tabs
     const spreadsheet = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`,
       { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal }
@@ -108,39 +106,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 3. Fetch data from each tab (batch read)
+    // 3. OPTIMIZED: Parallel batch fetch with larger batch size (20 tabs per batch)
+    const BATCH_SIZE = 20;
+    const batches: string[][] = [];
+    for (let i = 0; i < filteredTabs.length; i += BATCH_SIZE) {
+      batches.push(filteredTabs.slice(i, i + BATCH_SIZE));
+    }
+
+    // Fetch all batches in parallel
+    const batchResults = await Promise.all(
+      batches.map(async (batch) => {
+        const ranges = batch.map((tab: string) => `${encodeURIComponent(tab)}!A2:V1000`).join('&ranges=');
+        const batchController = new AbortController();
+        const batchTimeout = setTimeout(() => batchController.abort(), 20000);
+
+        const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${ranges}&valueRenderOption=UNFORMATTED_VALUE`;
+        const batchRes = await fetch(batchUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: batchController.signal,
+        }).then(r => r.json()) as any;
+        clearTimeout(batchTimeout);
+
+        return { tabs: batch, valueRanges: batchRes.valueRanges || [] };
+      })
+    );
+
+    // 4. OPTIMIZED: Single-pass processing with period breakdown computed inline
     const dailyData: any[] = [];
     const stationTotals: Record<string, number> = {};
     const shiftTotals: Record<string, number> = {};
     const productCounts: Record<string, { count: number; qty: number }> = {};
     const stationItemsByUnit: Record<string, Record<string, Record<string, number>>> = {};
-    const allItems: { date: string; station: string; product: string; qty: number; unit: string; shift: string }[] = [];
     const allQcNames = new Set<string>();
     let lastEntryTime = 0;
     let lastEntryInfo: { date: string; qc: string; station: string; shift: string } | null = null;
     let totalItems = 0;
     let totalQty = 0;
 
-    for (let i = 0; i < filteredTabs.length; i += 5) {
-      const batch = filteredTabs.slice(i, i + 5);
-      const ranges = batch.map((tab: string) => `${encodeURIComponent(tab)}!A2:V1000`).join('&ranges=');
+    // Period breakdown accumulators (single-pass instead of 3x re-scan)
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+    const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
 
-      const batchController = new AbortController();
-      const batchTimeout = setTimeout(() => batchController.abort(), 20000);
+    type UnitProducts = Record<string, Record<string, number>>;
+    type StationUnits = Record<string, UnitProducts>;
+    const periodDaily: StationUnits = {};
+    const periodWeekly: StationUnits = {};
+    const periodMonthly: StationUnits = {};
+    const byDateBreakdown: Record<string, StationUnits> = {};
 
-      const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${ranges}&valueRenderOption=UNFORMATTED_VALUE`;
-      const batchRes = await fetch(batchUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        signal: batchController.signal,
-      }).then(r => r.json()) as any;
-      clearTimeout(batchTimeout);
+    function addToPeriod(acc: StationUnits, station: string, unit: string, product: string, qty: number) {
+      if (!acc[station]) acc[station] = {};
+      if (!acc[station][unit]) acc[station][unit] = {};
+      acc[station][unit][product] = (acc[station][unit][product] || 0) + qty;
+    }
 
-      const valueRanges = batchRes.valueRanges || [];
-
-      for (let j = 0; j < batch.length; j++) {
-        const tab = batch[j];
+    for (const { tabs, valueRanges } of batchResults) {
+      for (let j = 0; j < tabs.length; j++) {
+        const tab = tabs[j];
         const rows = valueRanges[j]?.values || [];
         const tabDate = parseTabToDate(tab);
+        const isoDate = tabToISODate(tab);
 
         let dayItems = 0;
         let dayQty = 0;
@@ -198,15 +225,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               }
             }
 
-            if (qcName && !qcName.includes('#REF') && !qcName.includes('Please use') && !allQcNames.has(qcName)) allQcNames.add(qcName);
+            if (qcName && !qcName.includes('#REF') && !qcName.includes('Please use') && !allQcNames.has(qcName)) {
+              allQcNames.add(qcName);
+            }
 
-            // BUG-018 fix: Use safe tabToISODate
-            allItems.push({ date: tabToISODate(tab), station, product: pName, qty, unit, shift });
+            // OPTIMIZED: Single-pass period breakdown (no more re-scanning allItems 4x)
+            if (isoDate >= todayStr) addToPeriod(periodDaily, station, unit, pName, qty);
+            if (isoDate >= weekAgo) addToPeriod(periodWeekly, station, unit, pName, qty);
+            if (isoDate >= monthAgo) addToPeriod(periodMonthly, station, unit, pName, qty);
+            addToPeriod(byDateBreakdown[isoDate] ??= {}, station, unit, pName, qty);
           }
         }
 
         dailyData.push({
-          date: tabToISODate(tab),
+          date: isoDate,
           tab,
           items: dayItems,
           qty: dayQty,
@@ -223,35 +255,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .slice(0, 10)
       .map(([name, data]) => ({ name, ...data }));
 
-    const stationBreakdown: Record<string, { unit: string; items: { name: string; qty: number }[]; totalQty: number }[]> = {};
-    for (const [station, unitMap] of Object.entries(stationItemsByUnit)) {
-      stationBreakdown[station] = Object.entries(unitMap).map(([unit, products]) => {
-        const items = Object.entries(products).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
-        return { unit, items, totalQty: items.reduce((s, i) => s + i.qty, 0) };
-      }).sort((a, b) => b.totalQty - a.totalQty);
-    }
-
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
-    const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
-
-    function buildPeriodBreakdown(items: typeof allItems, fromDate: string) {
-      const filtered = items.filter(i => i.date >= fromDate);
-      const byStation: Record<string, Record<string, Record<string, number>>> = {};
-      for (const item of filtered) {
-        if (!byStation[item.station]) byStation[item.station] = {};
-        if (!byStation[item.station][item.unit]) byStation[item.station][item.unit] = {};
-        byStation[item.station][item.unit][item.product] = (byStation[item.station][item.unit][item.product] || 0) + item.qty;
-      }
+    // Format station breakdown helper
+    function formatStationBreakdown(data: StationUnits) {
       const result: Record<string, { unit: string; items: { name: string; qty: number }[]; totalQty: number }[]> = {};
-      for (const [station, unitMap] of Object.entries(byStation)) {
+      for (const [station, unitMap] of Object.entries(data)) {
         result[station] = Object.entries(unitMap).map(([unit, products]) => {
           const items = Object.entries(products).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
           return { unit, items, totalQty: items.reduce((s, i) => s + i.qty, 0) };
         }).sort((a, b) => b.totalQty - a.totalQty);
       }
       return result;
+    }
+
+    const stationBreakdown = formatStationBreakdown(stationItemsByUnit);
+
+    // Format byDate breakdown
+    const byDateFormatted: Record<string, ReturnType<typeof formatStationBreakdown>> = {};
+    for (const [date, data] of Object.entries(byDateBreakdown)) {
+      byDateFormatted[date] = formatStationBreakdown(data);
     }
 
     return res.json({
@@ -271,33 +292,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       lastEntry: lastEntryInfo,
       stationBreakdown,
       periodBreakdown: {
-        daily: buildPeriodBreakdown(allItems, todayStr),
-        weekly: buildPeriodBreakdown(allItems, weekAgo),
-        monthly: buildPeriodBreakdown(allItems, monthAgo),
-        byDate: (() => {
-          const grouped: Record<string, typeof allItems> = {};
-          for (const item of allItems) {
-            if (!grouped[item.date]) grouped[item.date] = [];
-            grouped[item.date].push(item);
-          }
-          const result: Record<string, Record<string, { unit: string; items: { name: string; qty: number }[]; totalQty: number }[]>> = {};
-          for (const [date, dateItems] of Object.entries(grouped)) {
-            const byStation: Record<string, Record<string, Record<string, number>>> = {};
-            for (const item of dateItems) {
-              if (!byStation[item.station]) byStation[item.station] = {};
-              if (!byStation[item.station][item.unit]) byStation[item.station][item.unit] = {};
-              byStation[item.station][item.unit][item.product] = (byStation[item.station][item.unit][item.product] || 0) + item.qty;
-            }
-            result[date] = {};
-            for (const [station, unitMap] of Object.entries(byStation)) {
-              result[date][station] = Object.entries(unitMap).map(([unit, products]) => {
-                const items = Object.entries(products).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
-                return { unit, items, totalQty: items.reduce((s, i) => s + i.qty, 0) };
-              }).sort((a, b) => b.totalQty - a.totalQty);
-            }
-          }
-          return result;
-        })(),
+        daily: formatStationBreakdown(periodDaily),
+        weekly: formatStationBreakdown(periodWeekly),
+        monthly: formatStationBreakdown(periodMonthly),
+        byDate: byDateFormatted,
       },
       qcNames: Array.from(allQcNames),
     });
