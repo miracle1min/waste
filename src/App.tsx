@@ -15,8 +15,6 @@ import { UpdateBanner } from "@/components/ui/update-banner";
 import { AppLayout } from "@/components/ui/app-layout";
 
 const NotFound = React.lazy(() => import("@/pages/not-found"));
-const ModeSelector = React.lazy(() => import("@/pages/mode-selector"));
-const ProductDestruction = React.lazy(() => import("@/pages/product-destruction"));
 const AutoWaste = React.lazy(() => import("@/pages/auto-waste"));
 const Dashboard = React.lazy(() => import("@/pages/dashboard"));
 const AdminPanel = React.lazy(() => import("@/pages/admin-panel"));
@@ -25,8 +23,7 @@ function UserRouter() {
   return (
     <Suspense fallback={<LoadingSpinner size="lg" text="Memuat halaman..." />}>
       <Switch>
-        <Route path="/" component={ModeSelector} />
-        <Route path="/manual-waste" component={ProductDestruction} />
+        <Route path="/" component={AutoWaste} />
         <Route path="/auto-waste" component={AutoWaste} />
         <Route path="/dashboard" component={Dashboard} />
         <Route component={NotFound} />

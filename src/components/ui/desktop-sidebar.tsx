@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, Zap, ClipboardEdit, BarChart3, Shield, LogOut } from "lucide-react";
+import { Zap, BarChart3, Shield, LogOut } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 interface NavItem {
@@ -20,9 +20,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
   const [currentPath, setLocation] = useLocation();
 
   const userNavItems: NavItem[] = [
-    { label: "Home", path: "/", icon: Home },
-    { label: "Auto Waste", path: "/auto-waste", icon: Zap },
-    { label: "Manual Waste", path: "/manual-waste", icon: ClipboardEdit },
+    { label: "Auto Waste", path: "/", icon: Zap },
     { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
   ];
 
@@ -109,7 +107,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
           {isLoggingOut ? "Keluar..." : "Logout"}
         </button>
         <div className="text-center space-y-0.5 pt-1">
-          <p className="text-[9px] font-mono text-slate-600">v3.2.0</p>
+          <p className="text-[9px] font-mono text-slate-600">v3.3.0</p>
           <p className="text-[9px] text-slate-700">Made with ☕ By ~/DirgaX</p>
         </div>
       </div>
