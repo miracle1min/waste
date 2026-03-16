@@ -2,7 +2,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useState, useEffect, useMemo } from "react";
 import {
   FileDown, Calendar, Download, Loader2, FileText,
-  CheckSquare, Square, BarChart3, Store, User, RefreshCw
+  CheckSquare, Square, User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -397,28 +397,33 @@ export default function PdfDownload() {
   const [selectedPelapor, setSelectedPelapor] = useState<string>("");
   const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
   const [loadingSignatures, setLoadingSignatures] = useState(true);
-  const [range, setRange] = useState<"30" | "60" | "all">("30");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   const tenantName = localStorage.getItem("waste_app_tenant_name") || "";
   const userName = localStorage.getItem("waste_app_qc_name") || "User";
 
-  // Fetch available dates
+  // Fetch ALL available dates once
   useEffect(() => {
     async function fetchDates() {
       setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (range !== "all") {
-          const end = new Date();
-          const start = new Date();
-          start.setDate(end.getDate() - parseInt(range));
-          params.set("startDate", start.toISOString().split("T")[0]);
-          params.set("endDate", end.toISOString().split("T")[0]);
-        }
-        const res = await apiFetch(`/api/dashboard-data?${params}`);
+        const res = await apiFetch(`/api/dashboard-data`);
         const json = await res.json();
         if (json.success) {
-          setAvailableDates(json.availableDates || []);
+          const dates = json.availableDates || [];
+          setAvailableDates(dates);
+          // Auto-select current month
+          if (dates.length > 0) {
+            const now = new Date();
+            const currentKey = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+            // Check if current month has data, otherwise use latest
+            const months = [...new Set(dates.map((d: string) => {
+              const parsed = parseTabDate(d);
+              if (!parsed) return '';
+              return `${parsed.getFullYear()}-${(parsed.getMonth()+1).toString().padStart(2,'0')}`;
+            }).filter(Boolean))];
+            setSelectedMonth(months.includes(currentKey) ? currentKey : (months[months.length - 1] || ''));
+          }
         }
       } catch {
         toast({ title: "Error", description: "Gagal load daftar tanggal", variant: "destructive" });
@@ -427,7 +432,7 @@ export default function PdfDownload() {
       }
     }
     fetchDates();
-  }, [range]);
+  }, []);
 
   // Fetch signatures
   useEffect(() => {
@@ -446,6 +451,36 @@ export default function PdfDownload() {
     fetchSigs();
   }, []);
 
+  // Group dates by month
+  const monthOptions = useMemo(() => {
+    const monthMap = new Map<string, { label: string; count: number }>();
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    for (const d of availableDates) {
+      const parsed = parseTabDate(d);
+      if (!parsed) continue;
+      const key = `${parsed.getFullYear()}-${(parsed.getMonth()+1).toString().padStart(2,'0')}`;
+      if (!monthMap.has(key)) {
+        monthMap.set(key, { label: `${monthNames[parsed.getMonth()]} ${parsed.getFullYear()}`, count: 0 });
+      }
+      monthMap.get(key)!.count++;
+    }
+    return Array.from(monthMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0])) // newest first
+      .map(([key, val]) => ({ key, ...val }));
+  }, [availableDates]);
+
+  // Filter dates by selected month
+  const filteredDates = useMemo(() => {
+    if (!selectedMonth) return [];
+    return availableDates.filter(d => {
+      const parsed = parseTabDate(d);
+      if (!parsed) return false;
+      const key = `${parsed.getFullYear()}-${(parsed.getMonth()+1).toString().padStart(2,'0')}`;
+      return key === selectedMonth;
+    });
+  }, [availableDates, selectedMonth]);
+
   const togglePdfDate = (date: string) => {
     setSelectedPdfDates(prev => {
       const next = new Set(prev);
@@ -455,12 +490,23 @@ export default function PdfDownload() {
   };
 
   const toggleAllPdfDates = () => {
-    if (selectedPdfDates.size === availableDates.length) {
-      setSelectedPdfDates(new Set());
+    const allFiltered = new Set(filteredDates);
+    const allSelected = filteredDates.every(d => selectedPdfDates.has(d));
+    if (allSelected) {
+      // Deselect all in this month
+      setSelectedPdfDates(prev => {
+        const next = new Set(prev);
+        filteredDates.forEach(d => next.delete(d));
+        return next;
+      });
     } else {
-      setSelectedPdfDates(new Set(availableDates));
+      // Select all in this month
+      setSelectedPdfDates(prev => new Set([...prev, ...filteredDates]));
     }
   };
+
+  const allMonthSelected = filteredDates.length > 0 && filteredDates.every(d => selectedPdfDates.has(d));
+  const selectedInMonth = filteredDates.filter(d => selectedPdfDates.has(d)).length;
 
   const handleBatchPdf = async () => {
     if (selectedPdfDates.size === 0) return;
@@ -557,45 +603,48 @@ export default function PdfDownload() {
       </header>
 
       <main className="flex-1 w-full px-3 py-4 space-y-4 desktop-container">
-        {/* Range selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {(["30", "60", "all"] as const).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => { setRange(opt); setSelectedPdfDates(new Set()); }}
-              className={`shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all ${
-                range === opt
-                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                  : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
-              }`}
+        {/* Month selector dropdown */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <label className="text-[10px] font-medium text-slate-500 mb-1 block">📅 Pilih Bulan</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => { setSelectedMonth(e.target.value); }}
+              className="w-full bg-slate-900 border border-cyan-900/40 rounded-lg px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none"
             >
-              {opt === "30" ? "30 Hari" : opt === "60" ? "60 Hari" : "Semua"}
-            </button>
-          ))}
-          <span className="text-[10px] text-slate-500 ml-auto shrink-0">
-            {availableDates.length} tanggal tersedia
-          </span>
+              <option value="">-- Pilih Bulan --</option>
+              {monthOptions.map((m) => (
+                <option key={m.key} value={m.key}>{m.label} ({m.count} hari)</option>
+              ))}
+            </select>
+          </div>
+          <div className="text-right pt-4">
+            <span className="text-[10px] text-slate-500 block">{availableDates.length} total</span>
+            {selectedPdfDates.size > 0 && (
+              <span className="text-[10px] text-cyan-400 font-semibold">{selectedPdfDates.size} dipilih</span>
+            )}
+          </div>
         </div>
 
         {/* Main PDF section */}
         <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
-              <FileText className="w-4 h-4" /> Pilih Tanggal PDF
+              <Calendar className="w-4 h-4" /> Tanggal di Bulan Ini
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500">
-                {selectedPdfDates.size}/{availableDates.length} dipilih
-              </span>
+            {filteredDates.length > 0 && (
               <Button
                 variant="ghost" size="sm"
                 onClick={toggleAllPdfDates}
                 className="text-[10px] text-cyan-400 hover:bg-cyan-950/50 px-2 h-7"
               >
-                {selectedPdfDates.size === availableDates.length ? "Batal Semua" : "Pilih Semua"}
+                {allMonthSelected ? "Batal Semua" : `Pilih Semua (${filteredDates.length})`}
               </Button>
-            </div>
+            )}
           </div>
+          {selectedInMonth > 0 && (
+            <div className="text-[10px] text-cyan-400 mb-2">{selectedInMonth}/{filteredDates.length} dipilih bulan ini</div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-10">
@@ -604,35 +653,47 @@ export default function PdfDownload() {
             </div>
           ) : availableDates.length > 0 ? (
             <>
-              {/* Date grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 mb-4 max-h-72 overflow-y-auto pr-1">
-                {availableDates.map((date) => {
+              {/* Date list for selected month */}
+              {!selectedMonth ? (
+                <p className="text-center text-slate-500 text-sm py-6">👆 Pilih bulan dulu di dropdown atas</p>
+              ) : filteredDates.length === 0 ? (
+                <p className="text-center text-slate-500 text-sm py-6">Tidak ada data di bulan ini</p>
+              ) : (
+              <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto pr-1">
+                {filteredDates.map((date) => {
                   const isSelected = selectedPdfDates.has(date);
-                  const { display, dayName } = formatTabDate(date);
+                  const { display, dayName, fullDate } = formatTabDate(date);
+                  const dateObj = parseTabDate(date);
+                  const dayNum = dateObj ? dateObj.getDate() : '';
                   return (
                     <button
                       key={date}
                       onClick={() => togglePdfDate(date)}
                       disabled={pdfGenerating}
-                      className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-all ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm transition-all ${
                         isSelected
-                          ? "border-cyan-500 bg-cyan-950/60 text-cyan-300"
-                          : "border-cyan-900/30 bg-[hsl(220,45%,8%)] text-slate-400 hover:border-cyan-700"
+                          ? "border-cyan-500/60 bg-cyan-950/40 text-cyan-300"
+                          : "border-cyan-900/20 bg-[hsl(220,45%,8%)] text-slate-400 hover:border-cyan-800/50 hover:bg-[hsl(220,45%,9%)]"
                       } ${pdfGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       {isSelected ? (
-                        <CheckSquare className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                        <CheckSquare className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                       ) : (
-                        <Square className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
+                        <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
                       )}
-                      <div className="text-left">
-                        <div className="font-mono font-semibold">{display}</div>
-                        <div className="text-[9px] text-slate-500">{dayName}</div>
+                      <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-slate-300">{dayNum}</span>
                       </div>
+                      <div className="text-left flex-1">
+                        <span className="font-medium">{dayName}</span>
+                        <span className="text-slate-500 ml-2 text-xs font-mono">{display}</span>
+                      </div>
+                      <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? 'text-cyan-500' : 'text-slate-700'}`} />
                     </button>
                   );
                 })}
               </div>
+              )}
 
               {/* Progress bar */}
               {pdfGenerating && (
