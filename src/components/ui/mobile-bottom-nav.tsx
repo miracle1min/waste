@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, FileDown, User } from "lucide-react";
+import { Zap, BarChart3, FileDown, User } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -9,6 +9,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Auto Waste", path: "/", icon: Zap },
+  { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
   { label: "PDF", path: "/pdf", icon: FileDown },
   { label: "Profil", path: "/profile", icon: User },
 ];
@@ -23,7 +24,7 @@ export function MobileBottomNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-cyan-900/30 bg-[hsl(220,45%,6%)]/95 backdrop-blur-xl safe-area-bottom">
-      <div className="flex items-center justify-around px-2 pt-2 pb-1">
+      <div className="flex items-center justify-around px-1 pt-2 pb-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -36,7 +37,7 @@ export function MobileBottomNav() {
                 window.history.pushState({}, "", item.path);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
                 active
                   ? "text-cyan-400"
                   : "text-slate-500 active:text-slate-300"
