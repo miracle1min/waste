@@ -47,8 +47,7 @@ export function isLegacyHash(stored: string): boolean {
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    console.error("[SECURITY] JWT_SECRET environment variable is not set! Using fallback.");
-    return process.env.NEON_DATABASE_URL || "ba-waste-default-secret-change-me";
+    throw new Error("[SECURITY] JWT_SECRET environment variable is not set! Server cannot start securely.");
   }
   return secret;
 }

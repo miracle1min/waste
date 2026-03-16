@@ -4,6 +4,14 @@
  */
 import { neon } from "@neondatabase/serverless";
 
+const ALLOWED_TABLES = new Set(["tenants", "users", "tenant_configs", "personnel"]);
+
+function assertValidTable(table: string): void {
+  if (!ALLOWED_TABLES.has(table)) {
+    throw new Error(`Invalid table name: ${table}`);
+  }
+}
+
 // Master DB tables (tenants registry)
 const MASTER_TABLES_DDL = [
   `CREATE TABLE IF NOT EXISTS tenants (
@@ -182,6 +190,7 @@ export async function migrateToTenantDb(
 
     // 5. Reset sequences
     for (const table of ["users", "tenant_configs", "personnel"]) {
+      assertValidTable(table);
       try {
         await tgtSql(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1))`);
       } catch (_) { /* no sequence */ }
@@ -210,10 +219,12 @@ export async function seedDatabase(sourceUrl: string, targetUrl: string): Promis
     }
 
     for (const table of [...DATA_TABLES].reverse()) {
+      assertValidTable(table);
       await tgtSql(`DELETE FROM ${table}`);
     }
 
     for (const table of DATA_TABLES) {
+      assertValidTable(table);
       const src = await srcSql(`SELECT * FROM ${table}`);
       if (src.length === 0) { details[table] = 0; continue; }
 
@@ -227,6 +238,7 @@ export async function seedDatabase(sourceUrl: string, targetUrl: string): Promis
 
       if (table !== "tenants") {
         try {
+          assertValidTable(table);
           await tgtSql(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1))`);
         } catch (_) { /* no sequence */ }
       }

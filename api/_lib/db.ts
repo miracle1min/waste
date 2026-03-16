@@ -213,19 +213,24 @@ export interface TenantConfig {
 }
 
 export async function getAllConfigs(): Promise<TenantConfig[]> {
-  // For super admin view: gather configs from all tenants
+  // For super admin view: gather configs from all tenants in parallel
   const masterSql = getMasterSQL();
   const tenants = await masterSql`SELECT id, neon_database_url FROM tenants WHERE status = 'active'`;
-  const allConfigs: TenantConfig[] = [];
 
-  for (const tenant of tenants) {
-    try {
-      const rows = await tenantQuery(tenant.id, 'SELECT * FROM tenant_configs ORDER BY tenant_id', []);
-      allConfigs.push(...(rows as TenantConfig[]));
-    } catch (err) {
-      console.error(`Error fetching configs for tenant ${tenant.id}:`, err);
+  const results = await Promise.allSettled(
+    tenants.map(tenant =>
+      tenantQuery(tenant.id, 'SELECT * FROM tenant_configs ORDER BY tenant_id', [])
+    )
+  );
+
+  const allConfigs: TenantConfig[] = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      allConfigs.push(...(result.value as TenantConfig[]));
+    } else {
+      console.error(`Error fetching configs for tenant ${tenants[index].id}:`, result.reason);
     }
-  }
+  });
 
   return allConfigs;
 }

@@ -1,5 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+/**
+ * In-memory rate limiter.
+ * NOTE: This is per-instance only. In serverless environments, each cold start
+ * gets a fresh Map, so this is best-effort protection (not a hard guarantee).
+ * For production-grade rate limiting, consider using Vercel KV, Upstash Redis, 
+ * or similar external store.
+ */
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
