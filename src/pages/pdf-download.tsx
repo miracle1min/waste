@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FileDown, Calendar, Download, Loader2, AlertCircle, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { apiFetch } from "@/lib/apiFetch";
+import { apiFetch } from "@/lib/api-client";
 
 export default function PdfDownload() {
   const { tenantName, storeCode } = useAuth();
