@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
 import { 
-  ArrowLeft, TrendingUp, Package, Calendar, BarChart3, 
+  TrendingUp, Package, Calendar, BarChart3, 
   Loader2, RefreshCw, ChevronDown,
   Store, User
 } from "lucide-react";
@@ -199,16 +199,6 @@ export default function Dashboard() {
         {/* Top row: branding + actions */}
         <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
-              title="Kembali"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div className="h-6 w-px bg-cyan-900/40" />
             <img src={wasteLogo} alt="AWAS" className="w-7 h-7 rounded-md" />
             <div className="leading-tight">
               <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-1.5">

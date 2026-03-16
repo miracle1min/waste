@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
 
 // ===== Types =====
 interface Tenant { id: string; name: string; address: string; phone: string; status: string; neon_database_url: string; created_at: string; }
@@ -50,9 +50,6 @@ export default function Settings() {
       {/* Header */}
       <div className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-4">
-          <button onClick={() => navigate("/")} className="p-1.5 sm:p-2 rounded-lg border border-cyan-800/40 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all flex-shrink-0">
-            <ArrowLeft className="h-4 w-4 text-cyan-400" />
-          </button>
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 truncate">
               ⚙️ Settings — Control Panel

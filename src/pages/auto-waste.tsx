@@ -455,13 +455,7 @@ export default function AutoWaste() {
     setStep("config");
   }, []);
 
-  // Back navigation
-  const handleBack = useCallback(() => {
-    if (step === "config") setLocation("/");
-    else if (step === "paste") setStep("config");
-    else if (step === "preview") setStep("paste");
-    else setStep("config");
-  }, [step, setLocation]);
+
 
   // Count total items across all selected stations
   const totalItems = selectedStations.reduce((sum, st) => sum + parsedItemsMap[st].length, 0);
@@ -493,14 +487,6 @@ export default function AutoWaste() {
       <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md lg:hidden">
         <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="p-2 text-slate-400 hover:text-cyan-400"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
             <Zap className="w-5 h-5 text-cyan-400" />
             <div>
               <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Waste Otomatis</h1>
