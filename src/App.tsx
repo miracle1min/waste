@@ -18,6 +18,8 @@ const NotFound = React.lazy(() => import("@/pages/not-found"));
 const AutoWaste = React.lazy(() => import("@/pages/auto-waste"));
 const Dashboard = React.lazy(() => import("@/pages/dashboard"));
 const AdminPanel = React.lazy(() => import("@/pages/admin-panel"));
+const PdfDownload = React.lazy(() => import("@/pages/pdf-download"));
+const Profile = React.lazy(() => import("@/pages/profile"));
 
 function UserRouter() {
   return (
@@ -26,6 +28,8 @@ function UserRouter() {
         <Route path="/" component={AutoWaste} />
         <Route path="/auto-waste" component={AutoWaste} />
         <Route path="/dashboard" component={Dashboard} />
+        <Route path="/pdf" component={PdfDownload} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

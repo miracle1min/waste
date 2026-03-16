@@ -535,3 +535,8 @@ html, body, #root {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* iOS safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
