@@ -350,9 +350,9 @@ function OverviewPage({ onNavigate }: { onNavigate: (key: PageKey) => void }) {
     (async () => {
       try {
         const [td, ud, cd] = await Promise.all([
-          api("/api/settings/tenants"),
-          api("/api/settings/users"),
-          api("/api/settings/configs"),
+          api("/api/settings?entity=tenants"),
+          api("/api/settings?entity=users"),
+          api("/api/settings?entity=configs"),
         ]);
         const tList = td.tenants || [];
         setTenants(tList);
@@ -462,16 +462,16 @@ function TenantsPage() {
   const [form, setForm] = useState({ name: "", address: "", phone: "", status: "active", neon_database_url: "" });
   const [saving, setSaving] = useState(false);
 
-  const loadTenants = async () => { setLoading(true); const data = await api("/api/settings/tenants"); setTenants(data.tenants || []); setLoading(false); };
+  const loadTenants = async () => { setLoading(true); const data = await api("/api/settings?entity=tenants"); setTenants(data.tenants || []); setLoading(false); };
   useEffect(() => { loadTenants(); }, []);
 
   const handleSave = async () => {
     setSaving(true);
     if (editingId) {
-      await api("/api/settings/tenants", "PUT", { id: editingId, ...form });
+      await api("/api/settings?entity=tenants", "PUT", { id: editingId, ...form });
     } else {
       const autoId = form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      await api("/api/settings/tenants", "POST", { id: autoId, ...form });
+      await api("/api/settings?entity=tenants", "POST", { id: autoId, ...form });
     }
     setSaving(false); setShowForm(false); setEditingId(null);
     setForm({ name: "", address: "", phone: "", status: "active", neon_database_url: "" });
@@ -486,7 +486,7 @@ function TenantsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Yakin mau hapus store ini?")) return;
-    await api(`/api/settings/tenants?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=tenants&id=${id}`, "DELETE");
     loadTenants();
   };
 
@@ -628,7 +628,7 @@ function UsersPage() {
 
   const load = async () => {
     setLoading(true);
-    const [ud, td] = await Promise.all([api("/api/settings/users"), api("/api/settings/tenants")]);
+    const [ud, td] = await Promise.all([api("/api/settings?entity=users"), api("/api/settings?entity=tenants")]);
     setUsers(ud.users || []); setTenants(td.tenants || []); setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -643,9 +643,9 @@ function UsersPage() {
     if (editingId) {
       const payload: any = { id: editingId, tenant_id: form.tenant_id, username: form.username, role: form.role };
       if (form.password) payload.password = form.password;
-      await api("/api/settings/users", "PUT", payload);
+      await api("/api/settings?entity=users", "PUT", payload);
     } else {
-      await api("/api/settings/users", "POST", form);
+      await api("/api/settings?entity=users", "POST", form);
     }
     setSaving(false); setShowForm(false); setEditingId(null);
     setForm({ tenant_id: "", username: "", password: "", role: "admin" });
@@ -660,7 +660,7 @@ function UsersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Yakin mau hapus user ini?")) return;
-    await api(`/api/settings/users?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=users&id=${id}`, "DELETE");
     load();
   };
 
@@ -807,7 +807,7 @@ function GoogleUsersPage() {
     setLoading(true);
     const [gd, td] = await Promise.all([
       api("/api/auth/google?action=list"),
-      api("/api/settings/tenants"),
+      api("/api/settings?entity=tenants"),
     ]);
     setGoogleUsers(gd.data || []);
     setTenants(td.tenants || []);
@@ -957,10 +957,10 @@ function PersonnelPage() {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  const load = async () => { setLoading(true); const td = await api("/api/settings/tenants"); setTenants(td.tenants || []); setLoading(false); };
+  const load = async () => { setLoading(true); const td = await api("/api/settings?entity=tenants"); setTenants(td.tenants || []); setLoading(false); };
   const loadPersonnel = async (tid: string) => {
     if (!tid) { setPersonnel([]); return; }
-    const data = await api(`/api/settings/personnel?tenant_id=${tid}`);
+    const data = await api(`/api/settings?entity=personnel&tenant_id=${tid}`);
     setPersonnel(data.personnel || []);
   };
   useEffect(() => { load(); }, []);
@@ -970,8 +970,8 @@ function PersonnelPage() {
   const handleSave = async () => {
     if (!selectedTenant) return;
     setSaving(true);
-    if (editingId) { await api(`/api/settings/personnel?id=${editingId}`, "PUT", form); }
-    else { await api("/api/settings/personnel", "POST", { tenant_id: selectedTenant, ...form }); }
+    if (editingId) { await api(`/api/settings?entity=personnel&id=${editingId}`, "PUT", form); }
+    else { await api("/api/settings?entity=personnel", "POST", { tenant_id: selectedTenant, ...form }); }
     setSaving(false); setShowForm(false); setEditingId(null);
     setForm({ name: "", full_name: "", role: "qc", signature_url: "", status: "active" });
     loadPersonnel(selectedTenant);
@@ -986,7 +986,7 @@ function PersonnelPage() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(",")[1];
-        const result = await api("/api/settings/configs", "POST", {
+        const result = await api("/api/settings?entity=configs", "POST", {
           action: "upload-signature", tenant_id: selectedTenant,
           file_base64: base64, file_name: file.name, mime_type: file.type,
         });
@@ -1005,7 +1005,7 @@ function PersonnelPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Yakin mau hapus personil ini?")) return;
-    await api(`/api/settings/personnel?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=personnel&id=${id}`, "DELETE");
     loadPersonnel(selectedTenant);
   };
 
@@ -1166,7 +1166,7 @@ function ConfigsPage() {
 
   const load = async () => {
     setLoading(true);
-    const [td, cd] = await Promise.all([api("/api/settings/tenants"), api("/api/settings/configs")]);
+    const [td, cd] = await Promise.all([api("/api/settings?entity=tenants"), api("/api/settings?entity=configs")]);
     setTenants(td.tenants || []); setConfigs(cd.configs || []); setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -1188,7 +1188,7 @@ function ConfigsPage() {
   const handleSave = async () => {
     if (!selectedTenant) return;
     setSaving(true);
-    await api("/api/settings/configs", "POST", { tenant_id: selectedTenant, ...form });
+    await api("/api/settings?entity=configs", "POST", { tenant_id: selectedTenant, ...form });
     await load(); setSaving(false);
   };
 
@@ -1349,7 +1349,7 @@ function DatabasePage() {
 
   useEffect(() => {
     (async () => {
-      const td = await api("/api/settings/tenants");
+      const td = await api("/api/settings?entity=tenants");
       setTenants(td.tenants || []);
       setLoading(false);
     })();
@@ -1365,7 +1365,7 @@ function DatabasePage() {
     if (!confirm(`Seed database untuk ${tenant.name}? Ini akan bikin tabel users, personnel, tenant_configs di database tenant.`)) return;
     setSeeding(true); setSeedResult(null);
     try {
-      const result = await api("/api/settings/configs", "POST", { action: "seed-tenant-db", tenant_id: selectedTenant });
+      const result = await api("/api/settings?entity=configs", "POST", { action: "seed-tenant-db", tenant_id: selectedTenant });
       setSeedResult(result);
     } catch (err: any) {
       setSeedResult({ ok: false, message: err.message });

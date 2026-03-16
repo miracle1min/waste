@@ -1,10 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAllConfigs, upsertConfig, deleteConfig } from "../_lib/db.js";
-import { testConnection, seedDatabase, switchDatabase, seedTenantDatabase, migrateToTenantDb } from "../_lib/database-ops.js";
-import { uploadToR2 } from "../_lib/r2.js";
-import { resolveTenantCredentials } from "../_lib/tenant-resolver.js";
-import { requireRole, handleAuthError } from "../_lib/auth.js";
-import { checkRateLimit } from "../_lib/rate-limit.js";
+import { getAllConfigs, upsertConfig, deleteConfig } from "../../_lib/db.js";
+import { testConnection, seedDatabase, switchDatabase, seedTenantDatabase, migrateToTenantDb } from "../../_lib/database-ops.js";
+import { uploadToR2 } from "../../_lib/r2.js";
+import { resolveTenantCredentials } from "../../_lib/tenant-resolver.js";
+import { requireRole, handleAuthError } from "../../_lib/auth.js";
 
 // BUG-005 fix: Mask sensitive fields in API responses
 function maskConfig(config: any): any {
@@ -17,9 +16,7 @@ function maskConfig(config: any): any {
   };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
-
+export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
   try {
     // BUG-003 fix: Server-side JWT auth
     requireRole(req, "super_admin");

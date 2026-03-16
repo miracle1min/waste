@@ -1,13 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAllUsers, getUsersByTenant, createUser, updateUser, deleteUser } from "../_lib/db.js";
-import { requireRole, hashPassword, handleAuthError, verifyToken, extractToken } from "../_lib/auth.js";
-import { logActivity, getClientIP } from "../_lib/activity-logger.js";
-import { checkRateLimit } from "../_lib/rate-limit.js";
-import { validate, createUserSchema, updateUserSchema } from "../_lib/validators.js";
+import { getAllUsers, getUsersByTenant, createUser, updateUser, deleteUser } from "../../_lib/db.js";
+import { requireRole, hashPassword, handleAuthError, verifyToken, extractToken } from "../../_lib/auth.js";
+import { logActivity, getClientIP } from "../../_lib/activity-logger.js";
+import { validate, createUserSchema, updateUserSchema } from "../../_lib/validators.js";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
-
+export async function handleUsers(req: VercelRequest, res: VercelResponse) {
   try {
     requireRole(req, "super_admin");
   } catch (err) {

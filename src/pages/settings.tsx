@@ -113,7 +113,7 @@ function TenantsTab() {
 
   const loadTenants = async () => {
     setLoading(true);
-    const data = await api("/api/settings/tenants");
+    const data = await api("/api/settings?entity=tenants");
     setTenants(data.tenants || []);
     setLoading(false);
   };
@@ -123,10 +123,10 @@ function TenantsTab() {
   const handleSave = async () => {
     setSaving(true);
     if (editingId) {
-      await api("/api/settings/tenants", "PUT", { id: editingId, ...form });
+      await api("/api/settings?entity=tenants", "PUT", { id: editingId, ...form });
     } else {
       const autoId = form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      await api("/api/settings/tenants", "POST", { id: autoId, ...form });
+      await api("/api/settings?entity=tenants", "POST", { id: autoId, ...form });
     }
     setSaving(false);
     setShowForm(false);
@@ -143,7 +143,7 @@ function TenantsTab() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Yakin mau hapus store ini?")) return;
-    await api(`/api/settings/tenants?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=tenants&id=${id}`, "DELETE");
     loadTenants();
   };
 
@@ -284,7 +284,7 @@ function UsersTab() {
 
   const load = async () => {
     setLoading(true);
-    const [ud, td] = await Promise.all([api("/api/settings/users"), api("/api/settings/tenants")]);
+    const [ud, td] = await Promise.all([api("/api/settings?entity=users"), api("/api/settings?entity=tenants")]);
     setUsers(ud.users || []);
     setTenants(td.tenants || []);
     setLoading(false);
@@ -302,9 +302,9 @@ function UsersTab() {
     if (editingId) {
       const payload: any = { id: editingId, tenant_id: form.tenant_id, username: form.username, role: form.role };
       if (form.password) payload.password = form.password;
-      await api("/api/settings/users", "PUT", payload);
+      await api("/api/settings?entity=users", "PUT", payload);
     } else {
-      await api("/api/settings/users", "POST", form);
+      await api("/api/settings?entity=users", "POST", form);
     }
     setSaving(false);
     setShowForm(false);
@@ -321,7 +321,7 @@ function UsersTab() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Yakin mau hapus user ini?")) return;
-    await api(`/api/settings/users?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=users&id=${id}`, "DELETE");
     load();
   };
 
@@ -455,14 +455,14 @@ function PersonnelTab() {
 
   const load = async () => {
     setLoading(true);
-    const td = await api("/api/settings/tenants");
+    const td = await api("/api/settings?entity=tenants");
     setTenants(td.tenants || []);
     setLoading(false);
   };
 
   const loadPersonnel = async (tid: string) => {
     if (!tid) { setPersonnel([]); return; }
-    const data = await api(`/api/settings/personnel?tenant_id=${tid}`);
+    const data = await api(`/api/settings?entity=personnel&tenant_id=${tid}`);
     setPersonnel(data.personnel || []);
   };
 
@@ -479,9 +479,9 @@ function PersonnelTab() {
     if (!selectedTenant) return;
     setSaving(true);
     if (editingId) {
-      await api(`/api/settings/personnel?id=${editingId}`, "PUT", form);
+      await api(`/api/settings?entity=personnel&id=${editingId}`, "PUT", form);
     } else {
-      await api("/api/settings/personnel", "POST", { tenant_id: selectedTenant, ...form });
+      await api("/api/settings?entity=personnel", "POST", { tenant_id: selectedTenant, ...form });
     }
     setSaving(false);
     setShowForm(false);
@@ -502,7 +502,7 @@ function PersonnelTab() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(",")[1];
-        const result = await api("/api/settings/configs", "POST", {
+        const result = await api("/api/settings?entity=configs", "POST", {
           action: "upload-signature",
           tenant_id: selectedTenant,
           file_base64: base64,
@@ -529,7 +529,7 @@ function PersonnelTab() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Yakin mau hapus personil ini?")) return;
-    await api(`/api/settings/personnel?id=${id}`, "DELETE");
+    await api(`/api/settings?entity=personnel&id=${id}`, "DELETE");
     loadPersonnel(selectedTenant);
   };
 
@@ -746,7 +746,7 @@ function ConfigsTab() {
 
   const load = async () => {
     setLoading(true);
-    const [td, cd] = await Promise.all([api("/api/settings/tenants"), api("/api/settings/configs")]);
+    const [td, cd] = await Promise.all([api("/api/settings?entity=tenants"), api("/api/settings?entity=configs")]);
     setTenants(td.tenants || []);
     setConfigs(cd.configs || []);
     setLoading(false);
@@ -774,7 +774,7 @@ function ConfigsTab() {
   const handleSave = async () => {
     if (!selectedTenant) return;
     setSaving(true);
-    await api("/api/settings/configs", "POST", { tenant_id: selectedTenant, ...form });
+    await api("/api/settings?entity=configs", "POST", { tenant_id: selectedTenant, ...form });
     await load();
     setSaving(false);
   };
@@ -923,7 +923,7 @@ function DatabaseTab() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/settings/configs", {
+      const res = await fetch("/api/settings?entity=configs", {
         method: "POST",
         headers,
         body: JSON.stringify({ action: "db-test", db_url: newDbUrl }),
@@ -944,7 +944,7 @@ function DatabaseTab() {
     setSeeding(true);
     setSeedResult(null);
     try {
-      const res = await fetch("/api/settings/configs", {
+      const res = await fetch("/api/settings?entity=configs", {
         method: "POST",
         headers,
         body: JSON.stringify({ action: "db-seed", target_url: newDbUrl }),
@@ -965,7 +965,7 @@ function DatabaseTab() {
     setSwitching(true);
     setSwitchResult(null);
     try {
-      const res = await fetch("/api/settings/configs", {
+      const res = await fetch("/api/settings?entity=configs", {
         method: "POST",
         headers,
         body: JSON.stringify({ action: "db-switch", new_url: newDbUrl }),

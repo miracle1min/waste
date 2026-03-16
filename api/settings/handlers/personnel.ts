@@ -1,17 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { tenantQuery } from '../_lib/tenant-db.js';
-import { requireRole, handleAuthError, getAuthorizedTenantId, extractToken, verifyToken } from '../_lib/auth.js';
-import { checkRateLimit } from '../_lib/rate-limit.js';
-import { validate, createPersonnelSchema } from '../_lib/validators.js';
+import { tenantQuery } from '../../_lib/tenant-db.js';
+import { requireRole, handleAuthError, getAuthorizedTenantId, extractToken, verifyToken } from '../../_lib/auth.js';
+import { validate, createPersonnelSchema } from '../../_lib/validators.js';
 
 /**
- * Personnel CRUD API (admin only) — now uses per-tenant DB
+ * Personnel CRUD handler (admin only) — now uses per-tenant DB
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
-
+export async function handlePersonnel(req: VercelRequest, res: VercelResponse) {
   try {
     requireRole(req, "super_admin", "admin_store");
   } catch (err) {

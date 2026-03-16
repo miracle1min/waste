@@ -1,14 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../_lib/db.js";
-import { clearTenantDbCache } from "../_lib/tenant-db.js";
-import { requireRole, handleAuthError, verifyToken, extractToken } from "../_lib/auth.js";
-import { logActivity, getClientIP } from "../_lib/activity-logger.js";
-import { checkRateLimit } from "../_lib/rate-limit.js";
-import { validate, createTenantSchema } from "../_lib/validators.js";
+import { getAllTenants, createTenant, updateTenant, deleteTenant } from "../../_lib/db.js";
+import { clearTenantDbCache } from "../../_lib/tenant-db.js";
+import { requireRole, handleAuthError, verifyToken, extractToken } from "../../_lib/auth.js";
+import { logActivity, getClientIP } from "../../_lib/activity-logger.js";
+import { validate, createTenantSchema } from "../../_lib/validators.js";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (checkRateLimit(req, res, { name: "settings", maxRequests: 30, windowSeconds: 60 })) return;
-
+export async function handleTenants(req: VercelRequest, res: VercelResponse) {
   try {
     // BUG-003 fix: Server-side JWT auth instead of trusting x-user-role header
     requireRole(req, "super_admin");
