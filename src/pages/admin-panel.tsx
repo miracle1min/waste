@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard, Building2, UserCog, Globe, UserCheck, KeyRound, Server,
-  Activity, Shield, LogOut, Menu, MoreHorizontal, Loader2
+  Activity, Shield, LogOut, Menu, MoreHorizontal, Loader2, Sparkles
 } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
@@ -33,6 +33,21 @@ const MENU_ITEMS: { key: PageKey; label: string; shortLabel: string; icon: any; 
 // Mobile bottom nav shows first 4, rest in "More" menu
 const MOBILE_NAV = MENU_ITEMS.slice(0, 4);
 const MORE_NAV = MENU_ITEMS.slice(4);
+
+// ===== Skeleton Fallback =====
+function PageSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-24 rounded-2xl bg-[#4FD1FF]/5 border border-[#4FD1FF]/10" />
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-28 rounded-2xl bg-[#4FD1FF]/5 border border-[#4FD1FF]/10" />
+        ))}
+      </div>
+      <div className="h-48 rounded-2xl bg-[#4FD1FF]/5 border border-[#4FD1FF]/10" />
+    </div>
+  );
+}
 
 // ===== Main Admin Panel =====
 export default function AdminPanel() {
@@ -65,10 +80,15 @@ export default function AdminPanel() {
           {/* Logo area */}
           <div className="p-5 border-b border-[rgba(79,209,255,0.08)]">
             <div className="flex items-center gap-3">
-              <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]" />
+              <div className="relative">
+                <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]" />
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-[#1A1C22]" />
+              </div>
               <div>
                 <h1 className="text-base font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent leading-tight">AWAS</h1>
-                <p className="text-[10px] text-[#4FD1FF]/40 font-sans">Control Panel</p>
+                <p className="text-[10px] text-[#4FD1FF]/40 font-sans flex items-center gap-1">
+                  <Sparkles className="h-2.5 w-2.5" /> Control Panel
+                </p>
               </div>
             </div>
           </div>
@@ -84,12 +104,12 @@ export default function AdminPanel() {
                   onClick={() => handleNav(item.key)}
                   className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 group ${
                     isActive
-                      ? "bg-[#4FD1FF]/8 border border-[#4FD1FF]/15 text-[#E5E7EB]"
+                      ? "bg-[#4FD1FF]/8 border border-[#4FD1FF]/15 text-[#E5E7EB] shadow-[0_2px_12px_rgba(79,209,255,0.06)]"
                       : "border border-transparent text-[#4FD1FF]/80 hover:text-[#E5E7EB] hover:bg-[#2A2D37]"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                    isActive ? "bg-[#4FD1FF]/10" : "bg-[#2A2D37]/50 group-hover:bg-[#4FD1FF]/8"
+                    isActive ? "bg-gradient-to-br from-[#4FD1FF]/15 to-[#9F7AEA]/10" : "bg-[#2A2D37]/50 group-hover:bg-[#4FD1FF]/8"
                   }`}>
                     <Icon className={`h-[18px] w-[18px] ${isActive ? "text-[#4FD1FF]" : "text-[#4FD1FF]/60 group-hover:text-[#4FD1FF]"}`} />
                   </div>
@@ -97,7 +117,7 @@ export default function AdminPanel() {
                     <p className={`text-[13px] font-sans font-medium ${isActive ? "text-[#E5E7EB]" : ""}`}>{item.label}</p>
                     <p className={`text-[10px] font-sans ${isActive ? "text-[#4FD1FF]/80" : "text-[#4FD1FF]/30"}`}>{item.desc}</p>
                   </div>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-[#4FD1FF] shadow-none shrink-0" />}
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-[#4FD1FF] shadow-[0_0_6px_rgba(79,209,255,0.5)] shrink-0" />}
                 </button>
               );
             })}
@@ -105,8 +125,10 @@ export default function AdminPanel() {
 
           {/* User / Logout */}
           <div className="p-3 border-t border-[rgba(79,209,255,0.08)] space-y-2">
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-purple-500/5 border border-purple-900/20">
-              <Shield className="h-4 w-4 text-purple-400 shrink-0" />
+            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/5 to-purple-900/5 border border-purple-900/20">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-purple-400" />
+              </div>
               <div className="min-w-0">
                 <p className="text-xs font-sans text-purple-300 truncate">{qcName}</p>
                 <p className="text-[10px] font-sans text-purple-600">Super Admin</p>
@@ -155,7 +177,7 @@ export default function AdminPanel() {
           {/* Page Content */}
           <main className="flex-1 p-4 sm:p-6 pb-20 lg:pb-6 overflow-y-auto">
             <div className="max-w-5xl mx-auto">
-              <Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#4FD1FF]" /></div>}>
+              <Suspense fallback={<PageSkeleton />}>
                 {activePage === "overview" && <OverviewPage onNavigate={handleNav} />}
                 {activePage === "tenants" && <TenantsPage />}
                 {activePage === "users" && <UsersPage />}
@@ -184,7 +206,7 @@ export default function AdminPanel() {
                       <Icon className="h-5 w-5" />
                     </div>
                     <span className="text-[9px] font-sans font-medium">{item.shortLabel}</span>
-                    {isActive && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-none" />}
+                    {isActive && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-[0_0_4px_rgba(79,209,255,0.5)]" />}
                   </button>
                 );
               })}
@@ -198,7 +220,7 @@ export default function AdminPanel() {
                     <MoreHorizontal className="h-5 w-5" />
                   </div>
                   <span className="text-[9px] font-sans font-medium">More</span>
-                  {MORE_NAV.some(m => m.key === activePage) && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-none" />}
+                  {MORE_NAV.some(m => m.key === activePage) && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-[0_0_4px_rgba(79,209,255,0.5)]" />}
                 </button>
                 {/* More popup */}
                 {moreOpen && (
