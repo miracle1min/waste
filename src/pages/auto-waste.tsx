@@ -1113,4 +1113,41 @@ Contoh:
                   <span className={`text-xs font-bold ${
                     submitStatusMap[station] === "success" ? "text-green-400" : "text-red-400"
                   }`}>
-                    {submitStatusMap[station] ==
+                    {submitStatusMap[station] === "success" ? `✅ ${parsedItemsMap[station].length} item` : "❌ Error"}
+                  </span>
+                </div>
+              ))}
+
+              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Total</span>
+                <span className="text-[#E5E7EB] font-bold text-base lg:text-lg">{totalItems} produk</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={handleNewEntry}
+                className={CLAY_BTN_PRIMARY}
+              >
+                <Zap className="w-5 h-5 mr-2" /> Shift Baru
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/")}
+                className={`w-full ${CLAY_BTN_OUTLINE}`}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
+              </Button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <div className="lg:hidden">
+        <Footer />
+      </div>
+    </div>
+  );
+}
