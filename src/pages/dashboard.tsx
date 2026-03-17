@@ -487,7 +487,7 @@ export default function Dashboard() {
                       <div className="min-w-0">
                         <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Entry Terakhir</p>
                         <p className="text-xs font-bold text-white truncate">{data.lastEntry.station} • {data.lastEntry.shift}</p>
-                        <p className="text-[10px] text-[#4FD1FF]/70">{data.lastEntry.date} — {data.lastEntry.qc || "-"}</p>
+                        <p className="text-[10px] text-[#4FD1FF]/70">{data.lastEntry.date} — QC: {userName}</p>
                       </div>
                     </div>
                   )}
