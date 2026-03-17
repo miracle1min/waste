@@ -8,6 +8,28 @@ html, body, #root {
   max-width: 100vw;
 }
 
+/* Performance: reduce layout shifts (CLS) */
+#root {
+  contain: layout style;
+  min-height: 100vh;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Optimize font rendering */
+body {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 
 /* ═══════════════════════════════════════════
    NEO CLAYMORPHISM THEME - BA WASTE
