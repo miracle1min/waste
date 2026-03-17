@@ -467,9 +467,9 @@ export default function AutoWaste() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
       {/* Desktop page title */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/80 backdrop-blur-sm">
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] backdrop-blur-sm">
         <Zap className="w-6 h-6 text-[#4FD1FF]" />
-        <h1 className="text-xl font-bold text-[#4FD1FF]">Auto Waste</h1>
+        <h1 className="text-xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Auto Waste</h1>
         <div className="flex items-center gap-1 ml-auto">
           {(["config", "paste", "preview", "success"] as AutoStep[]).map((s, i) => (
             <div
@@ -515,20 +515,20 @@ export default function AutoWaste() {
           <div className="w-full max-w-sm space-y-6">
             {/* Animated icon */}
             <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-[#4FD1FF]/15 border-2 border-[#4FD1FF]/20 flex items-center justify-center animate-pulse">
+              <div className="w-20 h-20 rounded-full bg-[#4FD1FF]/15 border-2 border-[#4FD1FF]/20 flex items-center justify-center animate-pulse shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <Send className="w-8 h-8 text-[#4FD1FF]" />
               </div>
             </div>
 
             {/* Title */}
             <div className="text-center">
-              <h3 className="text-lg font-bold text-white mb-1">Mengirim Data...</h3>
+              <h3 className="text-lg font-bold text-[#E5E7EB] mb-1">Mengirim Data...</h3>
               <p className="text-xs text-[#9CA3AF]">Jangan tutup halaman ini</p>
             </div>
 
             {/* Progress bar */}
             <div className="space-y-2">
-              <div className="h-3 w-full bg-[#2A2D37] rounded-full overflow-hidden">
+              <div className="h-3 w-full bg-[#2A2D37] rounded-full overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
                 <div
                   className="h-full bg-gradient-to-r from-[#4FD1FF] via-[#9F7AEA] to-[#9F7AEA] rounded-full transition-all duration-700 ease-out"
                   style={{ width: `${globalProgress.percent}%` }}
@@ -544,10 +544,10 @@ export default function AutoWaste() {
 
             {/* Current station status */}
             {globalProgress.currentStation && (
-              <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/[0.06] text-center">
+              <div className="p-3 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
-                  <span className="text-sm text-white font-medium">
+                  <span className="text-sm text-[#E5E7EB] font-medium">
                     {STATION_ICONS[globalProgress.currentStation as Station]} {globalProgress.currentStation}
                   </span>
                 </div>
@@ -560,11 +560,11 @@ export default function AutoWaste() {
             {/* Station checklist */}
             <div className="space-y-1.5">
               {selectedStations.map((st) => (
-                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
-                  submitStatusMap[st] === "success" ? "bg-green-950/30 border border-green-800/30" :
-                  submitStatusMap[st] === "uploading" ? "bg-[#4FD1FF]/5 border border-[rgba(79,209,255,0.08)]" :
-                  submitStatusMap[st] === "error" ? "bg-red-950/30 border border-red-800/30" :
-                  "bg-[#23262F]/80 border border-[rgba(79,209,255,0.06)]/30"
+                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] ${
+                  submitStatusMap[st] === "success" ? "bg-[#23262F] border border-green-500/20" :
+                  submitStatusMap[st] === "uploading" ? "bg-[#23262F] border border-[rgba(79,209,255,0.08)]" :
+                  submitStatusMap[st] === "error" ? "bg-[#23262F] border border-red-500/20" :
+                  "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">{STATION_ICONS[st]}</span>
@@ -612,12 +612,12 @@ export default function AutoWaste() {
                   type="date"
                   value={selectedDate}
                   onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">🏪 Resto</label>
-                <div className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base font-medium">
+                <div className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base font-medium shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
                   {storeName || 'Loading...'}
                 </div>
               </div>
@@ -632,7 +632,7 @@ export default function AutoWaste() {
                   className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
                     allStationsSelected
                       ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/20"
-                      : "bg-[#2A2D37]/80 text-[#9CA3AF] border border-[rgba(79,209,255,0.08)]/50 hover:border-[rgba(79,209,255,0.12)] hover:text-[#4FD1FF]"
+                      : "bg-[#23262F] text-[#9CA3AF] border border-[rgba(79,209,255,0.08)] hover:border-[rgba(79,209,255,0.12)] hover:text-[#4FD1FF]"
                   }`}
                 >
                   <CheckCheck className="w-3 h-3" />
@@ -646,8 +646,8 @@ export default function AutoWaste() {
                     onClick={() => toggleStation(st)}
                     className={`p-3 lg:p-5 rounded-lg lg:rounded-xl border-2 text-center transition-all duration-200 ${
                       selectedStations.includes(st)
-                        ? "border-[#4FD1FF]/20 bg-[#4FD1FF]/15 text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
-                        : "border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-[#9CA3AF] hover:border-[rgba(79,209,255,0.12)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                        ? "border-[#4FD1FF]/25 bg-[#4FD1FF]/10 text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                        : "border-[rgba(79,209,255,0.08)] bg-[#23262F] text-[#9CA3AF] hover:border-[rgba(79,209,255,0.12)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
                     }`}
                   >
                     <div className="text-xl lg:text-3xl">{STATION_ICONS[st]}</div>
@@ -672,7 +672,7 @@ export default function AutoWaste() {
                 <select
                   value={selectedShift}
                   onChange={e => setSelectedShift(e.target.value as Shift)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih Shift --</option>
                   {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -684,7 +684,7 @@ export default function AutoWaste() {
                   type="time"
                   value={jam}
                   onChange={e => setJam(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all"
                 />
               </div>
             </div>
@@ -696,14 +696,14 @@ export default function AutoWaste() {
                 <select
                   value={selectedQC}
                   onChange={e => setSelectedQC(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih QC --</option>
                   {validQC.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
                 {selectedQC && signatureUrls[selectedQC] && (
-                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-[#2A2D37]/80 border border-[rgba(79,209,255,0.08)]/30">
-                    <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37]/60 p-0.5" />
+                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)]">
+                    <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
                     <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
@@ -713,14 +713,14 @@ export default function AutoWaste() {
                 <select
                   value={selectedManajer}
                   onChange={e => setSelectedManajer(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih Manajer --</option>
                   {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
                 {selectedManajer && signatureUrls[selectedManajer] && (
-                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-[#2A2D37]/80 border border-[rgba(79,209,255,0.08)]/30">
-                    <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37]/60 p-0.5" />
+                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)]">
+                    <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
                     <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
@@ -736,7 +736,7 @@ export default function AutoWaste() {
             <Button
               onClick={() => setStep("paste")}
               disabled={!configReady}
-              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 lg:rounded-xl"
+              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
             >
               Gas, Paste Data Item ({selectedStations.length} Station) →
             </Button>
@@ -747,14 +747,14 @@ export default function AutoWaste() {
         {step === "paste" && (
           <div className="space-y-4 w-full">
             <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold text-[#4FD1FF] mb-1 lg:mb-2">📋 Paste Data Item</h2>
+              <h2 className="text-lg lg:text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent mb-1 lg:mb-2">📋 Paste Data Item</h2>
               <p className="text-xs lg:text-sm text-[#9CA3AF]">
                 {selectedShift} • {selectedDate} • {selectedStations.length} station
               </p>
             </div>
 
             {/* Format reference */}
-            <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/[0.06]">
+            <div className="p-3 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs lg:text-sm font-bold text-[#4FD1FF]">📝 Format tiap baris</span>
                 <Button
@@ -780,7 +780,7 @@ Contoh:
               <div key={station} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{STATION_ICONS[station]}</span>
-                  <span className="text-sm lg:text-base font-bold text-white">{station}</span>
+                  <span className="text-sm lg:text-base font-bold text-[#E5E7EB]">{station}</span>
                   {rawTexts[station].trim() && (
                     <span className="text-[10px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded">ada data</span>
                   )}
@@ -793,7 +793,7 @@ Contoh:
                       setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                     }}
                     placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
-                    className="w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg lg:rounded-xl text-white font-sans text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none resize-none placeholder:text-[#6B7280]"
+                    className="w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all resize-none placeholder:text-[#6B7280]"
                   />
                   {rawTexts[station] && (
                     <button
@@ -801,7 +801,7 @@ Contoh:
                         setRawTexts(prev => ({ ...prev, [station]: "" }));
                         setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                       }}
-                      className="absolute top-2 right-2 p-1 text-[#6B7280] hover:text-white"
+                      className="absolute top-2 right-2 p-1 text-[#6B7280] hover:text-[#E5E7EB]"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -821,14 +821,14 @@ Contoh:
                       toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "destructive" });
                     }
                   }}
-                  className="w-full border-[rgba(79,209,255,0.08)] text-[#4FD1FF] hover:bg-[#4FD1FF]/5 h-8 text-xs"
+                  className="w-full border-[rgba(79,209,255,0.08)] text-[#4FD1FF] hover:bg-[#4FD1FF]/5 h-8 text-xs shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
                 >
                   <ClipboardPaste className="w-3 h-3 mr-1" /> Paste dari Clipboard ke {station}
                 </Button>
 
                 {/* Parse errors for this station */}
                 {parseErrorsMap[station].length > 0 && (
-                  <div className="p-2 rounded-lg border border-red-800/50 bg-red-950/30 space-y-1">
+                  <div className="p-2 rounded-xl border border-red-500/20 bg-[#23262F] space-y-1 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                     <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
                       <AlertTriangle className="w-3 h-3" />
                       <span>{station} — Error ({parseErrorsMap[station].length})</span>
@@ -848,7 +848,7 @@ Contoh:
             <Button
               onClick={handleParseAll}
               disabled={selectedStations.every(st => !rawTexts[st].trim())}
-              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white font-bold py-5 lg:py-6 lg:text-lg lg:rounded-xl"
+              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white font-bold py-5 lg:py-6 lg:text-lg rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
             >
               <Zap className="w-4 h-4 mr-2" /> Parse & Cek Semua Station
             </Button>
@@ -867,15 +867,15 @@ Contoh:
 
             {/* Info cards */}
             <div className="grid grid-cols-3 gap-2 lg:gap-3">
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Station</p>
-                <p className="text-sm lg:text-lg font-bold text-white">{selectedStations.length}x</p>
+                <p className="text-sm lg:text-lg font-bold text-[#E5E7EB]">{selectedStations.length}x</p>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Shift</p>
-                <p className="text-sm lg:text-lg font-bold text-white">{selectedShift}</p>
+                <p className="text-sm lg:text-lg font-bold text-[#E5E7EB]">{selectedShift}</p>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Jam</p>
                 <p className="text-sm lg:text-lg font-bold text-yellow-400">{jam} WIB</p>
               </div>
@@ -883,21 +883,21 @@ Contoh:
 
             {/* QC & Manajer */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">QC</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm lg:text-base font-bold text-[#4FD1FF]">{selectedQC}</p>
                   {signatureUrls[selectedQC] && (
-                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#2A2D37]/60 p-0.5" />
+                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#2A2D37] p-0.5" />
                   )}
                 </div>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Manajer</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm lg:text-base font-bold text-purple-400">{selectedManajer}</p>
                   {signatureUrls[selectedManajer] && (
-                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#2A2D37]/60 p-0.5" />
+                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#2A2D37] p-0.5" />
                   )}
                 </div>
               </div>
@@ -909,14 +909,14 @@ Contoh:
                 {/* Station header */}
                 <div className="flex items-center gap-2 pt-2">
                   <span className="text-xl">{STATION_ICONS[station]}</span>
-                  <span className="text-base lg:text-lg font-bold text-white">{station}</span>
+                  <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
                   <span className="text-xs lg:text-sm text-[#6B7280]">({parsedItemsMap[station].length} item)</span>
                   {isSubmitting && (
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                       submitStatusMap[station] === "uploading" ? "bg-yellow-900/30 text-yellow-400" :
                       submitStatusMap[station] === "success" ? "bg-green-900/30 text-green-400" :
                       submitStatusMap[station] === "error" ? "bg-red-900/30 text-red-400" :
-                      "bg-[#2A2D37]/80 text-[#6B7280]"
+                      "bg-[#2A2D37] text-[#6B7280]"
                     }`}>
                       {submitStatusMap[station] === "uploading" ? "⏳ Uploading..." :
                        submitStatusMap[station] === "success" ? "✅ Done" :
@@ -926,11 +926,11 @@ Contoh:
                 </div>
 
                 {/* Items table */}
-                <div className="rounded-lg border border-[rgba(79,209,255,0.08)]/50 overflow-hidden">
+                <div className="rounded-xl border border-[rgba(79,209,255,0.08)] overflow-hidden shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs lg:text-sm">
                       <thead>
-                        <tr className="bg-[#2A2D37]/80 text-[#9CA3AF]">
+                        <tr className="bg-[#2A2D37] text-[#9CA3AF]">
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">#</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Produk</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Lot</th>
@@ -941,9 +941,9 @@ Contoh:
                       </thead>
                       <tbody>
                         {parsedItemsMap[station].map((item, i) => (
-                          <tr key={i} className="border-t border-[rgba(79,209,255,0.06)]/30 hover:bg-[#2A2D37]/20">
+                          <tr key={i} className="border-t border-[rgba(79,209,255,0.06)] hover:bg-[#2A2D37]/50">
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#6B7280]">{i + 1}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-white font-medium truncate max-w-[100px] lg:max-w-[250px]">{item.namaProduk}</td>
+                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] font-medium truncate max-w-[100px] lg:max-w-[250px]">{item.namaProduk}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] text-[11px] lg:text-sm">{item.kodeLot || "-"}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-center text-yellow-400 font-bold">{item.qty}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB]">{item.unit}</td>
@@ -975,14 +975,14 @@ Contoh:
 
                 {/* Divider between stations */}
                 {station !== selectedStations[selectedStations.length - 1] && (
-                  <div className="border-t border-dashed border-[rgba(79,209,255,0.08)]/50 my-2" />
+                  <div className="border-t border-dashed border-[rgba(79,209,255,0.08)] my-2" />
                 )}
               </div>
             ))}
 
             {/* Error summary banner */}
             {selectedStations.some(st => submitStatusMap[st] === "error") && !isSubmitting && (
-              <div className="p-4 rounded-lg border border-red-800/50 bg-red-950/30 space-y-3">
+              <div className="p-4 rounded-xl border border-red-500/20 bg-[#23262F] space-y-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                   <span className="text-sm font-bold text-red-400">
@@ -997,7 +997,7 @@ Contoh:
                 ))}
                 <Button
                   onClick={handleRetryFailed}
-                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3"
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" /> Retry {selectedStations.filter(st => submitStatusMap[st] === "error").length} Station yang Gagal
                 </Button>
@@ -1010,14 +1010,14 @@ Contoh:
                 variant="outline"
                 onClick={() => setStep("paste")}
                 disabled={isSubmitting}
-                className="flex-1 border-[rgba(79,209,255,0.08)]/50 text-[#9CA3AF]"
+                className="flex-1 border-[rgba(79,209,255,0.08)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
               </Button>
               <Button
                 onClick={() => handleSubmit()}
                 disabled={isSubmitting || selectedStations.some(st => dokumentasiFilesMap[st].length === 0)}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
@@ -1042,17 +1042,17 @@ Contoh:
               </p>
             </div>
 
-            <div className="p-4 lg:p-6 rounded-lg lg:rounded-xl border border-green-800/30 bg-green-950/20 text-left space-y-1 lg:space-y-2 text-sm lg:text-base">
-              <p><span className="text-[#9CA3AF]">Tanggal:</span> <span className="text-white">{selectedDate}</span></p>
-              <p><span className="text-[#9CA3AF]">Resto:</span> <span className="text-white">{storeName}</span></p>
-              <p><span className="text-[#9CA3AF]">Shift:</span> <span className="text-white">{selectedShift}</span></p>
+            <div className="p-4 lg:p-6 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-left space-y-1 lg:space-y-2 text-sm lg:text-base shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <p><span className="text-[#9CA3AF]">Tanggal:</span> <span className="text-[#E5E7EB]">{selectedDate}</span></p>
+              <p><span className="text-[#9CA3AF]">Resto:</span> <span className="text-[#E5E7EB]">{storeName}</span></p>
+              <p><span className="text-[#9CA3AF]">Shift:</span> <span className="text-[#E5E7EB]">{selectedShift}</span></p>
               <p><span className="text-[#9CA3AF]">Jam:</span> <span className="text-yellow-400">{jam} WIB</span></p>
               <p><span className="text-[#9CA3AF]">QC:</span> <span className="text-[#4FD1FF]">{selectedQC}</span></p>
               <p><span className="text-[#9CA3AF]">Manajer:</span> <span className="text-purple-400">{selectedManajer}</span></p>
-              <div className="border-t border-green-800/30 my-2" />
+              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
               {selectedStations.map(station => (
                 <div key={station} className="flex items-center justify-between">
-                  <span className="text-white">{STATION_ICONS[station]} {station}</span>
+                  <span className="text-[#E5E7EB]">{STATION_ICONS[station]} {station}</span>
                   <span className={`text-xs font-bold ${
                     submitStatusMap[station] === "success" ? "text-green-400" : "text-red-400"
                   }`}>
@@ -1060,21 +1060,21 @@ Contoh:
                   </span>
                 </div>
               ))}
-              <div className="border-t border-green-800/30 my-2" />
-              <p><span className="text-[#9CA3AF]">Total:</span> <span className="text-white font-bold">{totalItems} produk</span></p>
+              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+              <p><span className="text-[#9CA3AF]">Total:</span> <span className="text-[#E5E7EB] font-bold">{totalItems} produk</span></p>
             </div>
 
             <div className="flex flex-col gap-3">
               <Button
                 onClick={handleNewEntry}
-                className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold lg:rounded-xl"
+                className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
               >
                 <Zap className="w-5 h-5 mr-2" /> Shift Baru
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation("/")}
-                className="w-full border-[rgba(79,209,255,0.08)]/50 text-[#9CA3AF]"
+                className="w-full border-[rgba(79,209,255,0.08)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
               </Button>
