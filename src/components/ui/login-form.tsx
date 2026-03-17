@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { AlertCircle, Lock, Loader2, User, CheckCircle2, Store } from "lucide-react";
+import { AlertCircle, Lock, Loader2, User, CheckCircle2, Store, Clock, ShieldX, ArrowLeft } from "lucide-react";
 import logoUrl from "@assets/waste-logo_1753322218969.webp";
 
 const loginSchema = z.object({
@@ -113,6 +113,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState("Menyambungkan ke server...");
+  const [pendingState, setPendingState] = useState<{ email: string; name: string } | null>(null);
+  const [rejectedState, setRejectedState] = useState<{ email: string } | null>(null);
 
   // Handle Google OAuth callback
   useEffect(() => {
@@ -132,6 +134,15 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       }
       window.history.replaceState({}, "", "/");
       onLogin(username, role, tenant_id, tenant_name, "", token);
+    } else if (googleAuth === "pending") {
+      const email = params.get("email") || "";
+      const name = params.get("name") || "";
+      setPendingState({ email, name });
+      window.history.replaceState({}, "", "/");
+    } else if (googleAuth === "rejected") {
+      const email = params.get("email") || "";
+      setRejectedState({ email });
+      window.history.replaceState({}, "", "/");
     } else if (googleAuth === "error") {
       const message = params.get("message") || "Login Google gagal.";
       setError(message);
@@ -225,6 +236,139 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       token || ""
     );
   };
+
+  /* ── Pending Approval Screen ── */
+  if (pendingState) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1A1C22] p-4 overflow-hidden">
+        <CyberBackground />
+        <div className={`relative z-10 w-full max-w-md transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+          <div className="relative rounded-[24px] bg-gradient-to-br from-[#23262F] to-[#1F2128] border border-[rgba(79,209,255,0.06)] p-8 shadow-[8px_8px_20px_rgba(0,0,0,0.5),-4px_-4px_12px_rgba(255,255,255,0.05)]">
+            <div className="text-center space-y-6">
+              {/* Animated clock icon */}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <div className="h-20 w-20 rounded-full flex items-center justify-center bg-[#F59E0B]/10 shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)]">
+                    <Clock className="h-10 w-10 text-[#F59E0B]" />
+                  </div>
+                  <div className="absolute inset-0 rounded-full border-2 border-[#F59E0B]/20 animate-ping" />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-[#F59E0B]/70 tracking-[0.3em] uppercase">Menunggu Persetujuan</p>
+                <p className="text-[#E5E7EB] text-lg font-bold mt-3">
+                  Halo, {pendingState.name || "User"}! 👋
+                </p>
+                <p className="text-[#9CA3AF] text-sm mt-2 leading-relaxed">
+                  Akun Google kamu sudah terdaftar dengan email:
+                </p>
+                <p className="text-[#4FD1FF] text-sm font-medium mt-1">
+                  {pendingState.email}
+                </p>
+              </div>
+
+              {/* Info box */}
+              <div className="rounded-[12px] bg-[#F59E0B]/5 border border-[#F59E0B]/20 p-4 text-left space-y-2">
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-[#F59E0B] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[#E5E7EB] text-sm font-medium">Perlu persetujuan Super Admin</p>
+                    <p className="text-[#9CA3AF] text-xs mt-1 leading-relaxed">
+                      Pendaftaran kamu sedang menunggu persetujuan dari Super Admin. 
+                      Kamu akan bisa login setelah akunmu di-approve.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress indicator */}
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[#4ADE80] shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
+                  <span className="text-[10px] text-[#9CA3AF]">Daftar</span>
+                </div>
+                <div className="w-8 h-px bg-[#F59E0B]/40" />
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[#F59E0B] animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                  <span className="text-[10px] text-[#F59E0B]">Review</span>
+                </div>
+                <div className="w-8 h-px bg-[#6B7280]/40" />
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[#6B7280]/40" />
+                  <span className="text-[10px] text-[#6B7280]">Aktif</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setPendingState(null)}
+                className="w-full h-12 rounded-[12px] font-semibold text-sm tracking-wide bg-[#23262F] border border-[rgba(79,209,255,0.06)] text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] active:scale-[0.97] transition-all duration-200 ease-in-out"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Kembali ke Login
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Rejected Screen ── */
+  if (rejectedState) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1A1C22] p-4 overflow-hidden">
+        <CyberBackground />
+        <div className={`relative z-10 w-full max-w-md transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+          <div className="relative rounded-[24px] bg-gradient-to-br from-[#23262F] to-[#1F2128] border border-[rgba(79,209,255,0.06)] p-8 shadow-[8px_8px_20px_rgba(0,0,0,0.5),-4px_-4px_12px_rgba(255,255,255,0.05)]">
+            <div className="text-center space-y-6">
+              {/* Rejected icon */}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <div className="h-20 w-20 rounded-full flex items-center justify-center bg-[#F87171]/10 shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)]">
+                    <ShieldX className="h-10 w-10 text-[#F87171]" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-[#F87171]/70 tracking-[0.3em] uppercase">Akses Ditolak</p>
+                <p className="text-[#9CA3AF] text-sm mt-3 leading-relaxed">
+                  Pendaftaran untuk email berikut telah ditolak oleh Super Admin:
+                </p>
+                <p className="text-[#F87171] text-sm font-medium mt-1">
+                  {rejectedState.email}
+                </p>
+              </div>
+
+              {/* Info box */}
+              <div className="rounded-[12px] bg-[#F87171]/5 border border-[#F87171]/20 p-4 text-left space-y-2">
+                <div className="flex items-start gap-2">
+                  <ShieldX className="h-4 w-4 text-[#F87171] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[#E5E7EB] text-sm font-medium">Akun tidak disetujui</p>
+                    <p className="text-[#9CA3AF] text-xs mt-1 leading-relaxed">
+                      Hubungi Super Admin jika kamu merasa ini adalah kesalahan, atau coba daftar ulang dengan akun Google yang berbeda.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setRejectedState(null)}
+                className="w-full h-12 rounded-[12px] font-semibold text-sm tracking-wide bg-[#23262F] border border-[rgba(79,209,255,0.06)] text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] active:scale-[0.97] transition-all duration-200 ease-in-out"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Kembali ke Login
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* ── Confirmation Screen ── */
   if (showConfirm && loginResult) {

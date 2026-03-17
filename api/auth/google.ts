@@ -37,10 +37,12 @@ function extractUserFromIdToken(idToken: string): GoogleUserInfo {
 // GET with code → handle callback
 // POST action=link → link Google account (super_admin only)
 // POST action=setup → create google_users table
+// POST action=approve → approve pending user (super_admin)
+// POST action=reject → reject pending user (super_admin)
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // POST requests: link or setup
+  // POST requests: link, setup, approve, reject
   if (req.method === "POST" || req.method === "DELETE") {
     return handlePostActions(req, res);
   }
@@ -165,7 +167,7 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
     let row: any;
 
     if (rows.length === 0) {
-      // === SELF-REGISTER: Auto-create new user ===
+      // === SELF-REGISTER: Create with PENDING status ===
       if (!tenantId) {
         return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Pilih Resto dulu sebelum login dengan Google untuk pendaftaran otomatis.")}`);
       }
@@ -176,7 +178,7 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
         return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Resto tidak ditemukan atau tidak aktif.")}`);
       }
 
-      // Generate username from email (before @, sanitized)
+      // Generate username from email
       const emailPrefix = googleUser.email.split("@")[0].replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
       const username = emailPrefix.substring(0, 50);
       const displayName = googleUser.name || username;
@@ -184,7 +186,7 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
       // Create random password hash (user will login via Google, not password)
       const randomPass = hashPassword(crypto.randomUUID());
 
-      // Create user in tenant DB
+      // Create user in tenant DB with status inactive (pending approval)
       const newUser = await createUser({
         username,
         password_hash: randomPass,
@@ -193,25 +195,34 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
         tenant_id: tenantId,
       });
 
-      // Link in google_users master table
+      // Link in google_users master table with PENDING status
       await masterSql`
-        INSERT INTO google_users (google_email, google_name, google_picture, user_id, username, display_name, role, tenant_id, last_login)
-        VALUES (${googleUser.email}, ${googleUser.name}, ${googleUser.picture}, ${newUser.id}, ${username}, ${displayName}, ${"admin_store"}, ${tenantId}, NOW())
+        INSERT INTO google_users (google_email, google_name, google_picture, user_id, username, display_name, role, tenant_id, last_login, status)
+        VALUES (${googleUser.email}, ${googleUser.name}, ${googleUser.picture}, ${newUser.id}, ${username}, ${displayName}, ${"admin_store"}, ${tenantId}, NOW(), ${"pending"})
       `;
 
-      row = {
-        user_id: newUser.id,
-        username,
-        display_name: displayName,
-        role: "admin_store",
-        tenant_id: tenantId,
-      };
-    } else {
-      row = rows[0];
-
-      // Update last_login and google info
-      await masterSql`UPDATE google_users SET last_login = NOW(), google_name = ${googleUser.name}, google_picture = ${googleUser.picture} WHERE google_email = ${googleUser.email}`;
+      // Redirect with pending status — NOT logged in
+      return res.redirect(302, `${baseUrl}/?google_auth=pending&email=${encodeURIComponent(googleUser.email)}&name=${encodeURIComponent(googleUser.name)}`);
     }
+
+    row = rows[0];
+
+    // === CHECK APPROVAL STATUS ===
+    const status = row.status || "approved"; // backward compat: old rows without status are approved
+
+    if (status === "pending") {
+      // Update google info but don't issue token
+      await masterSql`UPDATE google_users SET google_name = ${googleUser.name}, google_picture = ${googleUser.picture} WHERE google_email = ${googleUser.email}`;
+      return res.redirect(302, `${baseUrl}/?google_auth=pending&email=${encodeURIComponent(googleUser.email)}&name=${encodeURIComponent(googleUser.name)}`);
+    }
+
+    if (status === "rejected") {
+      return res.redirect(302, `${baseUrl}/?google_auth=rejected&email=${encodeURIComponent(googleUser.email)}`);
+    }
+
+    // Status === "approved" → proceed with login
+    // Update last_login and google info
+    await masterSql`UPDATE google_users SET last_login = NOW(), google_name = ${googleUser.name}, google_picture = ${googleUser.picture} WHERE google_email = ${googleUser.email}`;
 
     // Create JWT token
     const token = createToken({
@@ -250,7 +261,7 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// === POST ACTIONS: LINK / SETUP ===
+// === POST ACTIONS: LINK / SETUP / APPROVE / REJECT ===
 async function handlePostActions(req: VercelRequest, res: VercelResponse) {
   const action = req.body?.action || "link";
 
@@ -258,7 +269,7 @@ async function handlePostActions(req: VercelRequest, res: VercelResponse) {
     return handleSetup(req, res);
   }
 
-  // Link/unlink requires super_admin
+  // All other actions require super_admin
   try {
     requireRole(req, "super_admin");
   } catch (err) {
@@ -268,6 +279,31 @@ async function handlePostActions(req: VercelRequest, res: VercelResponse) {
   const sql = getMasterSQL();
 
   try {
+    // === APPROVE USER ===
+    if (action === "approve") {
+      const { google_email } = req.body || {};
+      if (!google_email) {
+        return res.status(400).json({ error: "google_email wajib diisi." });
+      }
+      const rows = await sql`SELECT * FROM google_users WHERE google_email = ${google_email}`;
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Google user tidak ditemukan." });
+      }
+      await sql`UPDATE google_users SET status = 'approved' WHERE google_email = ${google_email}`;
+      return res.status(200).json({ success: true, message: `Akun ${google_email} berhasil di-approve!` });
+    }
+
+    // === REJECT USER ===
+    if (action === "reject") {
+      const { google_email } = req.body || {};
+      if (!google_email) {
+        return res.status(400).json({ error: "google_email wajib diisi." });
+      }
+      await sql`UPDATE google_users SET status = 'rejected' WHERE google_email = ${google_email}`;
+      return res.status(200).json({ success: true, message: `Akun ${google_email} ditolak.` });
+    }
+
+    // === UNLINK ===
     if (req.method === "DELETE" || action === "unlink") {
       const { google_email } = req.body || {};
       if (!google_email) {
@@ -277,21 +313,22 @@ async function handlePostActions(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, message: "Google account unlinked successfully." });
     }
 
-    // POST link
+    // === LINK ===
     const { google_email, user_id, username, display_name, role, tenant_id } = req.body || {};
     if (!google_email || !user_id || !username) {
       return res.status(400).json({ error: "google_email, user_id, dan username wajib diisi." });
     }
 
     await sql`
-      INSERT INTO google_users (google_email, user_id, username, display_name, role, tenant_id)
-      VALUES (${google_email}, ${user_id}, ${username}, ${display_name || ""}, ${role || "admin_store"}, ${tenant_id || ""})
+      INSERT INTO google_users (google_email, user_id, username, display_name, role, tenant_id, status)
+      VALUES (${google_email}, ${user_id}, ${username}, ${display_name || ""}, ${role || "admin_store"}, ${tenant_id || ""}, ${"approved"})
       ON CONFLICT (google_email) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         username = EXCLUDED.username,
         display_name = EXCLUDED.display_name,
         role = EXCLUDED.role,
-        tenant_id = EXCLUDED.tenant_id
+        tenant_id = EXCLUDED.tenant_id,
+        status = EXCLUDED.status
     `;
 
     return res.status(200).json({ success: true, message: "Google account linked successfully." });
@@ -311,7 +348,9 @@ async function handleListLinkedUsers(req: VercelRequest, res: VercelResponse) {
 
   try {
     const sql = getMasterSQL();
-    const rows = await sql`SELECT * FROM google_users ORDER BY linked_at DESC`;
+    const rows = await sql`SELECT * FROM google_users ORDER BY 
+      CASE WHEN status = 'pending' THEN 0 WHEN status = 'approved' THEN 1 ELSE 2 END,
+      linked_at DESC`;
     return res.status(200).json({ success: true, data: rows });
   } catch (err: any) {
     console.error("Google list error:", err);
@@ -335,6 +374,7 @@ async function handleSetup(req: VercelRequest, res: VercelResponse) {
         display_name VARCHAR(255),
         role VARCHAR(50) NOT NULL DEFAULT 'admin_store',
         tenant_id VARCHAR(100) NOT NULL DEFAULT '',
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
         linked_at TIMESTAMP DEFAULT NOW(),
         last_login TIMESTAMP
       )
@@ -342,9 +382,21 @@ async function handleSetup(req: VercelRequest, res: VercelResponse) {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_google_users_email ON google_users(google_email)`;
 
+    // Migration: add status column if it doesn't exist (for existing tables)
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'google_users' AND column_name = 'status'
+        ) THEN
+          ALTER TABLE google_users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'approved';
+        END IF;
+      END $$;
+    `;
+
     return res.status(200).json({
       success: true,
-      message: "Google users table created successfully.",
+      message: "Google users table created/updated successfully with approval system.",
     });
   } catch (err: any) {
     console.error("Google OAuth setup error:", err);
