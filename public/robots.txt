@@ -1,0 +1,13 @@
+# AWAS — Aplikasi Waste Always Simple
+# https://gacoanku.my.id
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemaps
+Sitemap: https://gacoanku.my.id/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1

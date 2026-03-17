@@ -1,36 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
-    <title>BA WASTE - By Kang Marko</title>
-    <meta name="description" content="BA WASTE - Aplikasi pencatatan pemusnahan produk yang mudah dan efisien. By Kang Marko | Jangan Lupa ☕" />
-    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
+
+    <!-- Primary Meta Tags -->
+    <title>AWAS — Aplikasi Waste Always Simple | PT. Pesta Pora Abadi</title>
+    <meta name="title" content="AWAS — Aplikasi Waste Always Simple | PT. Pesta Pora Abadi" />
+    <meta name="description" content="Sistem pencatatan dan pemusnahan produk waste yang modern, cepat, dan efisien untuk PT. Pesta Pora Abadi. Tracking real-time, laporan otomatis, dan dokumentasi lengkap." />
+    <meta name="keywords" content="waste management, pemusnahan produk, tracking waste, BA waste, PT Pesta Pora Abadi, AWAS, aplikasi waste, product destruction, quality control" />
+    <meta name="author" content="Kang Marko — PT. Pesta Pora Abadi" />
+    <meta name="creator" content="Kang Marko" />
+    <meta name="publisher" content="PT. Pesta Pora Abadi" />
+    <meta name="application-name" content="AWAS" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="google" content="notranslate" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="canonical" href="https://gacoanku.my.id/" />
+
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Favicon -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Favicon & Icons -->
     <link rel="icon" type="image/webp" href="/favicon.webp" />
-    <link rel="apple-touch-icon" href="/favicon.webp" />
-    
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#06b6d4" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="BA WASTE" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    
-    <!-- Open Graph -->
+    <meta name="apple-mobile-web-app-title" content="AWAS" />
+    <meta name="msapplication-TileColor" content="#0a0a0f" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="msapplication-config" content="none" />
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="BA WASTE - By Kang Marko" />
-    <meta property="og:description" content="Aplikasi pencatatan pemusnahan produk yang mudah dan efisien. By Kang Marko | Jangan Lupa ☕" />
-    <meta property="og:image" content="/favicon.webp" />
+    <meta property="og:url" content="https://gacoanku.my.id/" />
+    <meta property="og:title" content="AWAS — Aplikasi Waste Always Simple" />
+    <meta property="og:description" content="Sistem pencatatan dan pemusnahan produk waste yang modern, cepat, dan efisien untuk PT. Pesta Pora Abadi." />
+    <meta property="og:image" content="https://gacoanku.my.id/icons/icon-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="AWAS - Aplikasi Waste Always Simple Logo" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:site_name" content="AWAS by PT. Pesta Pora Abadi" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://gacoanku.my.id/" />
+    <meta name="twitter:title" content="AWAS — Aplikasi Waste Always Simple" />
+    <meta name="twitter:description" content="Sistem pencatatan dan pemusnahan produk waste yang modern, cepat, dan efisien untuk PT. Pesta Pora Abadi." />
+    <meta name="twitter:image" content="https://gacoanku.my.id/icons/icon-512x512.png" />
+    <meta name="twitter:image:alt" content="AWAS - Aplikasi Waste Always Simple Logo" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "AWAS — Aplikasi Waste Always Simple",
+      "alternateName": "BA WASTE",
+      "description": "Sistem pencatatan dan pemusnahan produk waste yang modern, cepat, dan efisien untuk PT. Pesta Pora Abadi. Tracking real-time, laporan otomatis, dan dokumentasi lengkap.",
+      "url": "https://gacoanku.my.id/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web Browser",
+      "browserRequirements": "Requires JavaScript",
+      "softwareVersion": "2.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "IDR"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Kang Marko"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "PT. Pesta Pora Abadi",
+        "url": "https://gacoanku.my.id/"
+      },
+      "inLanguage": "id",
+      "image": "https://gacoanku.my.id/icons/icon-512x512.png",
+      "screenshot": "https://gacoanku.my.id/icons/icon-512x512.png"
+    }
+    </script>
+
+    <!-- Preload critical resources -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
   </head>
-  <body>
+  <body class="bg-[#0a0a0f] text-white antialiased">
     <div id="root"></div>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0a0f;color:#06b6d4;font-family:sans-serif;padding:2rem;text-align:center">
+        <div>
+          <h1 style="font-size:1.5rem;margin-bottom:1rem">⚡ AWAS — Aplikasi Waste Always Simple</h1>
+          <p>Aplikasi ini membutuhkan JavaScript untuk berjalan. Silakan aktifkan JavaScript di browser Anda.</p>
+        </div>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
