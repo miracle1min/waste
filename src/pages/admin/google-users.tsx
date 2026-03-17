@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trash2, Search, Globe, CheckCircle, XCircle, Clock, ShieldCheck, ShieldX, Filter } from "lucide-react";
+import { Trash2, Search, Globe, CheckCircle, XCircle, Clock, ShieldCheck, ShieldX, Filter, Database } from "lucide-react";
 import { api } from "./types";
 import { Card, Badge, EmptyState, SkeletonLoader, RefreshBtn, HeroBanner, PageHeader } from "./shared";
 
@@ -27,6 +27,8 @@ export default function GoogleUsersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupDone, setSetupDone] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +45,18 @@ export default function GoogleUsersPage() {
   const getTenantName = (tid: string) => {
     if (tid === "ALL") return "Semua Store";
     return tenants.find((t) => t.id === tid)?.name || tid;
+  };
+
+  const handleSetup = async () => {
+    setSetupLoading(true);
+    try {
+      await api("/api/auth/google?action=setup");
+      setSetupDone(true);
+      await load();
+    } catch (err) {
+      console.error("Setup error:", err);
+    }
+    setSetupLoading(false);
   };
 
   const handleApprove = async (email: string) => {
@@ -138,6 +152,18 @@ export default function GoogleUsersPage() {
       )}
 
       <PageHeader title="Daftar Google User" count={googleUsers.length}>
+        <button
+          onClick={handleSetup}
+          disabled={setupLoading}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 ${
+            setupDone
+              ? "bg-green-500/15 border-green-500/30 text-green-300"
+              : "bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/25"
+          }`}
+        >
+          <Database className={`h-3.5 w-3.5 ${setupLoading ? "animate-spin" : ""}`} />
+          {setupLoading ? "Migrating..." : setupDone ? "✓ Migrated" : "Setup / Migrate Table"}
+        </button>
         <RefreshBtn onClick={load} />
       </PageHeader>
 
