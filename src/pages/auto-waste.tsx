@@ -119,7 +119,16 @@ const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
 export default function AutoWaste() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { tenantName } = useAuth();
+  const { tenantName, qcName } = useAuth();
+
+  // Fetch real IP address
+  const [clientIP, setClientIP] = useState<string>("...");
+  useEffect(() => {
+    apiFetch("/api/client-info")
+      .then(res => res.json())
+      .then(data => { if (data.success) setClientIP(data.ip); })
+      .catch(() => setClientIP("N/A"));
+  }, []);
 
   // Step
   const [step, setStep] = useState<AutoStep>("config");
@@ -604,6 +613,19 @@ export default function AutoWaste() {
       )}
 
       <main className="flex-1 w-full px-4 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
+        {/* User Identity Badge */}
+        <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#6B7280] font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">
+            <span className="text-[#4FD1FF]/70">👤</span>
+            <span className="text-[#9CA3AF]">{qcName || "—"}</span>
+            <span className="text-[#2A2D37] mx-0.5">|</span>
+            <span className="text-[#4FD1FF]/70">🏪</span>
+            <span className="text-[#9CA3AF]">{tenantName || "—"}</span>
+            <span className="text-[#2A2D37] mx-0.5">|</span>
+            <span className="text-[#4FD1FF]/70">🌐</span>
+            <span className="text-[#9CA3AF]">{clientIP}</span>
+          </div>
+        </div>
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
@@ -1091,41 +1113,4 @@ Contoh:
                   <span className={`text-xs font-bold ${
                     submitStatusMap[station] === "success" ? "text-green-400" : "text-red-400"
                   }`}>
-                    {submitStatusMap[station] === "success" ? `✅ ${parsedItemsMap[station].length} item` : "❌ Error"}
-                  </span>
-                </div>
-              ))}
-
-              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
-
-              <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Total</span>
-                <span className="text-[#E5E7EB] font-bold text-base lg:text-lg">{totalItems} produk</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <Button
-                onClick={handleNewEntry}
-                className={CLAY_BTN_PRIMARY}
-              >
-                <Zap className="w-5 h-5 mr-2" /> Shift Baru
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/")}
-                className={`w-full ${CLAY_BTN_OUTLINE}`}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
-              </Button>
-            </div>
-          </div>
-        )}
-      </main>
-
-      <div className="lg:hidden">
-        <Footer />
-      </div>
-    </div>
-  );
-}
+                    {submitStatusMap[station] ==
