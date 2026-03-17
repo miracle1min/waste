@@ -14,6 +14,20 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "clay-sm": "12px",
+        "clay": "16px",
+        "clay-lg": "20px",
+        "clay-xl": "28px",
+      },
+      boxShadow: {
+        "clay-sm": "4px 4px 8px rgba(0,0,0,0.4), -2px -2px 6px rgba(255,255,255,0.03)",
+        "clay-md": "6px 6px 12px rgba(0,0,0,0.45), -3px -3px 8px rgba(255,255,255,0.04)",
+        "clay-lg": "8px 8px 20px rgba(0,0,0,0.5), -4px -4px 12px rgba(255,255,255,0.05)",
+        "clay-inset": "inset 3px 3px 6px rgba(0,0,0,0.4), inset -2px -2px 4px rgba(255,255,255,0.03)",
+        "clay-button": "3px 3px 6px rgba(0,0,0,0.35), -2px -2px 4px rgba(255,255,255,0.03)",
+        "clay-button-hover": "5px 5px 10px rgba(0,0,0,0.4), -3px -3px 6px rgba(255,255,255,0.04)",
+        "clay-button-active": "inset 2px 2px 4px rgba(0,0,0,0.35), inset -1px -1px 3px rgba(255,255,255,0.02)",
+        "glass": "0 8px 32px rgba(0,0,0,0.4)",
       },
       colors: {
         background: "var(--background)",
@@ -66,6 +80,8 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
+        "clay-accent": "#4FD1FF",
+        "clay-purple": "#9F7AEA",
       },
       keyframes: {
         "accordion-down": {
@@ -77,7 +93,7 @@ export default {
           to: { height: "0" },
         },
         "slide-in": {
-          from: { opacity: "0", transform: "translateY(20px)" },
+          from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "fade-in": {

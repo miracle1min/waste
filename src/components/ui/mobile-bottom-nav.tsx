@@ -23,7 +23,7 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-cyan-900/30 bg-[hsl(220,45%,6%)]/95 backdrop-blur-xl safe-area-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(79,209,255,0.06)] bg-[#1A1C22]/95 backdrop-blur-xl safe-area-bottom">
       <div className="flex items-center justify-around px-1 pt-2 pb-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -39,20 +39,17 @@ export function MobileBottomNav() {
               }}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
                 active
-                  ? "text-cyan-400"
-                  : "text-slate-500 active:text-slate-300"
+                  ? "text-[#4FD1FF]"
+                  : "text-[#6B7280] active:text-[#9CA3AF]"
               }`}
             >
-              <div className={`relative p-1.5 rounded-2xl transition-all duration-300 ${
-                active ? "bg-cyan-500/15" : ""
+              <div className={`relative p-1.5 rounded-[12px] transition-all duration-300 ${
+                active ? "bg-[#23262F] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]" : ""
               }`}>
-                <Icon className={`w-5 h-5 transition-all ${active ? "text-cyan-400" : ""}`} strokeWidth={active ? 2.5 : 1.8} />
-                {active && (
-                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-400" />
-                )}
+                <Icon className={`w-5 h-5 transition-all ${active ? "text-[#4FD1FF]" : ""}`} strokeWidth={active ? 2.5 : 1.8} />
               </div>
               <span className={`text-[10px] font-medium transition-all ${
-                active ? "text-cyan-400" : ""
+                active ? "text-[#4FD1FF]" : ""
               }`}>
                 {item.label}
               </span>

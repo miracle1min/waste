@@ -76,23 +76,23 @@ export function PWAInstallPrompt() {
 
       {/* Banner */}
       <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 animate-in slide-in-from-bottom duration-500">
-        <div className="max-w-md mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-cyan-500/30 rounded-2xl shadow-2xl shadow-cyan-500/10 p-5">
+        <div className="max-w-md mx-auto bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-[20px] shadow-[8px_8px_20px_rgba(0,0,0,0.5),-4px_-4px_12px_rgba(255,255,255,0.05)] p-5">
           {/* Header */}
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <div className="w-14 h-14 rounded-[14px] bg-gradient-to-br from-[#4FD1FF] to-[#9F7AEA] flex items-center justify-center flex-shrink-0 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
               <span className="text-2xl">♻️</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-bold text-lg leading-tight">
+              <h3 className="text-[#E5E7EB] font-bold text-lg leading-tight">
                 Install BA WASTE
               </h3>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-[#9CA3AF] text-sm mt-1">
                 Akses lebih cepat langsung dari home screen — tanpa buka browser!
               </p>
             </div>
             <button
               onClick={handleDismiss}
-              className="text-slate-500 hover:text-white transition-colors p-1 -mt-1 -mr-1"
+              className="text-[#6B7280] hover:text-[#E5E7EB] transition-colors p-1 -mt-1 -mr-1"
               aria-label="Tutup"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,15 +102,15 @@ export function PWAInstallPrompt() {
           </div>
 
           {/* Features */}
-          <div className="flex gap-4 mt-4 text-xs text-slate-400">
+          <div className="flex gap-4 mt-4 text-xs text-[#9CA3AF]">
             <span className="flex items-center gap-1.5">
-              <span className="text-cyan-400">⚡</span> Lebih Cepat
+              <span className="text-[#4FD1FF]">⚡</span> Lebih Cepat
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="text-green-400">📱</span> Fullscreen
+              <span className="text-[#4ADE80]">📱</span> Fullscreen
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="text-purple-400">🔔</span> Notifikasi
+              <span className="text-[#9F7AEA]">🔔</span> Notifikasi
             </span>
           </div>
 
@@ -119,21 +119,21 @@ export function PWAInstallPrompt() {
             {isIOS ? (
               <button
                 onClick={() => setShowIOSGuide(true)}
-                className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:from-cyan-400 hover:to-purple-500 transition-all active:scale-[0.98] shadow-lg"
+                className="flex-1 py-3 px-4 rounded-[14px] font-semibold text-sm bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] text-white hover:opacity-90 transition-all duration-200 active:scale-[0.97] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
               >
                 Cara Install →
               </button>
             ) : (
               <button
                 onClick={handleInstall}
-                className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:from-cyan-400 hover:to-purple-500 transition-all active:scale-[0.98] shadow-lg"
+                className="flex-1 py-3 px-4 rounded-[14px] font-semibold text-sm bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] text-white hover:opacity-90 transition-all duration-200 active:scale-[0.97] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
               >
                 Install Sekarang
               </button>
             )}
             <button
               onClick={handleDismiss}
-              className="py-3 px-4 rounded-xl font-medium text-sm text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all"
+              className="py-3 px-4 rounded-[14px] font-medium text-sm text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#2A2D37] transition-all duration-200"
             >
               Nanti
             </button>
@@ -144,33 +144,33 @@ export function PWAInstallPrompt() {
       {/* iOS Guide Modal */}
       {showIOSGuide && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-            <h3 className="text-white font-bold text-lg mb-4 text-center">
+          <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-[20px] shadow-[8px_8px_20px_rgba(0,0,0,0.5),-4px_-4px_12px_rgba(255,255,255,0.05)] max-w-sm w-full p-6">
+            <h3 className="text-[#E5E7EB] font-bold text-lg mb-4 text-center">
               📱 Cara Install di iPhone/iPad
             </h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <span className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center flex-shrink-0 font-bold text-sm">1</span>
-                <p className="text-slate-300 text-sm pt-1">
+                <span className="w-8 h-8 rounded-full bg-[#4FD1FF]/15 text-[#4FD1FF] flex items-center justify-center flex-shrink-0 font-bold text-sm">1</span>
+                <p className="text-[#E5E7EB] text-sm pt-1">
                   Tap ikon <strong className="text-white">Share</strong> (kotak dengan panah ke atas) di toolbar Safari
                 </p>
               </div>
               <div className="flex items-start gap-3">
-                <span className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center flex-shrink-0 font-bold text-sm">2</span>
-                <p className="text-slate-300 text-sm pt-1">
+                <span className="w-8 h-8 rounded-full bg-[#4FD1FF]/15 text-[#4FD1FF] flex items-center justify-center flex-shrink-0 font-bold text-sm">2</span>
+                <p className="text-[#E5E7EB] text-sm pt-1">
                   Scroll ke bawah, tap <strong className="text-white">"Add to Home Screen"</strong>
                 </p>
               </div>
               <div className="flex items-start gap-3">
-                <span className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center flex-shrink-0 font-bold text-sm">3</span>
-                <p className="text-slate-300 text-sm pt-1">
+                <span className="w-8 h-8 rounded-full bg-[#4FD1FF]/15 text-[#4FD1FF] flex items-center justify-center flex-shrink-0 font-bold text-sm">3</span>
+                <p className="text-[#E5E7EB] text-sm pt-1">
                   Tap <strong className="text-white">"Add"</strong> di pojok kanan atas — selesai! 🎉
                 </p>
               </div>
             </div>
             <button
               onClick={() => { setShowIOSGuide(false); handleDismiss(); }}
-              className="w-full mt-5 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:from-cyan-400 hover:to-purple-500 transition-all"
+              className="w-full mt-5 py-3 rounded-[14px] font-semibold text-sm bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] text-white hover:opacity-90 transition-all duration-200 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
             >
               Oke, Mengerti!
             </button>

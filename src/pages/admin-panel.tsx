@@ -55,20 +55,20 @@ export default function AdminPanel() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-cyan-100">
+    <div className="min-h-screen bg-[#1A1C22] text-[#E5E7EB]">
       {/* ====== Mobile overlay ====== */}
-      {sidebarOpen && <div className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-[#1A1C22]/80 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       <div className="flex">
         {/* ====== Sidebar (desktop + mobile drawer) ====== */}
-        <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-gray-950 border-r border-cyan-900/20 flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shrink-0`}>
+        <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-[#1A1C22] border-r border-[rgba(79,209,255,0.08)] flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shrink-0`}>
           {/* Logo area */}
-          <div className="p-5 border-b border-cyan-900/20">
+          <div className="p-5 border-b border-[rgba(79,209,255,0.08)]">
             <div className="flex items-center gap-3">
-              <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl shadow-lg shadow-cyan-500/10" />
+              <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]" />
               <div>
-                <h1 className="text-base font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight">AWAS</h1>
-                <p className="text-[10px] text-cyan-700 font-mono">Control Panel</p>
+                <h1 className="text-base font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent leading-tight">AWAS</h1>
+                <p className="text-[10px] text-[#4FD1FF]/40 font-sans">Control Panel</p>
               </div>
             </div>
           </div>
@@ -84,38 +84,38 @@ export default function AdminPanel() {
                   onClick={() => handleNav(item.key)}
                   className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 group ${
                     isActive
-                      ? "bg-cyan-500/10 border border-cyan-500/25 text-cyan-100"
-                      : "border border-transparent text-cyan-500 hover:text-cyan-200 hover:bg-white/[0.02]"
+                      ? "bg-[#4FD1FF]/8 border border-[#4FD1FF]/15 text-[#E5E7EB]"
+                      : "border border-transparent text-[#4FD1FF]/80 hover:text-[#E5E7EB] hover:bg-[#2A2D37]"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                    isActive ? "bg-cyan-500/15" : "bg-white/[0.02] group-hover:bg-cyan-500/5"
+                    isActive ? "bg-[#4FD1FF]/10" : "bg-[#2A2D37]/50 group-hover:bg-[#4FD1FF]/8"
                   }`}>
-                    <Icon className={`h-[18px] w-[18px] ${isActive ? "text-cyan-400" : "text-cyan-600 group-hover:text-cyan-400"}`} />
+                    <Icon className={`h-[18px] w-[18px] ${isActive ? "text-[#4FD1FF]" : "text-[#4FD1FF]/60 group-hover:text-[#4FD1FF]"}`} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-[13px] font-mono font-medium ${isActive ? "text-cyan-100" : ""}`}>{item.label}</p>
-                    <p className={`text-[10px] font-mono ${isActive ? "text-cyan-500" : "text-cyan-800"}`}>{item.desc}</p>
+                    <p className={`text-[13px] font-sans font-medium ${isActive ? "text-[#E5E7EB]" : ""}`}>{item.label}</p>
+                    <p className={`text-[10px] font-sans ${isActive ? "text-[#4FD1FF]/80" : "text-[#4FD1FF]/30"}`}>{item.desc}</p>
                   </div>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,255,255,0.5)] shrink-0" />}
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-[#4FD1FF] shadow-none shrink-0" />}
                 </button>
               );
             })}
           </nav>
 
           {/* User / Logout */}
-          <div className="p-3 border-t border-cyan-900/20 space-y-2">
+          <div className="p-3 border-t border-[rgba(79,209,255,0.08)] space-y-2">
             <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-purple-500/5 border border-purple-900/20">
               <Shield className="h-4 w-4 text-purple-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-mono text-purple-300 truncate">{qcName}</p>
-                <p className="text-[10px] font-mono text-purple-600">Super Admin</p>
+                <p className="text-xs font-sans text-purple-300 truncate">{qcName}</p>
+                <p className="text-[10px] font-sans text-purple-600">Super Admin</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-mono text-red-400/60 hover:text-red-300 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all"
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-sans text-red-400/60 hover:text-red-300 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all"
             >
               {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
               {isLoggingOut ? "Keluar..." : "Logout"}
@@ -126,19 +126,19 @@ export default function AdminPanel() {
         {/* ====== Main Content ====== */}
         <div className="flex-1 min-w-0 flex flex-col min-h-screen">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 border-b border-cyan-900/20 bg-gray-950/90 backdrop-blur-xl">
+          <header className="sticky top-0 z-30 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/90 backdrop-blur-xl">
             <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
               <div className="flex items-center gap-3">
-                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-1 rounded-xl border border-cyan-800/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all">
-                  <Menu className="h-5 w-5 text-cyan-400" />
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-1 rounded-xl border border-[rgba(79,209,255,0.08)] hover:border-[#4FD1FF]/20 hover:bg-[#4FD1FF]/8 transition-all">
+                  <Menu className="h-5 w-5 text-[#4FD1FF]" />
                 </button>
                 {/* Mobile logo */}
                 <img src={wasteLogo} alt="" className="w-7 h-7 rounded-lg lg:hidden" />
                 <div>
-                  <h2 className="text-sm sm:text-base font-bold font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+                  <h2 className="text-sm sm:text-base font-bold font-sans text-transparent bg-clip-text bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA]">
                     {MENU_ITEMS.find(m => m.key === activePage)?.label || "Admin"}
                   </h2>
-                  <p className="text-[10px] font-mono text-cyan-700 hidden sm:block">
+                  <p className="text-[10px] font-sans text-[#4FD1FF]/40 hidden sm:block">
                     {MENU_ITEMS.find(m => m.key === activePage)?.desc}
                   </p>
                 </div>
@@ -146,7 +146,7 @@ export default function AdminPanel() {
               <div className="lg:hidden flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/5 border border-purple-900/20">
                   <Shield className="h-3 w-3 text-purple-400" />
-                  <span className="text-[10px] font-mono text-purple-300 max-w-[80px] truncate">{qcName}</span>
+                  <span className="text-[10px] font-sans text-purple-300 max-w-[80px] truncate">{qcName}</span>
                 </div>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function AdminPanel() {
           {/* Page Content */}
           <main className="flex-1 p-4 sm:p-6 pb-20 lg:pb-6 overflow-y-auto">
             <div className="max-w-5xl mx-auto">
-              <Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>}>
+              <Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-[#4FD1FF]" /></div>}>
                 {activePage === "overview" && <OverviewPage onNavigate={handleNav} />}
                 {activePage === "tenants" && <TenantsPage />}
                 {activePage === "users" && <UsersPage />}
@@ -169,7 +169,7 @@ export default function AdminPanel() {
           </main>
 
           {/* ====== Mobile Bottom Nav ====== */}
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-cyan-900/20 bg-gray-950/95 backdrop-blur-xl safe-area-bottom">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-xl safe-area-bottom">
             <div className="flex items-stretch">
               {MOBILE_NAV.map((item) => {
                 const Icon = item.icon;
@@ -178,13 +178,13 @@ export default function AdminPanel() {
                   <button
                     key={item.key}
                     onClick={() => handleNav(item.key)}
-                    className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${isActive ? "text-cyan-300" : "text-cyan-700 active:text-cyan-400"}`}
+                    className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${isActive ? "text-[#4FD1FF]" : "text-[#4FD1FF]/40 active:text-[#4FD1FF]"}`}
                   >
-                    <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-cyan-500/10" : ""}`}>
+                    <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-[#4FD1FF]/8" : ""}`}>
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className="text-[9px] font-mono font-medium">{item.shortLabel}</span>
-                    {isActive && <div className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]" />}
+                    <span className="text-[9px] font-sans font-medium">{item.shortLabel}</span>
+                    {isActive && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-none" />}
                   </button>
                 );
               })}
@@ -192,17 +192,17 @@ export default function AdminPanel() {
               <div className="flex-1 relative" ref={moreRef}>
                 <button
                   onClick={() => setMoreOpen(!moreOpen)}
-                  className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${MORE_NAV.some(m => m.key === activePage) ? "text-cyan-300" : "text-cyan-700 active:text-cyan-400"}`}
+                  className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 transition-all ${MORE_NAV.some(m => m.key === activePage) ? "text-[#4FD1FF]" : "text-[#4FD1FF]/40 active:text-[#4FD1FF]"}`}
                 >
-                  <div className={`p-1 rounded-lg transition-all ${MORE_NAV.some(m => m.key === activePage) ? "bg-cyan-500/10" : ""}`}>
+                  <div className={`p-1 rounded-lg transition-all ${MORE_NAV.some(m => m.key === activePage) ? "bg-[#4FD1FF]/8" : ""}`}>
                     <MoreHorizontal className="h-5 w-5" />
                   </div>
-                  <span className="text-[9px] font-mono font-medium">More</span>
-                  {MORE_NAV.some(m => m.key === activePage) && <div className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]" />}
+                  <span className="text-[9px] font-sans font-medium">More</span>
+                  {MORE_NAV.some(m => m.key === activePage) && <div className="w-1 h-1 rounded-full bg-[#4FD1FF] shadow-none" />}
                 </button>
                 {/* More popup */}
                 {moreOpen && (
-                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-cyan-900/30 bg-gray-900/95 backdrop-blur-xl shadow-xl overflow-hidden">
+                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F]/95 backdrop-blur-xl shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] overflow-hidden">
                     {MORE_NAV.map((item) => {
                       const Icon = item.icon;
                       const isActive = activePage === item.key;
@@ -210,22 +210,22 @@ export default function AdminPanel() {
                         <button
                           key={item.key}
                           onClick={() => handleNav(item.key)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? "bg-cyan-500/10 text-cyan-200" : "text-cyan-500 hover:bg-cyan-500/5"}`}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? "bg-[#4FD1FF]/8 text-[#E5E7EB]" : "text-[#4FD1FF]/80 hover:bg-[#4FD1FF]/8"}`}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
-                          <span className="text-sm font-mono">{item.label}</span>
+                          <span className="text-sm font-sans">{item.label}</span>
                         </button>
                       );
                     })}
                     {/* Logout in more menu */}
-                    <div className="border-t border-cyan-900/20">
+                    <div className="border-t border-[rgba(79,209,255,0.08)]">
                       <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
                         className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-400/70 hover:bg-red-500/5 transition-all"
                       >
                         {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                        <span className="text-sm font-mono">{isLoggingOut ? "Keluar..." : "Logout"}</span>
+                        <span className="text-sm font-sans">{isLoggingOut ? "Keluar..." : "Logout"}</span>
                       </button>
                     </div>
                   </div>

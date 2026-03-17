@@ -67,20 +67,20 @@ function formatTabDate(tab: string): { display: string; dayName: string; fullDat
 }
 
 const STATION_COLORS: Record<string, string> = {
-  NOODLE: "#06b6d4",
+  NOODLE: "#4FD1FF",
   DIMSUM: "#8b5cf6",
   BAR: "#f59e0b",
   PRODUKSI: "#10b981",
 };
 
 const SHIFT_COLORS: Record<string, string> = {
-  OPENING: "#06b6d4",
+  OPENING: "#4FD1FF",
   MIDDLE: "#f59e0b",
   CLOSING: "#8b5cf6",
   MIDNIGHT: "#ef4444",
 };
 
-const PIE_COLORS = ["#06b6d4", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
+const PIE_COLORS = ["#4FD1FF", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
 
 type RangeOption = "7" | "14" | "30" | "all" | "custom";
 
@@ -175,18 +175,18 @@ export default function Dashboard() {
   const tenantName = localStorage.getItem("waste_app_tenant_name") || "";
 
   return (
-    <div className="min-h-screen bg-[hsl(220,45%,6%)] text-white flex flex-col">
+    <div className="min-h-screen bg-[#1A1C22] text-white flex flex-col">
       {/* Desktop page title */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/80 backdrop-blur-sm">
-        <BarChart3 className="w-5 h-5 text-cyan-400" />
-        <h1 className="text-lg font-bold text-cyan-400">Dashboard</h1>
-        {tenantName && <span className="text-xs text-cyan-500/70 font-mono">{tenantName}</span>}
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/80 backdrop-blur-sm">
+        <BarChart3 className="w-5 h-5 text-[#4FD1FF]" />
+        <h1 className="text-lg font-bold text-[#4FD1FF]">Dashboard</h1>
+        {tenantName && <span className="text-xs text-[#4FD1FF]/60 font-sans">{tenantName}</span>}
         <div className="ml-auto">
           <Button
             variant="ghost"
             size="sm"
             onClick={fetchData}
-            className="text-cyan-400 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
+            className="text-[#4FD1FF] hover:bg-[#4FD1FF]/8 p-1.5 h-8 w-8"
             title="Refresh data"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -195,18 +195,18 @@ export default function Dashboard() {
       </div>
 
       {/* Header - Mobile only */}
-      <header className="sticky top-0 z-50 border-b border-cyan-900/30 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-md lg:hidden">
         {/* Top row: branding + actions */}
         <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
             <img src={wasteLogo} alt="AWAS" className="w-7 h-7 rounded-md" />
             <div className="leading-tight">
-              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-1.5">
-                <BarChart3 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+              <h1 className="text-sm font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-[#4FD1FF] flex-shrink-0" />
                 Dashboard
               </h1>
               {tenantName && (
-                <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                <p className="text-[10px] text-[#6B7280] flex items-center gap-1 mt-0.5">
                   <Store className="w-2.5 h-2.5" />
                   {tenantName}
                 </p>
@@ -215,15 +215,15 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-1.5">
             {/* User badge */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-500/5 border border-cyan-900/30 mr-1">
-              <User className="w-3 h-3 text-cyan-600" />
-              <span className="text-[10px] font-medium text-cyan-400">{userName}</span>
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#4FD1FF]/8 border border-[rgba(79,209,255,0.08)] mr-1">
+              <User className="w-3 h-3 text-[#4FD1FF]/60" />
+              <span className="text-[10px] font-medium text-[#4FD1FF]">{userName}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={fetchData}
-              className="text-cyan-400 hover:bg-cyan-950/50 p-1.5 h-8 w-8"
+              className="text-[#4FD1FF] hover:bg-[#4FD1FF]/8 p-1.5 h-8 w-8"
               title="Refresh data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -239,8 +239,8 @@ export default function Dashboard() {
                 onClick={() => setRange(opt)}
                 className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   range === opt
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
+                    ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/20 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                    : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#2A2D37] border border-transparent"
                 }`}
               >
                 {rangeLabels[opt]}
@@ -251,8 +251,8 @@ export default function Dashboard() {
                 onClick={() => setShowRangeMenu(!showRangeMenu)}
                 className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1 ${
                   range === "custom"
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
+                    ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/20 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                    : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#2A2D37] border border-transparent"
                 }`}
               >
                 <Calendar className="w-3 h-3" />
@@ -260,25 +260,25 @@ export default function Dashboard() {
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showRangeMenu && (
-                <div className="absolute left-0 mt-1.5 w-60 bg-[hsl(220,45%,12%)] border border-cyan-900/50 rounded-xl shadow-2xl shadow-black/40 z-50 p-3">
-                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mb-2">Pilih Rentang Tanggal</p>
+                <div className="absolute left-0 mt-1.5 w-60 bg-[#2A2D37] border border-[rgba(79,209,255,0.12)] rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] z-50 p-3">
+                  <p className="text-[10px] text-[#6B7280] font-medium uppercase tracking-wider mb-2">Pilih Rentang Tanggal</p>
                   <div className="space-y-1.5">
                     <div>
-                      <label className="text-[10px] text-slate-400 mb-0.5 block">Dari</label>
+                      <label className="text-[10px] text-[#9CA3AF] mb-0.5 block">Dari</label>
                       <input
                         type="date"
                         value={customStart}
                         onChange={(e) => setCustomStart(e.target.value)}
-                        className="w-full text-xs bg-slate-900/80 border border-cyan-900/50 rounded-lg px-2 py-1.5 text-white focus:border-cyan-500/50 focus:outline-none transition"
+                        className="w-full text-xs bg-[#23262F] border border-[rgba(79,209,255,0.12)] rounded-lg px-2 py-1.5 text-white focus:border-[#4FD1FF]/20 focus:outline-none transition"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 mb-0.5 block">Sampai</label>
+                      <label className="text-[10px] text-[#9CA3AF] mb-0.5 block">Sampai</label>
                       <input
                         type="date"
                         value={customEnd}
                         onChange={(e) => setCustomEnd(e.target.value)}
-                        className="w-full text-xs bg-slate-900/80 border border-cyan-900/50 rounded-lg px-2 py-1.5 text-white focus:border-cyan-500/50 focus:outline-none transition"
+                        className="w-full text-xs bg-[#23262F] border border-[rgba(79,209,255,0.12)] rounded-lg px-2 py-1.5 text-white focus:border-[#4FD1FF]/20 focus:outline-none transition"
                       />
                     </div>
                   </div>
@@ -287,7 +287,7 @@ export default function Dashboard() {
                       size="sm"
                       variant="ghost"
                       onClick={() => setShowRangeMenu(false)}
-                      className="flex-1 h-7 text-[11px] text-slate-400 hover:text-white"
+                      className="flex-1 h-7 text-[11px] text-[#9CA3AF] hover:text-white"
                     >
                       Batal
                     </Button>
@@ -295,7 +295,7 @@ export default function Dashboard() {
                       size="sm"
                       onClick={() => { setRange("custom"); setShowRangeMenu(false); }}
                       disabled={!customStart || !customEnd}
-                      className="flex-1 h-7 text-[11px] bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg"
+                      className="flex-1 h-7 text-[11px] bg-[#4FD1FF]/80 hover:bg-[#4FD1FF]/90 text-white rounded-lg"
                     >
                       Terapkan
                     </Button>
@@ -310,15 +310,15 @@ export default function Dashboard() {
       <main className="flex-1 w-full px-3 py-4 space-y-4 desktop-container">
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mr-3" />
-            <span className="text-slate-400">Lagi loading data, bentar ya...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-[#4FD1FF] mr-3" />
+            <span className="text-[#9CA3AF]">Lagi loading data, bentar ya...</span>
           </div>
         )}
 
         {error && !loading && (
           <div className="text-center py-20">
             <p className="text-red-400 mb-3">{error}</p>
-            <Button onClick={fetchData} variant="outline" className="border-cyan-800 text-cyan-400">
+            <Button onClick={fetchData} variant="outline" className="border-[rgba(79,209,255,0.12)] text-[#4FD1FF]">
               Coba Lagi
             </Button>
           </div>
@@ -328,33 +328,33 @@ export default function Dashboard() {
           <>
             {/* ==================== DATA WASTE TERAKHIR ==================== */}
             {data.lastEntry && (
-              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-                <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2 mb-3">
+              <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+                <h2 className="text-sm font-semibold text-[#4FD1FF] flex items-center gap-2 mb-3">
                   📋 Data Waste Terakhir
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tanggal</p>
+                  <div className="bg-[#23262F]/80 rounded-lg p-3 border border-[rgba(79,209,255,0.06)]">
+                    <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Tanggal</p>
                     <p className="text-sm font-bold text-white mt-1">{data.lastEntry.date}</p>
                   </div>
-                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">QC / Pelapor</p>
-                    <p className="text-sm font-bold text-cyan-300 mt-1">{data.lastEntry.qc || '-'}</p>
+                  <div className="bg-[#23262F]/80 rounded-lg p-3 border border-[rgba(79,209,255,0.06)]">
+                    <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">QC / Pelapor</p>
+                    <p className="text-sm font-bold text-[#4FD1FF] mt-1">{data.lastEntry.qc || '-'}</p>
                   </div>
-                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Station</p>
+                  <div className="bg-[#23262F]/80 rounded-lg p-3 border border-[rgba(79,209,255,0.06)]">
+                    <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Station</p>
                     <p className="text-sm font-bold text-amber-300 mt-1">{data.lastEntry.station}</p>
                   </div>
-                  <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Shift</p>
+                  <div className="bg-[#23262F]/80 rounded-lg p-3 border border-[rgba(79,209,255,0.06)]">
+                    <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Shift</p>
                     <p className="text-sm font-bold text-violet-300 mt-1">{data.lastEntry.shift}</p>
                   </div>
                 </div>
                 {data.qcNames && data.qcNames.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="text-[10px] text-slate-500 mr-1 self-center">QC Aktif:</span>
+                    <span className="text-[10px] text-[#6B7280] mr-1 self-center">QC Aktif:</span>
                     {data.qcNames.map((qc: string) => (
-                      <span key={qc} className="text-[10px] bg-cyan-950/50 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-800/50">{qc}</span>
+                      <span key={qc} className="text-[10px] bg-[#4FD1FF]/8 text-[#4FD1FF] px-2 py-0.5 rounded-full border border-[#4FD1FF]/15">{qc}</span>
                     ))}
                   </div>
                 )}
@@ -363,21 +363,21 @@ export default function Dashboard() {
 
             {/* ==================== WASTE STATION DETAIL (by UNIT) ==================== */}
             {data.periodBreakdown && (
-              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
+              <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <h2 className="text-sm font-semibold text-cyan-300 flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-[#4FD1FF] flex items-center gap-2">
                     🏭 Waste per Station (Detail per Satuan)
                   </h2>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+                    <div className="flex bg-[#23262F] rounded-lg border border-[rgba(79,209,255,0.08)] overflow-hidden">
                       {([["daily", "Hari Ini"], ["weekly", "7 Hari"], ["monthly", "30 Hari"]] as const).map(([key, label]) => (
                         <button
                           key={key}
                           onClick={() => setStatPeriod(key)}
                           className={`px-3 py-1 text-[11px] font-medium transition-all ${
                             statPeriod === key 
-                              ? "bg-cyan-600 text-white" 
-                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                              ? "bg-[#4FD1FF]/80 text-white" 
+                              : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#2A2D37]"
                           }`}
                         >
                           {label}
@@ -387,8 +387,8 @@ export default function Dashboard() {
                         onClick={() => setStatPeriod("custom")}
                         className={`px-3 py-1 text-[11px] font-medium transition-all flex items-center gap-1 ${
                           statPeriod === "custom" 
-                            ? "bg-cyan-600 text-white" 
-                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                            ? "bg-[#4FD1FF]/80 text-white" 
+                            : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#2A2D37]"
                         }`}
                       >
                         📅 Tanggal
@@ -399,7 +399,7 @@ export default function Dashboard() {
                         type="date"
                         value={customStatDate}
                         onChange={(e) => setCustomStatDate(e.target.value)}
-                        className="text-xs bg-slate-900 border border-cyan-700/50 rounded-lg px-2 py-1 text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition"
+                        className="text-xs bg-[#23262F] border border-[rgba(79,209,255,0.12)] rounded-lg px-2 py-1 text-white focus:border-[#4FD1FF]/30 focus:outline-none focus:ring-1 focus:ring-[#4FD1FF]/15 transition"
                       />
                     )}
                   </div>
@@ -417,7 +417,7 @@ export default function Dashboard() {
                       : statPeriod === "monthly" ? "30 hari terakhir"
                       : `tanggal ${customStatDate.split("-").reverse().join("/")}`;
                     return (
-                      <p className="text-center text-slate-500 py-6 text-sm">
+                      <p className="text-center text-[#6B7280] py-6 text-sm">
                         Belum ada data waste buat {periodLabel}
                       </p>
                     );
@@ -438,23 +438,23 @@ export default function Dashboard() {
                         const maxTotal = periodData[sortedStations[0]].reduce((s: number, u: any) => s + u.totalQty, 0);
                         
                         return (
-                          <div key={station} className="bg-slate-900/50 rounded-lg border border-slate-800 overflow-hidden">
+                          <div key={station} className="bg-[#23262F]/80 rounded-lg border border-[rgba(79,209,255,0.06)] overflow-hidden">
                             {/* Station header */}
-                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(79,209,255,0.06)]">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-white bg-cyan-600/20 px-2 py-0.5 rounded">#{idx + 1}</span>
+                                <span className="text-xs font-bold text-white bg-[#4FD1FF]/12 px-2 py-0.5 rounded">#{idx + 1}</span>
                                 <span className="text-sm font-bold text-white">{station}</span>
                               </div>
-                              <span className="text-[11px] text-slate-400">
-                                Total: <span className="text-cyan-300 font-bold">{stationTotal.toLocaleString()}</span> item
+                              <span className="text-[11px] text-[#9CA3AF]">
+                                Total: <span className="text-[#4FD1FF] font-bold">{stationTotal.toLocaleString()}</span> item
                               </span>
                             </div>
                             
                             {/* Progress bar */}
                             <div className="px-3 pt-1">
-                              <div className="w-full bg-slate-800 rounded-full h-1.5">
+                              <div className="w-full bg-[#2A2D37] rounded-full h-1.5">
                                 <div 
-                                  className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all"
+                                  className="h-1.5 rounded-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] transition-all"
                                   style={{ width: `${maxTotal > 0 ? (stationTotal / maxTotal) * 100 : 0}%` }}
                                 />
                               </div>
@@ -463,7 +463,7 @@ export default function Dashboard() {
                             {/* Unit groups */}
                             <div className="p-3 space-y-2">
                               {unitGroups.map((ug) => (
-                                <div key={ug.unit} className="bg-slate-800/50 rounded-lg p-2">
+                                <div key={ug.unit} className="bg-[#2A2D37]/80 rounded-lg p-2">
                                   <div className="flex items-center justify-between mb-1.5">
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       ug.unit === 'GRAM' ? 'bg-amber-900/40 text-amber-300' :
@@ -473,19 +473,19 @@ export default function Dashboard() {
                                     }`}>
                                       {ug.unit}
                                     </span>
-                                    <span className="text-[10px] text-slate-400">
+                                    <span className="text-[10px] text-[#9CA3AF]">
                                       Subtotal: <span className="font-bold text-white">{ug.totalQty.toLocaleString()} {ug.unit}</span>
                                     </span>
                                   </div>
                                   <div className="space-y-0.5">
                                     {ug.items.slice(0, 5).map((item, iIdx) => (
                                       <div key={iIdx} className="flex items-center justify-between text-[11px]">
-                                        <span className="text-slate-300 truncate mr-2">{item.name}</span>
-                                        <span className="text-white font-mono font-medium whitespace-nowrap">{item.qty.toLocaleString()} {ug.unit}</span>
+                                        <span className="text-[#E5E7EB] truncate mr-2">{item.name}</span>
+                                        <span className="text-white font-sans font-medium whitespace-nowrap">{item.qty.toLocaleString()} {ug.unit}</span>
                                       </div>
                                     ))}
                                     {ug.items.length > 5 && (
-                                      <p className="text-[10px] text-slate-500 mt-1">+{ug.items.length - 5} item lainnya</p>
+                                      <p className="text-[10px] text-[#6B7280] mt-1">+{ug.items.length - 5} item lainnya</p>
                                     )}
                                   </div>
                                 </div>
@@ -508,10 +508,10 @@ export default function Dashboard() {
                 { label: "Total Qty", value: data.summary.totalQty, icon: TrendingUp, color: "amber" },
                 { label: "Rata² Qty/Hari", value: data.summary.avgQtyPerDay, icon: BarChart3, color: "emerald" },
               ].map((card) => (
-                <div key={card.label} className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-3">
+                <div key={card.label} className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <card.icon className={`w-4 h-4 text-${card.color}-400`} />
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">{card.label}</span>
+                    <span className="text-[10px] text-[#6B7280] uppercase tracking-wider">{card.label}</span>
                   </div>
                   <p className={`text-2xl font-bold text-${card.color}-400`}>
                     {card.value.toLocaleString("id-ID")}
@@ -521,38 +521,38 @@ export default function Dashboard() {
             </div>
 
             {/* Trend Chart */}
-            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-[#4FD1FF] mb-3 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" /> Tren Waste Harian
               </h2>
               {lineData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(79,209,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} labelStyle={{ color: "#06b6d4" }} />
+                    <Tooltip contentStyle={{ background: "#2A2D37", border: "1px solid rgba(79,209,255,0.12)", borderRadius: "8px", fontSize: "12px" }} labelStyle={{ color: "#4FD1FF" }} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
-                    <Line type="monotone" dataKey="qty" name="Quantity" stroke="#06b6d4" strokeWidth={2} dot={{ fill: "#06b6d4", r: 3 }} />
+                    <Line type="monotone" dataKey="qty" name="Quantity" stroke="#4FD1FF" strokeWidth={2} dot={{ fill: "#4FD1FF", r: 3 }} />
                     <Line type="monotone" dataKey="items" name="Items" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: "#8b5cf6", r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-slate-500 py-10">Tidak ada data untuk periode ini</p>
+                <p className="text-center text-[#6B7280] py-10">Tidak ada data untuk periode ini</p>
               )}
             </div>
 
             {/* Station & Shift Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-                <h2 className="text-sm font-semibold text-cyan-300 mb-3">📊 Waste per Station</h2>
+              <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+                <h2 className="text-sm font-semibold text-[#4FD1FF] mb-3">📊 Waste per Station</h2>
                 {stationData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={stationData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(79,209,255,0.06)" />
                       <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                       <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
+                      <Tooltip contentStyle={{ background: "#2A2D37", border: "1px solid rgba(79,209,255,0.12)", borderRadius: "8px", fontSize: "12px" }} />
                       <Bar dataKey="qty" name="Quantity" radius={[6, 6, 0, 0]}>
                         {stationData.map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
@@ -561,12 +561,12 @@ export default function Dashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-center text-slate-500 py-10">Tidak ada data</p>
+                  <p className="text-center text-[#6B7280] py-10">Tidak ada data</p>
                 )}
               </div>
 
-              <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-                <h2 className="text-sm font-semibold text-cyan-300 mb-3">🕐 Waste per Shift</h2>
+              <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+                <h2 className="text-sm font-semibold text-[#4FD1FF] mb-3">🕐 Waste per Shift</h2>
                 {shiftData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
@@ -585,25 +585,25 @@ export default function Dashboard() {
                           <Cell key={i} fill={SHIFT_COLORS[entry.name] || PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
+                      <Tooltip contentStyle={{ background: "#2A2D37", border: "1px solid rgba(79,209,255,0.12)", borderRadius: "8px", fontSize: "12px" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-center text-slate-500 py-10">Tidak ada data</p>
+                  <p className="text-center text-[#6B7280] py-10">Tidak ada data</p>
                 )}
               </div>
             </div>
 
             {/* Station Trend */}
-            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-cyan-300 mb-3">📈 Tren per Station</h2>
+            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-[#4FD1FF] mb-3">📈 Tren per Station</h2>
               {stationLineData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={stationLineData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(6,182,212,0.1)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(79,209,255,0.06)" />
                     <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} />
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: "hsl(220,45%,12%)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "8px", fontSize: "12px" }} />
+                    <Tooltip contentStyle={{ background: "#2A2D37", border: "1px solid rgba(79,209,255,0.12)", borderRadius: "8px", fontSize: "12px" }} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
                     {allStations.map((station) => (
                       <Bar key={station} dataKey={station} name={station} stackId="a" fill={STATION_COLORS[station] || "#64748b"} />
@@ -611,23 +611,23 @@ export default function Dashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-slate-500 py-10">Tidak ada data</p>
+                <p className="text-center text-[#6B7280] py-10">Tidak ada data</p>
               )}
             </div>
 
             {/* Top Products */}
-            <div className="bg-[hsl(220,45%,10%)] border border-cyan-900/30 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-cyan-300 mb-3">🏆 Top 10 Produk Waste</h2>
+            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-[#4FD1FF] mb-3">🏆 Top 10 Produk Waste</h2>
               {data.topProducts.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-cyan-900/30">
-                        <th className="text-left py-2 px-2 text-slate-500">#</th>
-                        <th className="text-left py-2 px-2 text-slate-500">Nama Produk</th>
-                        <th className="text-right py-2 px-2 text-slate-500">Frekuensi</th>
-                        <th className="text-right py-2 px-2 text-slate-500">Total Qty</th>
-                        <th className="text-left py-2 px-2 text-slate-500">Bar</th>
+                      <tr className="border-b border-[rgba(79,209,255,0.08)]">
+                        <th className="text-left py-2 px-2 text-[#6B7280]">#</th>
+                        <th className="text-left py-2 px-2 text-[#6B7280]">Nama Produk</th>
+                        <th className="text-right py-2 px-2 text-[#6B7280]">Frekuensi</th>
+                        <th className="text-right py-2 px-2 text-[#6B7280]">Total Qty</th>
+                        <th className="text-left py-2 px-2 text-[#6B7280]">Bar</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -635,14 +635,14 @@ export default function Dashboard() {
                         const maxQty = data.topProducts[0]?.qty || 1;
                         const pct = (p.qty / maxQty) * 100;
                         return (
-                          <tr key={i} className="border-b border-cyan-900/10 hover:bg-cyan-950/30 transition">
-                            <td className="py-2 px-2 text-slate-500 font-mono">{i + 1}</td>
-                            <td className="py-2 px-2 text-slate-200 font-medium">{p.name}</td>
-                            <td className="py-2 px-2 text-right text-cyan-400">{p.count}x</td>
+                          <tr key={i} className="border-b border-[rgba(79,209,255,0.06)] hover:bg-[#4FD1FF]/5 transition">
+                            <td className="py-2 px-2 text-[#6B7280] font-sans">{i + 1}</td>
+                            <td className="py-2 px-2 text-[#E5E7EB] font-medium">{p.name}</td>
+                            <td className="py-2 px-2 text-right text-[#4FD1FF]">{p.count}x</td>
                             <td className="py-2 px-2 text-right text-amber-400 font-semibold">{p.qty}</td>
                             <td className="py-2 px-2 w-32">
-                              <div className="w-full bg-slate-800 rounded-full h-2">
-                                <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
+                              <div className="w-full bg-[#2A2D37] rounded-full h-2">
+                                <div className="h-2 rounded-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA]" style={{ width: `${pct}%` }} />
                               </div>
                             </td>
                           </tr>
@@ -652,7 +652,7 @@ export default function Dashboard() {
                   </table>
                 </div>
               ) : (
-                <p className="text-center text-slate-500 py-10">Tidak ada data</p>
+                <p className="text-center text-[#6B7280] py-10">Tidak ada data</p>
               )}
             </div>
 

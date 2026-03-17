@@ -34,39 +34,39 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
   const navItems = isSuperAdmin ? adminNavItems : userNavItems;
 
   return (
-    <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-[240px] z-40 bg-[hsl(220,45%,8%)] border-r border-cyan-900/30">
+    <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-[240px] z-40 bg-[#1A1C22] border-r border-[rgba(79,209,255,0.06)]">
       {/* App Logo & Branding */}
-      <div className="px-5 pt-5 pb-4 border-b border-cyan-900/20">
+      <div className="px-5 pt-5 pb-4 border-b border-[rgba(79,209,255,0.06)]">
         <div className="flex items-center gap-3">
-          <img src={wasteLogo} alt="AWAS Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-cyan-500/10" />
+          <img src={wasteLogo} alt="AWAS Logo" className="w-10 h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]" />
           <div>
-            <h1 className="text-base font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent leading-tight">
+            <h1 className="text-base font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent leading-tight">
               AWAS
             </h1>
-            <p className="text-[9px] text-slate-500 font-mono leading-tight">Aplikasi Waste Always Simple</p>
+            <p className="text-[9px] text-[#6B7280] font-mono leading-tight">Aplikasi Waste Always Simple</p>
           </div>
         </div>
         {tenantName && (
-          <p className="text-[10px] text-cyan-500/70 font-mono mt-2 truncate">{tenantName}</p>
+          <p className="text-[10px] text-[#4FD1FF]/60 font-mono mt-2 truncate">{tenantName}</p>
         )}
       </div>
 
       {/* User Info Section */}
-      <div className="px-4 py-3 border-b border-cyan-900/20">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-cyan-500/5 border border-cyan-900/30">
-          <div className="w-7 h-7 rounded-full bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
-            <span className="text-[10px] font-bold text-cyan-400">
+      <div className="px-4 py-3 border-b border-[rgba(79,209,255,0.06)]">
+        <div className="flex items-center gap-2.5 px-2 py-2 rounded-[12px] bg-[#23262F]/60 border border-[rgba(79,209,255,0.06)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+          <div className="w-7 h-7 rounded-full bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] flex items-center justify-center flex-shrink-0">
+            <span className="text-[10px] font-bold text-[#4FD1FF]">
               {qcName ? qcName.charAt(0).toUpperCase() : "?"}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-mono text-cyan-300 truncate">{qcName || "User"}</p>
+            <p className="text-xs font-mono text-[#E5E7EB] truncate">{qcName || "User"}</p>
             {isSuperAdmin ? (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono inline-flex items-center gap-0.5">
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#9F7AEA]/20 text-[#9F7AEA] font-mono inline-flex items-center gap-0.5">
                 👑 Super Admin
               </span>
             ) : (
-              <span className="text-[9px] text-slate-500 font-mono">QC Staff</span>
+              <span className="text-[9px] text-[#6B7280] font-mono">QC Staff</span>
             )}
           </div>
         </div>
@@ -81,25 +81,28 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
             <button
               key={item.path + item.label}
               onClick={() => setLocation(item.path)}
-              className={`sidebar-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-left transition-all duration-200 ${
                 isActive
-                  ? "active text-cyan-300"
-                  : "text-slate-400 hover:text-cyan-300"
+                  ? "bg-[#23262F] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] text-[#E5E7EB]"
+                  : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#23262F]/40"
               }`}
             >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-cyan-400" : "text-slate-500"}`} />
-              <span className={`text-sm font-medium ${isActive ? "text-cyan-300" : ""}`}>{item.label}</span>
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#4FD1FF] to-[#9F7AEA] shadow-[0_0_6px_rgba(79,209,255,0.3)]" />
+              )}
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#4FD1FF]" : "text-[#6B7280]"}`} />
+              <span className={`text-sm font-medium ${isActive ? "text-[#E5E7EB]" : ""}`}>{item.label}</span>
             </button>
           );
         })}
       </nav>
 
       {/* Bottom Section */}
-      <div className="px-3 pb-4 pt-2 border-t border-cyan-900/20 space-y-2">
+      <div className="px-3 pb-4 pt-2 border-t border-[rgba(79,209,255,0.06)] space-y-2">
         <button
           onClick={onLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-mono text-red-400/60 hover:text-red-300 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all disabled:opacity-40"
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] text-sm font-mono text-red-400/60 hover:text-red-400 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all disabled:opacity-40"
         >
           {isLoggingOut ? (
             <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -109,8 +112,8 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
           {isLoggingOut ? "Keluar..." : "Logout"}
         </button>
         <div className="text-center space-y-0.5 pt-1">
-          <p className="text-[9px] font-mono text-slate-600">v3.3.0</p>
-          <p className="text-[9px] text-slate-700">Made with ☕ By ~/DirgaX</p>
+          <p className="text-[9px] font-mono text-[#6B7280]">v3.3.0</p>
+          <p className="text-[9px] text-[#6B7280]">Made with ☕ By ~/DirgaX</p>
         </div>
       </div>
     </aside>

@@ -166,9 +166,11 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
       {selectedFiles.length === 0 && (
         <div
           className={cn(
-            "border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors cursor-pointer min-h-[120px] flex flex-col justify-center",
-            isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25",
-            "hover:border-primary hover:bg-primary/5"
+            "border-2 border-dashed rounded-[16px] p-4 sm:p-6 text-center transition-all duration-200 cursor-pointer min-h-[120px] flex flex-col justify-center",
+            isDragOver 
+              ? "border-[#4FD1FF]/40 bg-[#4FD1FF]/5 shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)]" 
+              : "border-[rgba(79,209,255,0.15)] bg-[#23262F] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)]",
+            "hover:border-[#4FD1FF]/30 hover:bg-[#4FD1FF]/5"
           )}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -178,16 +180,16 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
           <div className="space-y-2">
             <CloudUpload className={cn(
               "w-8 h-8 sm:w-10 sm:h-10 mx-auto",
-              isDragOver ? "text-primary" : "text-muted-foreground"
+              isDragOver ? "text-[#4FD1FF]" : "text-[#6B7280]"
             )} />
             <div className="px-2">
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium text-[#E5E7EB]">
                 {isCompressing ? "Memproses gambar..." : `${label} (Maks ${maxFiles} file)`}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[#6B7280] mt-1">
                 Drag & drop atau klik untuk memilih
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#6B7280]">
                 Format: JPG, PNG, JPEG • Auto resize ke 0.9MB
               </p>
             </div>
@@ -200,14 +202,14 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
         <div className="space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {selectedFiles.map((file, index) => (
-              <div key={index} className="relative bg-muted/50 border border-border/50 rounded-lg p-2 sm:p-3 file-preview-mobile">
-                <div className="relative overflow-hidden rounded mb-2">
+              <div key={index} className="relative bg-[#2A2D37] border border-[rgba(79,209,255,0.08)] rounded-[12px] p-2 sm:p-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] file-preview-mobile">
+                <div className="relative overflow-hidden rounded-[8px] mb-2">
                   <img 
                     src={previews[index]} 
                     alt={`Preview ${index + 1}`} 
                     className="w-full h-14 sm:h-16 object-cover" 
                   />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                     <Button
                       type="button"
                       variant="destructive"
@@ -220,8 +222,8 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-center file-name-mobile leading-tight">{file.name}</p>
-                  <p className="text-xs text-center text-muted-foreground file-size-mobile">
+                  <p className="text-xs text-center text-[#E5E7EB] file-name-mobile leading-tight">{file.name}</p>
+                  <p className="text-xs text-center text-[#6B7280] file-size-mobile">
                     {(file.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>
@@ -247,11 +249,11 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
       )}
 
       {error && (
-        <p className="text-sm text-destructive text-center">{error}</p>
+        <p className="text-sm text-[#F87171] text-center">{error}</p>
       )}
 
       {isCompressing && (
-        <p className="text-sm text-muted-foreground text-center">
+        <p className="text-sm text-[#9CA3AF] text-center">
           Mengompres gambar untuk optimasi ukuran...
         </p>
       )}
