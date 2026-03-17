@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
 
@@ -899,6 +900,7 @@ function ConfigsTab() {
 
 // ===== DATABASE TAB =====
 function DatabaseTab() {
+ const { toast } = useToast();
  const [newDbUrl, setNewDbUrl] = useState("");
  const [showUrl, setShowUrl] = useState(false);
  const [testing, setTesting] = useState(false);
@@ -916,7 +918,7 @@ function DatabaseTab() {
  };
 
  async function handleTest() {
- if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
+ if (!newDbUrl.trim()) { toast({ title: "⚠️ URL Kosong", description: "URL database wajib diisi dulu!", variant: "warning" as any }); return; };
  setTesting(true);
  setTestResult(null);
  try {
@@ -935,8 +937,8 @@ function DatabaseTab() {
  }
 
  async function handleSeed() {
- if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
- if (!testResult?.ok) return alert("Test koneksi dulu sebelum seed!");
+ if (!newDbUrl.trim()) { toast({ title: "⚠️ URL Kosong", description: "URL database wajib diisi dulu!", variant: "warning" as any }); return; };
+ if (!testResult?.ok) { toast({ title: "⚠️ Test Dulu", description: "Test koneksi dulu sebelum seed!", variant: "warning" as any }); return; };
  if (!confirm("Yakin mau transfer SEMUA data ke database baru? Data lama di target bakal di-replace.")) return;
  setSeeding(true);
  setSeedResult(null);
@@ -956,8 +958,8 @@ function DatabaseTab() {
  }
 
  async function handleSwitch() {
- if (!newDbUrl.trim()) return alert("URL database wajib diisi dulu!");
- if (!seedResult?.ok) return alert("Seed data dulu sebelum switch!");
+ if (!newDbUrl.trim()) { toast({ title: "⚠️ URL Kosong", description: "URL database wajib diisi dulu!", variant: "warning" as any }); return; };
+ if (!seedResult?.ok) { toast({ title: "⚠️ Seed Dulu", description: "Seed data dulu sebelum switch!", variant: "warning" as any }); return; };
  if (!confirm("⚠️ PERHATIAN! Ini bakal ganti database utama aplikasi.\n\nPastikan seed udah berhasil sebelum switch.\n\nLanjut?")) return;
  setSwitching(true);
  setSwitchResult(null);

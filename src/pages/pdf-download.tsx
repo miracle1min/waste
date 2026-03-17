@@ -557,7 +557,7 @@ export default function PdfDownload() {
  const handleBatchPdf = async () => {
    if (selectedPdfDates.size === 0) return;
    if (!selectedPelapor) {
-     toast({ title: "👤 Pilih Pelapor", description: "Pilih nama pelapor dulu ya buat TTD di PDF", variant: "destructive" });
+     toast({ title: "👤 Pilih Pelapor", description: "Pilih nama pelapor dulu ya buat TTD di PDF", variant: "warning" as any });
      return;
    }
    setPdfGenerating(true);

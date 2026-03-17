@@ -448,7 +448,7 @@ export default function AutoWaste() {
     navigator.clipboard.writeText(
       "- Mie Goreng (2025-03-09): 5 PCS Expired\n- Dimsum Ayam (2025-03-09): 3 PACK Rusak"
     );
-    toast({ title: "📋 Copied!", description: "Contoh format sudah di-copy" });
+    toast({ title: "📋 Copied!", description: "Contoh format sudah di-copy", variant: "success" as any });
   }, [toast]);
 
   // Reset for new entry
@@ -834,9 +834,9 @@ Contoh:
                     try {
                       const text = await navigator.clipboard.readText();
                       setRawTexts(prev => ({ ...prev, [station]: text }));
-                      toast({ title: "📋 Pasted!", description: `Teks clipboard ke-paste ke ${station}` });
+                      toast({ title: "📋 Pasted!", description: `Teks clipboard ke-paste ke ${station}`, variant: "success" as any });
                     } catch {
-                      toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "destructive" });
+                      toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "warning" as any });
                     }
                   }}
                   className={`w-full mt-2 ${CLAY_BTN_OUTLINE} h-8 text-xs text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
