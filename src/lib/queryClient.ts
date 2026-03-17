@@ -1,7 +1,17 @@
+import { dispatchAuthExpired } from "@/hooks/useAuth";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Auto-logout on 401/403
+    if (res.status === 401 || res.status === 403) {
+      dispatchAuthExpired({
+        reason: res.status === 401 ? "api_401" : "api_403",
+        message: res.status === 401 
+          ? "Sesi expired, otomatis logout..." 
+          : "Akses ditolak, otomatis logout...",
+      });
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -49,8 +59,12 @@ export const getQueryFn: <T>(options: {
       headers: defaultHeaders,
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      dispatchAuthExpired({ reason: "api_401", message: "Sesi expired, otomatis logout..." });
+      if (unauthorizedBehavior === "returnNull") return null;
+    }
+    if (res.status === 403) {
+      dispatchAuthExpired({ reason: "api_403", message: "Akses ditolak, otomatis logout..." });
     }
 
     await throwIfResNotOk(res);

@@ -1,3 +1,5 @@
+import { dispatchAuthExpired } from "@/hooks/useAuth";
+
 /**
  * API Client — otomatis nambah tenant_id header + JWT token di setiap request.
  * BUG-002 fix: Send JWT token in Authorization header.
@@ -145,8 +147,14 @@ export async function apiFetch(
         continue;
       }
 
-      // Auth errors — not retryable, throw immediately
+      // Auth errors — dispatch global logout event + throw
       if (response.status === 401 || response.status === 403) {
+        dispatchAuthExpired({
+          reason: response.status === 401 ? "api_401" : "api_403",
+          message: response.status === 401 
+            ? "Sesi expired, otomatis logout..." 
+            : "Akses ditolak, otomatis logout...",
+        });
         throw new ApiRequestError(
           response.status === 401 ? "Sesi expired, login ulang." : "Kamu ga punya akses.",
           "auth",

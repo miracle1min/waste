@@ -1,4 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ========================
+// GLOBAL AUTH EVENT SYSTEM
+// ========================
+
+/** 
+ * Custom event yang bisa di-dispatch dari mana aja (api-client, queryClient, dll)
+ * untuk trigger auto-logout + redirect ke login page.
+ */
+export const AUTH_EXPIRED_EVENT = "auth:session-expired";
+
+export interface AuthExpiredDetail {
+  reason: "session_timeout" | "api_401" | "api_403" | "token_missing" | "manual";
+  message?: string;
+}
+
+/** Dispatch dari mana aja untuk trigger global logout */
+export function dispatchAuthExpired(detail: AuthExpiredDetail) {
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, { detail }));
+}
+
+// ========================
+// AUTH HOOK
+// ========================
 
 interface AuthUser {
   id: string;
@@ -14,6 +38,11 @@ interface AuthTenant {
   status: string;
 }
 
+const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+const SESSION_CHECK_INTERVAL = 30 * 1000;      // Check every 30 seconds
+const ACTIVITY_THROTTLE = 60 * 1000;           // Extend session max every 60s
+const WARNING_BEFORE_EXPIRE = 5 * 60 * 1000;  // Warn 5 minutes before expiry
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -23,41 +52,206 @@ export function useAuth() {
   const [tenantId, setTenantId] = useState<string>("");
   const [tenantName, setTenantName] = useState<string>("");
   const [storeCode, setStoreCode] = useState<string>("");
+  const [logoutReason, setLogoutReason] = useState<string>("");
 
+  // Refs to prevent duplicate handling
+  const isHandlingExpiry = useRef(false);
+  const warningShown = useRef(false);
+  const sessionCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Check remaining session time ──
+  const getSessionRemaining = useCallback((): number => {
+    const loginTime = localStorage.getItem("waste_app_login_time");
+    if (!loginTime) return 0;
+    const elapsed = Date.now() - parseInt(loginTime);
+    return Math.max(SESSION_DURATION - elapsed, 0);
+  }, []);
+
+  // ── Core logout (clears everything) ──
+  const performLogout = useCallback((reason?: string) => {
+    if (isHandlingExpiry.current) return;
+    isHandlingExpiry.current = true;
+
+    setIsLoggingOut(true);
+    if (reason) setLogoutReason(reason);
+
+    // Clear all session data
+    const keys = [
+      "waste_app_authenticated",
+      "waste_app_login_time",
+      "waste_app_token",
+      "waste_app_qc_name",
+      "waste_app_role",
+      "waste_app_tenant_id",
+      "waste_app_tenant_name",
+      "waste_app_store_code",
+    ];
+    keys.forEach(k => localStorage.removeItem(k));
+
+    // Clear session check interval
+    if (sessionCheckRef.current) {
+      clearInterval(sessionCheckRef.current);
+      sessionCheckRef.current = null;
+    }
+
+    // Reset state
+    setQcName("");
+    setUserRole("");
+    setTenantId("");
+    setTenantName("");
+    setStoreCode("");
+
+    // Small delay for logout animation, then set unauthenticated
+    setTimeout(() => {
+      setIsAuthenticated(false);
+      setIsLoggingOut(false);
+      setLogoutReason("");
+      isHandlingExpiry.current = false;
+      warningShown.current = false;
+    }, 1500);
+  }, []);
+
+  // ── Public logout (manual) ──
+  const logout = useCallback(() => {
+    performLogout("Kamu berhasil logout.");
+  }, [performLogout]);
+
+  // ── Listen for global auth expired events ──
   useEffect(() => {
-    checkAuthStatus();
+    const handleAuthExpired = (e: Event) => {
+      const detail = (e as CustomEvent<AuthExpiredDetail>).detail;
+      const messages: Record<string, string> = {
+        session_timeout: "Sesi kamu sudah expired. Silakan login ulang.",
+        api_401: "Sesi tidak valid. Silakan login ulang.",
+        api_403: "Akses ditolak. Silakan login ulang.",
+        token_missing: "Token autentikasi hilang. Silakan login ulang.",
+        manual: "Logout berhasil.",
+      };
+      const msg = detail?.message || messages[detail?.reason] || "Sesi berakhir.";
 
-    const handleUserActivity = () => {
-      if (isAuthenticated) {
-        extendSession();
+      // Show toast before logout if available
+      try {
+        const { toast } = require("@/hooks/use-toast");
+        toast({
+          title: "⏰ Sesi Berakhir",
+          description: msg,
+          variant: "warning" as any,
+          duration: 4000,
+        });
+      } catch {}
+
+      // Perform logout after brief delay (let toast show)
+      setTimeout(() => performLogout(msg), 800);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, [performLogout]);
+
+  // ── Periodic session check ──
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkSession = () => {
+      const remaining = getSessionRemaining();
+      const token = localStorage.getItem("waste_app_token");
+
+      // Token gone? Logout immediately
+      if (!token) {
+        dispatchAuthExpired({ reason: "token_missing" });
+        return;
+      }
+
+      // Session fully expired? Auto logout
+      if (remaining <= 0) {
+        dispatchAuthExpired({ reason: "session_timeout" });
+        return;
+      }
+
+      // Warning: 5 minutes before expiry
+      if (remaining <= WARNING_BEFORE_EXPIRE && !warningShown.current) {
+        warningShown.current = true;
+        const minutesLeft = Math.ceil(remaining / 60000);
+        try {
+          const { toast } = require("@/hooks/use-toast");
+          toast({
+            title: "⚠️ Sesi Hampir Habis",
+            description: `Sisa ${minutesLeft} menit lagi. Gerakin mouse/klik untuk perpanjang sesi.`,
+            variant: "warning" as any,
+            duration: 10000,
+          });
+        } catch {}
+      }
+
+      // Reset warning if session got extended (activity reset the timer)
+      if (remaining > WARNING_BEFORE_EXPIRE) {
+        warningShown.current = false;
       }
     };
 
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    let activityTimeout: NodeJS.Timeout;
+    // Run immediately and then every 30s
+    checkSession();
+    sessionCheckRef.current = setInterval(checkSession, SESSION_CHECK_INTERVAL);
 
-    const throttledActivity = () => {
+    return () => {
+      if (sessionCheckRef.current) {
+        clearInterval(sessionCheckRef.current);
+        sessionCheckRef.current = null;
+      }
+    };
+  }, [isAuthenticated, getSessionRemaining]);
+
+  // ── Activity listener to extend session ──
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let activityTimeout: ReturnType<typeof setTimeout>;
+
+    const handleUserActivity = () => {
       clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(handleUserActivity, 60000);
+      activityTimeout = setTimeout(() => {
+        if (localStorage.getItem("waste_app_authenticated") === "true") {
+          localStorage.setItem("waste_app_login_time", Date.now().toString());
+          warningShown.current = false; // Reset warning since session extended
+        }
+      }, ACTIVITY_THROTTLE);
     };
 
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     events.forEach(event => {
-      document.addEventListener(event, throttledActivity, true);
+      document.addEventListener(event, handleUserActivity, true);
     });
 
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, throttledActivity, true);
+        document.removeEventListener(event, handleUserActivity, true);
       });
       clearTimeout(activityTimeout);
     };
   }, [isAuthenticated]);
 
-  const checkAuthStatus = () => {
+  // ── Listen for storage changes from other tabs ──
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Another tab logged out
+      if (e.key === "waste_app_authenticated" && e.newValue !== "true") {
+        performLogout("Kamu logout dari tab lain.");
+      }
+      // Another tab removed token
+      if (e.key === "waste_app_token" && !e.newValue) {
+        performLogout("Sesi berakhir dari tab lain.");
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [performLogout]);
+
+  // ── Initial auth check ──
+  const checkAuthStatus = useCallback(() => {
     try {
       const authenticated = localStorage.getItem("waste_app_authenticated");
       const loginTime = localStorage.getItem("waste_app_login_time");
-      // BUG-002 fix: Check for JWT token existence
       const token = localStorage.getItem("waste_app_token");
       const storedQcName = localStorage.getItem("waste_app_qc_name");
       const storedRole = localStorage.getItem("waste_app_role");
@@ -66,11 +260,9 @@ export function useAuth() {
       const storedStoreCode = localStorage.getItem("waste_app_store_code");
 
       if (authenticated === "true" && loginTime && token) {
-        const loginTimestamp = parseInt(loginTime);
-        const currentTime = Date.now();
-        const sessionDuration = 8 * 60 * 60 * 1000;
+        const remaining = SESSION_DURATION - (Date.now() - parseInt(loginTime));
 
-        if (currentTime - loginTimestamp < sessionDuration) {
+        if (remaining > 0) {
           setIsAuthenticated(true);
           setQcName(storedQcName || "");
           setUserRole(storedRole || "");
@@ -78,18 +270,22 @@ export function useAuth() {
           setTenantName(storedTenantName || "");
           setStoreCode(storedStoreCode || "");
         } else {
-          logout();
+          performLogout("Sesi kamu sudah expired. Silakan login ulang.");
         }
       }
     } catch (error) {
       console.error("Error checking auth status:", error);
-      logout();
+      performLogout("Terjadi error autentikasi.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [performLogout]);
 
-  // BUG-002 fix: Store JWT token on login
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // ── Login ──
   const login = (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string, token?: string) => {
     localStorage.setItem("waste_app_authenticated", "true");
     localStorage.setItem("waste_app_login_time", Date.now().toString());
@@ -107,24 +303,8 @@ export function useAuth() {
     setTenantName(tenant_name || "");
     setStoreCode(store_code || "");
     setIsAuthenticated(true);
-  };
-
-  const logout = () => {
-    setIsLoggingOut(true);
-    localStorage.removeItem("waste_app_authenticated");
-    localStorage.removeItem("waste_app_login_time");
-    localStorage.removeItem("waste_app_token");
-    localStorage.removeItem("waste_app_qc_name");
-    localStorage.removeItem("waste_app_role");
-    localStorage.removeItem("waste_app_tenant_id");
-    localStorage.removeItem("waste_app_tenant_name");
-    localStorage.removeItem("waste_app_store_code");
-    setQcName("");
-    setUserRole("");
-    setTenantId("");
-    setTenantName("");
-    setStoreCode("");
-    setIsAuthenticated(false);
+    isHandlingExpiry.current = false;
+    warningShown.current = false;
   };
 
   const extendSession = useCallback(() => {
@@ -139,6 +319,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     isLoggingOut,
+    logoutReason,
     qcName,
     userRole,
     tenantId,
