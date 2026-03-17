@@ -101,6 +101,18 @@ function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] }
 }
 
 // ========================
+// REUSABLE CLAY STYLES
+// ========================
+const CLAY_CARD = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] p-4 lg:p-5";
+const CLAY_CARD_SM = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]";
+const CLAY_INPUT = "w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all";
+const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]`;
+const CLAY_BTN_PRIMARY = "w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:shadow-[8px_8px_16px_rgba(0,0,0,0.6),-4px_-4px_10px_rgba(255,255,255,0.05)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.05)] transition-all duration-200";
+const CLAY_BTN_OUTLINE = "border-[rgba(79,209,255,0.12)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] transition-all duration-200";
+const LABEL = "text-[10px] lg:text-xs text-[#6B7280] font-sans uppercase tracking-wide";
+const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
+
+// ========================
 // MAIN COMPONENT
 // ========================
 
@@ -465,9 +477,9 @@ export default function AutoWaste() {
   // ========================
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col">
+    <div className="min-h-screen bg-[#1A1C22] flex flex-col">
       {/* Desktop page title */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] backdrop-blur-sm">
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]">
         <Zap className="w-6 h-6 text-[#4FD1FF]" />
         <h1 className="text-xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Auto Waste</h1>
         <div className="flex items-center gap-1 ml-auto">
@@ -515,7 +527,7 @@ export default function AutoWaste() {
           <div className="w-full max-w-sm space-y-6">
             {/* Animated icon */}
             <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-[#4FD1FF]/15 border-2 border-[#4FD1FF]/20 flex items-center justify-center animate-pulse shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className={`w-20 h-20 rounded-full bg-[#4FD1FF]/10 border-2 border-[#4FD1FF]/20 flex items-center justify-center animate-pulse ${CLAY_CARD_SM}`}>
                 <Send className="w-8 h-8 text-[#4FD1FF]" />
               </div>
             </div>
@@ -528,7 +540,7 @@ export default function AutoWaste() {
 
             {/* Progress bar */}
             <div className="space-y-2">
-              <div className="h-3 w-full bg-[#2A2D37] rounded-full overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
+              <div className="h-3 w-full bg-[#1A1C22] rounded-full overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
                 <div
                   className="h-full bg-gradient-to-r from-[#4FD1FF] via-[#9F7AEA] to-[#9F7AEA] rounded-full transition-all duration-700 ease-out"
                   style={{ width: `${globalProgress.percent}%` }}
@@ -544,7 +556,7 @@ export default function AutoWaste() {
 
             {/* Current station status */}
             {globalProgress.currentStation && (
-              <div className="p-3 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className={`${CLAY_CARD_SM} p-3 text-center`}>
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
                   <span className="text-sm text-[#E5E7EB] font-medium">
@@ -560,11 +572,10 @@ export default function AutoWaste() {
             {/* Station checklist */}
             <div className="space-y-1.5">
               {selectedStations.map((st) => (
-                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] ${
-                  submitStatusMap[st] === "success" ? "bg-[#23262F] border border-green-500/20" :
-                  submitStatusMap[st] === "uploading" ? "bg-[#23262F] border border-[rgba(79,209,255,0.08)]" :
-                  submitStatusMap[st] === "error" ? "bg-[#23262F] border border-red-500/20" :
-                  "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
+                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all ${CLAY_CARD_SM} ${
+                  submitStatusMap[st] === "success" ? "border-green-500/20" :
+                  submitStatusMap[st] === "uploading" ? "border-[#4FD1FF]/20" :
+                  submitStatusMap[st] === "error" ? "border-red-500/20" : ""
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">{STATION_ICONS[st]}</span>
@@ -592,7 +603,7 @@ export default function AutoWaste() {
         </div>
       )}
 
-      <main className="flex-1 w-full px-4 py-4 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
+      <main className="flex-1 w-full px-4 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
@@ -604,35 +615,37 @@ export default function AutoWaste() {
               </div>
             </div>
 
-            {/* Date & Resto row */}
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">📅 Tanggal</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">🏪 Resto</label>
-                <div className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base font-medium shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
-                  {storeName || 'Loading...'}
+            {/* ---- Card 1: Date & Resto ---- */}
+            <div className={CLAY_CARD}>
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                <div className="space-y-1.5">
+                  <label className={LABEL}>📅 Tanggal</label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    className={CLAY_INPUT}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={LABEL}>🏪 Resto</label>
+                  <div className={`${CLAY_INPUT} flex items-center font-medium`}>
+                    {storeName || 'Loading...'}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Station picker — multi select */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">🏭 Station</label>
+            {/* ---- Card 2: Station picker ---- */}
+            <div className={CLAY_CARD}>
+              <div className="flex items-center justify-between mb-3">
+                <label className={LABEL}>🏭 Station</label>
                 <button
                   onClick={toggleAllStations}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
                     allStationsSelected
-                      ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/20"
-                      : "bg-[#23262F] text-[#9CA3AF] border border-[rgba(79,209,255,0.08)] hover:border-[rgba(79,209,255,0.12)] hover:text-[#4FD1FF]"
+                      ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/25 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                      : "bg-[#1A1C22] text-[#9CA3AF] border border-[rgba(79,209,255,0.12)] hover:border-[#4FD1FF]/25 hover:text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
                   }`}
                 >
                   <CheckCheck className="w-3 h-3" />
@@ -644,10 +657,10 @@ export default function AutoWaste() {
                   <button
                     key={st}
                     onClick={() => toggleStation(st)}
-                    className={`p-3 lg:p-5 rounded-lg lg:rounded-xl border-2 text-center transition-all duration-200 ${
+                    className={`p-3 lg:p-5 rounded-xl border-2 text-center transition-all duration-200 ${
                       selectedStations.includes(st)
-                        ? "border-[#4FD1FF]/25 bg-[#4FD1FF]/10 text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
-                        : "border-[rgba(79,209,255,0.08)] bg-[#23262F] text-[#9CA3AF] hover:border-[rgba(79,209,255,0.12)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                        ? "border-[#4FD1FF]/30 bg-[#4FD1FF]/10 text-[#4FD1FF] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                        : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-[#4FD1FF]/20 hover:text-[#E5E7EB] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
                     }`}
                   >
                     <div className="text-xl lg:text-3xl">{STATION_ICONS[st]}</div>
@@ -659,84 +672,89 @@ export default function AutoWaste() {
                 ))}
               </div>
               {selectedStations.length > 0 && (
-                <p className="text-[10px] lg:text-xs text-[#4FD1FF]/70 text-center">
+                <p className="text-[10px] lg:text-xs text-[#4FD1FF]/70 text-center mt-3">
                   {selectedStations.length} station dipilih — data akan disubmit terpisah per station
                 </p>
               )}
             </div>
 
-            {/* Shift & Jam row */}
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">🕐 Shift</label>
-                <select
-                  value={selectedShift}
-                  onChange={e => setSelectedShift(e.target.value as Shift)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
-                >
-                  <option value="" disabled>-- Pilih Shift --</option>
-                  {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">⏰ Jam Pemusnahan</label>
-                <input
-                  type="time"
-                  value={jam}
-                  onChange={e => setJam(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* QC & Manajer row */}
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">🔍 QC</label>
-                <select
-                  value={selectedQC}
-                  onChange={e => setSelectedQC(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
-                >
-                  <option value="" disabled>-- Pilih QC --</option>
-                  {validQC.map(q => <option key={q} value={q}>{q}</option>)}
-                </select>
-                {selectedQC && signatureUrls[selectedQC] && (
-                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)]">
-                    <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                    <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs lg:text-sm font-medium text-[#9CA3AF]">👔 Manajer</label>
-                <select
-                  value={selectedManajer}
-                  onChange={e => setSelectedManajer(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
-                >
-                  <option value="" disabled>-- Pilih Manajer --</option>
-                  {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                {selectedManajer && signatureUrls[selectedManajer] && (
-                  <div className="flex items-center gap-2 mt-1 p-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)]">
-                    <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                    <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
-                  </div>
-                )}
+            {/* ---- Card 3: Shift & Jam ---- */}
+            <div className={CLAY_CARD}>
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                <div className="space-y-1.5">
+                  <label className={LABEL}>🕐 Shift</label>
+                  <select
+                    value={selectedShift}
+                    onChange={e => setSelectedShift(e.target.value as Shift)}
+                    className={CLAY_SELECT}
+                  >
+                    <option value="" disabled>-- Pilih Shift --</option>
+                    {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={LABEL}>⏰ Jam Pemusnahan</label>
+                  <input
+                    type="time"
+                    value={jam}
+                    onChange={e => setJam(e.target.value)}
+                    className={CLAY_INPUT}
+                  />
+                </div>
               </div>
             </div>
 
-            {isLoadingSignatures && (
-              <p className="text-xs lg:text-sm text-[#6B7280] text-center flex items-center justify-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Lagi ambil TTD...
-              </p>
-            )}
+            {/* ---- Card 4: QC & Manajer ---- */}
+            <div className={CLAY_CARD}>
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                <div className="space-y-1.5">
+                  <label className={LABEL}>🔍 QC</label>
+                  <select
+                    value={selectedQC}
+                    onChange={e => setSelectedQC(e.target.value)}
+                    className={CLAY_SELECT}
+                  >
+                    <option value="" disabled>-- Pilih QC --</option>
+                    {validQC.map(q => <option key={q} value={q}>{q}</option>)}
+                  </select>
+                  {selectedQC && signatureUrls[selectedQC] && (
+                    <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
+                      <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
+                      <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className={LABEL}>👔 Manajer</label>
+                  <select
+                    value={selectedManajer}
+                    onChange={e => setSelectedManajer(e.target.value)}
+                    className={CLAY_SELECT}
+                  >
+                    <option value="" disabled>-- Pilih Manajer --</option>
+                    {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  {selectedManajer && signatureUrls[selectedManajer] && (
+                    <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
+                      <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
+                      <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
+              {isLoadingSignatures && (
+                <p className="text-xs lg:text-sm text-[#6B7280] text-center flex items-center justify-center gap-1 mt-3">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Lagi ambil TTD...
+                </p>
+              )}
+            </div>
+
+            {/* CTA Button */}
             <Button
               onClick={() => setStep("paste")}
               disabled={!configReady}
-              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+              className={CLAY_BTN_PRIMARY}
             >
               Gas, Paste Data Item ({selectedStations.length} Station) →
             </Button>
@@ -753,8 +771,8 @@ export default function AutoWaste() {
               </p>
             </div>
 
-            {/* Format reference */}
-            <div className="p-3 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+            {/* Format reference card */}
+            <div className={CLAY_CARD}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs lg:text-sm font-bold text-[#4FD1FF]">📝 Format tiap baris</span>
                 <Button
@@ -777,12 +795,12 @@ Contoh:
 
             {/* Per-station textareas */}
             {selectedStations.map(station => (
-              <div key={station} className="space-y-2">
-                <div className="flex items-center gap-2">
+              <div key={station} className={CLAY_CARD}>
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">{STATION_ICONS[station]}</span>
                   <span className="text-sm lg:text-base font-bold text-[#E5E7EB]">{station}</span>
                   {rawTexts[station].trim() && (
-                    <span className="text-[10px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded">ada data</span>
+                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20">ada data</span>
                   )}
                 </div>
                 <div className="relative">
@@ -793,7 +811,7 @@ Contoh:
                       setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                     }}
                     placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
-                    className="w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/25 focus:ring-1 focus:ring-[#4FD1FF]/10 outline-none transition-all resize-none placeholder:text-[#6B7280]"
+                    className={`w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all resize-none placeholder:text-[#6B7280]`}
                   />
                   {rawTexts[station] && (
                     <button
@@ -801,7 +819,7 @@ Contoh:
                         setRawTexts(prev => ({ ...prev, [station]: "" }));
                         setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                       }}
-                      className="absolute top-2 right-2 p-1 text-[#6B7280] hover:text-[#E5E7EB]"
+                      className="absolute top-2 right-2 p-1 text-[#6B7280] hover:text-[#E5E7EB] transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -821,14 +839,14 @@ Contoh:
                       toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "destructive" });
                     }
                   }}
-                  className="w-full border-[rgba(79,209,255,0.08)] text-[#4FD1FF] hover:bg-[#4FD1FF]/5 h-8 text-xs shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                  className={`w-full mt-2 ${CLAY_BTN_OUTLINE} h-8 text-xs text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
                 >
                   <ClipboardPaste className="w-3 h-3 mr-1" /> Paste dari Clipboard ke {station}
                 </Button>
 
                 {/* Parse errors for this station */}
                 {parseErrorsMap[station].length > 0 && (
-                  <div className="p-2 rounded-xl border border-red-500/20 bg-[#23262F] space-y-1 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+                  <div className="mt-2 p-3 rounded-xl border border-red-500/20 bg-[#1A1C22] space-y-1">
                     <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
                       <AlertTriangle className="w-3 h-3" />
                       <span>{station} — Error ({parseErrorsMap[station].length})</span>
@@ -848,7 +866,7 @@ Contoh:
             <Button
               onClick={handleParseAll}
               disabled={selectedStations.every(st => !rawTexts[st].trim())}
-              className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white font-bold py-5 lg:py-6 lg:text-lg rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+              className={CLAY_BTN_PRIMARY}
             >
               <Zap className="w-4 h-4 mr-2" /> Parse & Cek Semua Station
             </Button>
@@ -867,37 +885,35 @@ Contoh:
 
             {/* Info cards */}
             <div className="grid grid-cols-3 gap-2 lg:gap-3">
-              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <p className="text-[10px] lg:text-xs text-[#6B7280]">Station</p>
-                <p className="text-sm lg:text-lg font-bold text-[#E5E7EB]">{selectedStations.length}x</p>
-              </div>
-              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <p className="text-[10px] lg:text-xs text-[#6B7280]">Shift</p>
-                <p className="text-sm lg:text-lg font-bold text-[#E5E7EB]">{selectedShift}</p>
-              </div>
-              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <p className="text-[10px] lg:text-xs text-[#6B7280]">Jam</p>
-                <p className="text-sm lg:text-lg font-bold text-yellow-400">{jam} WIB</p>
-              </div>
+              {[
+                { label: "Station", value: `${selectedStations.length}x`, color: "text-[#E5E7EB]" },
+                { label: "Shift", value: selectedShift, color: "text-[#E5E7EB]" },
+                { label: "Jam", value: `${jam} WIB`, color: "text-yellow-400" },
+              ].map((item, i) => (
+                <div key={i} className={`${CLAY_CARD_SM} p-2.5 lg:p-4 text-center`}>
+                  <p className={LABEL}>{item.label}</p>
+                  <p className={`text-sm lg:text-lg font-bold ${item.color} mt-0.5`}>{item.value}</p>
+                </div>
+              ))}
             </div>
 
             {/* QC & Manajer */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <p className="text-[10px] lg:text-xs text-[#6B7280]">QC</p>
-                <div className="flex items-center gap-2">
+              <div className={`${CLAY_CARD_SM} p-3 lg:p-4`}>
+                <p className={LABEL}>QC</p>
+                <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm lg:text-base font-bold text-[#4FD1FF]">{selectedQC}</p>
                   {signatureUrls[selectedQC] && (
-                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#2A2D37] p-0.5" />
+                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#1A1C22] p-0.5" />
                   )}
                 </div>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <p className="text-[10px] lg:text-xs text-[#6B7280]">Manajer</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm lg:text-base font-bold text-purple-400">{selectedManajer}</p>
+              <div className={`${CLAY_CARD_SM} p-3 lg:p-4`}>
+                <p className={LABEL}>Manajer</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm lg:text-base font-bold text-[#9F7AEA]">{selectedManajer}</p>
                   {signatureUrls[selectedManajer] && (
-                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#2A2D37] p-0.5" />
+                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#1A1C22] p-0.5" />
                   )}
                 </div>
               </div>
@@ -905,18 +921,22 @@ Contoh:
 
             {/* Per-station items + documentation */}
             {selectedStations.map(station => (
-              <div key={station} className="space-y-3">
+              <div key={station} className={CLAY_CARD}>
                 {/* Station header */}
-                <div className="flex items-center gap-2 pt-2">
-                  <span className="text-xl">{STATION_ICONS[station]}</span>
-                  <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
-                  <span className="text-xs lg:text-sm text-[#6B7280]">({parsedItemsMap[station].length} item)</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/[0.08] flex items-center justify-center">
+                    <span className="text-xl">{STATION_ICONS[station]}</span>
+                  </div>
+                  <div>
+                    <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
+                    <span className="text-xs lg:text-sm text-[#6B7280] ml-2">({parsedItemsMap[station].length} item)</span>
+                  </div>
                   {isSubmitting && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      submitStatusMap[station] === "uploading" ? "bg-yellow-900/30 text-yellow-400" :
-                      submitStatusMap[station] === "success" ? "bg-green-900/30 text-green-400" :
-                      submitStatusMap[station] === "error" ? "bg-red-900/30 text-red-400" :
-                      "bg-[#2A2D37] text-[#6B7280]"
+                    <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      submitStatusMap[station] === "uploading" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
+                      submitStatusMap[station] === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
+                      submitStatusMap[station] === "error" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                      "bg-[#2A2D37] text-[#6B7280] border border-[rgba(79,209,255,0.06)]"
                     }`}>
                       {submitStatusMap[station] === "uploading" ? "⏳ Uploading..." :
                        submitStatusMap[station] === "success" ? "✅ Done" :
@@ -926,11 +946,11 @@ Contoh:
                 </div>
 
                 {/* Items table */}
-                <div className="rounded-xl border border-[rgba(79,209,255,0.08)] overflow-hidden shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+                <div className="rounded-xl border border-[rgba(79,209,255,0.08)] overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs lg:text-sm">
                       <thead>
-                        <tr className="bg-[#2A2D37] text-[#9CA3AF]">
+                        <tr className="bg-[#1A1C22] text-[#6B7280]">
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">#</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Produk</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Lot</th>
@@ -941,7 +961,7 @@ Contoh:
                       </thead>
                       <tbody>
                         {parsedItemsMap[station].map((item, i) => (
-                          <tr key={i} className="border-t border-[rgba(79,209,255,0.06)] hover:bg-[#2A2D37]/50">
+                          <tr key={i} className="border-t border-[rgba(79,209,255,0.06)] hover:bg-[#1A1C22]/50 transition-colors">
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#6B7280]">{i + 1}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] font-medium truncate max-w-[100px] lg:max-w-[250px]">{item.namaProduk}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] text-[11px] lg:text-sm">{item.kodeLot || "-"}</td>
@@ -956,7 +976,7 @@ Contoh:
                 </div>
 
                 {/* Documentation photos per station */}
-                <div className="space-y-2">
+                <div className="mt-3 space-y-2">
                   <label className="text-xs lg:text-sm font-medium text-[#E5E7EB]">
                     📸 Foto Dokumentasi {station} <span className="text-red-400">*wajib</span>
                   </label>
@@ -972,32 +992,27 @@ Contoh:
                     <p className="text-[10px] text-green-400 flex items-center gap-1">✅ {dokumentasiFilesMap[station].length} foto siap</p>
                   )}
                 </div>
-
-                {/* Divider between stations */}
-                {station !== selectedStations[selectedStations.length - 1] && (
-                  <div className="border-t border-dashed border-[rgba(79,209,255,0.08)] my-2" />
-                )}
               </div>
             ))}
 
             {/* Error summary banner */}
             {selectedStations.some(st => submitStatusMap[st] === "error") && !isSubmitting && (
-              <div className="p-4 rounded-xl border border-red-500/20 bg-[#23262F] space-y-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-                <div className="flex items-center gap-2">
+              <div className={`${CLAY_CARD} border-red-500/20`}>
+                <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                   <span className="text-sm font-bold text-red-400">
                     {selectedStations.filter(st => submitStatusMap[st] === "error").length} station gagal
                   </span>
                 </div>
                 {selectedStations.filter(st => submitStatusMap[st] === "error").map(st => (
-                  <div key={st} className="flex items-start gap-2 text-xs">
+                  <div key={st} className="flex items-start gap-2 text-xs mb-1">
                     <span className="text-red-500 font-bold">{STATION_ICONS[st]} {st}:</span>
                     <span className="text-red-300">{stationErrors[st] || "Error tidak diketahui"}</span>
                   </div>
                 ))}
                 <Button
                   onClick={handleRetryFailed}
-                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                  className="w-full mt-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" /> Retry {selectedStations.filter(st => submitStatusMap[st] === "error").length} Station yang Gagal
                 </Button>
@@ -1010,14 +1025,14 @@ Contoh:
                 variant="outline"
                 onClick={() => setStep("paste")}
                 disabled={isSubmitting}
-                className="flex-1 border-[rgba(79,209,255,0.08)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                className={`flex-1 ${CLAY_BTN_OUTLINE}`}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
               </Button>
               <Button
                 onClick={() => handleSubmit()}
                 disabled={isSubmitting || selectedStations.some(st => dokumentasiFilesMap[st].length === 0)}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-200"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
@@ -1032,7 +1047,7 @@ Contoh:
         {/* ========== STEP: SUCCESS ========== */}
         {step === "success" && (
           <div className="space-y-6 w-full text-center py-8">
-            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+            <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
             <div>
@@ -1042,14 +1057,34 @@ Contoh:
               </p>
             </div>
 
-            <div className="p-4 lg:p-6 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] text-left space-y-1 lg:space-y-2 text-sm lg:text-base shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-              <p><span className="text-[#9CA3AF]">Tanggal:</span> <span className="text-[#E5E7EB]">{selectedDate}</span></p>
-              <p><span className="text-[#9CA3AF]">Resto:</span> <span className="text-[#E5E7EB]">{storeName}</span></p>
-              <p><span className="text-[#9CA3AF]">Shift:</span> <span className="text-[#E5E7EB]">{selectedShift}</span></p>
-              <p><span className="text-[#9CA3AF]">Jam:</span> <span className="text-yellow-400">{jam} WIB</span></p>
-              <p><span className="text-[#9CA3AF]">QC:</span> <span className="text-[#4FD1FF]">{selectedQC}</span></p>
-              <p><span className="text-[#9CA3AF]">Manajer:</span> <span className="text-purple-400">{selectedManajer}</span></p>
+            <div className={`${CLAY_CARD} text-left space-y-2 text-sm lg:text-base`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Tanggal</span>
+                <span className="text-[#E5E7EB] font-medium">{selectedDate}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Resto</span>
+                <span className="text-[#E5E7EB] font-medium">{storeName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Shift</span>
+                <span className="text-[#E5E7EB] font-medium">{selectedShift}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Jam</span>
+                <span className="text-yellow-400 font-medium">{jam} WIB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">QC</span>
+                <span className="text-[#4FD1FF] font-medium">{selectedQC}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Manajer</span>
+                <span className="text-[#9F7AEA] font-medium">{selectedManajer}</span>
+              </div>
+
               <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+
               {selectedStations.map(station => (
                 <div key={station} className="flex items-center justify-between">
                   <span className="text-[#E5E7EB]">{STATION_ICONS[station]} {station}</span>
@@ -1060,21 +1095,26 @@ Contoh:
                   </span>
                 </div>
               ))}
+
               <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
-              <p><span className="text-[#9CA3AF]">Total:</span> <span className="text-[#E5E7EB] font-bold">{totalItems} produk</span></p>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[#6B7280]">Total</span>
+                <span className="text-[#E5E7EB] font-bold text-base lg:text-lg">{totalItems} produk</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3">
               <Button
                 onClick={handleNewEntry}
-                className="w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                className={CLAY_BTN_PRIMARY}
               >
                 <Zap className="w-5 h-5 mr-2" /> Shift Baru
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation("/")}
-                className="w-full border-[rgba(79,209,255,0.08)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                className={`w-full ${CLAY_BTN_OUTLINE}`}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
               </Button>
