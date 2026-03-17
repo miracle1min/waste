@@ -14,7 +14,7 @@ export default function Profile() {
   const sessionStart = loginTime ? new Date(parseInt(loginTime)) : null;
 
   return (
-    <div className="min-h-screen bg-background pb-24 lg:pb-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#1A1C22] via-[#1A1C22] to-[#1A1C22]/95 pb-24 lg:pb-8">
       {/* Mobile header */}
       <header className="sticky top-0 z-40 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-md lg:hidden">
         <div className="px-4 py-3 flex items-center gap-3">
@@ -30,14 +30,14 @@ export default function Profile() {
         </div>
 
         {/* Avatar card */}
-        <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-2xl p-6 flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4FD1FF]/15 to-[#9F7AEA]/15 border-2 border-[#4FD1FF]/15 flex items-center justify-center">
+        <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-2xl p-6 flex flex-col items-center gap-4 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20 border-2 border-[#4FD1FF]/15 flex items-center justify-center">
             <span className="text-3xl font-bold text-[#4FD1FF]">
               {qcName ? qcName.charAt(0).toUpperCase() : "?"}
             </span>
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-bold text-white">{qcName || "User"}</h3>
+            <h3 className="text-lg font-bold text-[#E5E7EB]">{qcName || "User"}</h3>
             <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-sans mt-1.5 ${
               isSuperAdmin 
                 ? "bg-purple-500/15 text-purple-300 border border-purple-500/30" 
@@ -52,26 +52,26 @@ export default function Profile() {
         {/* Info cards */}
         <div className="space-y-3">
           {tenantName && (
-            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/8 flex items-center justify-center flex-shrink-0">
+            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/[0.08] flex items-center justify-center flex-shrink-0">
                 <Building2 className="w-4 h-4 text-[#4FD1FF]" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-[#6B7280] font-sans uppercase">Tenant / Resto</p>
-                <p className="text-sm text-white font-medium truncate">{tenantName}</p>
+                <p className="text-sm text-[#E5E7EB] font-medium truncate">{tenantName}</p>
                 {storeCode && <p className="text-xs text-[#9CA3AF] font-sans">{storeCode}</p>}
               </div>
             </div>
           )}
 
           {sessionStart && (
-            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/8 flex items-center justify-center flex-shrink-0">
+            <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
+              <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/[0.08] flex items-center justify-center flex-shrink-0">
                 <Clock className="w-4 h-4 text-[#4FD1FF]" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-[#6B7280] font-sans uppercase">Sesi Login</p>
-                <p className="text-sm text-white font-medium">
+                <p className="text-sm text-[#E5E7EB] font-medium">
                   {sessionStart.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
                   {" "}{sessionStart.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -82,10 +82,10 @@ export default function Profile() {
         </div>
 
         {/* App info */}
-        <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3">
+        <div className="bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl p-4 flex items-center gap-3 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
           <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl" />
           <div>
-            <p className="text-sm font-bold text-white">AWAS</p>
+            <p className="text-sm font-bold text-[#E5E7EB]">AWAS</p>
             <p className="text-[10px] text-[#6B7280] font-sans">Aplikasi Waste Always Simple</p>
             <p className="text-[10px] text-[#6B7280] font-sans">v3.4.0 • Made with ☕ By ~/DirgaX</p>
           </div>
@@ -95,7 +95,7 @@ export default function Profile() {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 active:bg-red-500/30 transition-all disabled:opacity-40"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/20 active:bg-red-500/30 transition-all disabled:opacity-40 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.05)] hover:-translate-y-0.5 active:scale-[0.97]"
         >
           {isLoggingOut ? (
             <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

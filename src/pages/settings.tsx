@@ -676,7 +676,7 @@ function PersonnelTab() {
  <div className="flex items-start justify-between">
  <div className="flex items-center gap-3">
  {/* TTD Preview */}
- <div className="w-16 h-12 rounded-lg border border-[#4FD1FF]/10 bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
+ <div className="w-16 h-12 rounded-lg border border-[#4FD1FF]/10 bg-[#2A2D37]/30 flex items-center justify-center overflow-hidden flex-shrink-0">
  {p.signature_url ? (
  <img src={`/api/proxy-image?url=${encodeURIComponent(p.signature_url)}&tenant_id=${selectedTenant}`}
  alt="TTD" className="w-full h-full object-contain p-1"

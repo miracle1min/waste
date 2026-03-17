@@ -90,7 +90,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (key: PageKey
  </CardHeader>
  <div className="divide-y divide-[rgba(79,209,255,0.08)]">
  {tenants.map((t) => (
- <div key={t.id} className="px-4 sm:px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.01] transition-colors">
+ <div key={t.id} className="px-4 sm:px-5 py-3.5 flex items-center justify-between hover:bg-[#2A2D37]/[0.08] transition-colors">
  <div className="flex items-center gap-3 min-w-0">
  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${t.status === "active" ? "bg-green-400 " : "bg-red-400"}`} />
  <div className="min-w-0">

@@ -137,7 +137,7 @@ export default function PersonnelPage() {
  </label>
  {(previewUrl || form.signature_url) && (
  <div className="flex items-center gap-3">
- <div className="w-16 h-12 rounded-lg border border-[#4FD1FF]/10 bg-white/5 overflow-hidden flex items-center justify-center">
+ <div className="w-16 h-12 rounded-lg border border-[#4FD1FF]/10 bg-[#2A2D37]/30 overflow-hidden flex items-center justify-center">
  <img src={previewUrl || `/api/proxy-image?url=${encodeURIComponent(form.signature_url)}&tenant_id=${selectedTenant}`}
  alt="TTD" className="w-full h-full object-contain p-1"
  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -168,7 +168,7 @@ export default function PersonnelPage() {
  <div className="flex items-start justify-between gap-3">
  <div className="flex items-center gap-3 min-w-0">
  {/* Signature thumbnail */}
- <div className="w-14 h-11 rounded-lg border border-[#4FD1FF]/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+ <div className="w-14 h-11 rounded-lg border border-[#4FD1FF]/10 bg-[#2A2D37]/30 flex items-center justify-center overflow-hidden shrink-0">
  {p.signature_url ? (
  <img src={`/api/proxy-image?url=${encodeURIComponent(p.signature_url)}&tenant_id=${selectedTenant}`}
  alt="TTD" className="w-full h-full object-contain p-0.5"

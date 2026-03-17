@@ -70,7 +70,7 @@ export default function GoogleUsersPage() {
  placeholder="Cari email, nama, atau username..."
  value={search}
  onChange={(e) => setSearch(e.target.value)}
- className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-[#4FD1FF]/10 text-sm font-sans text-[#E5E7EB] placeholder:text-[#6B7280] focus:outline-none focus:border-[#4FD1FF]/30/40 focus:ring-1 focus:ring-[#4FD1FF]/15 transition-all"
+ className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#2A2D37]/[0.15] border border-[#4FD1FF]/10 text-sm font-sans text-[#E5E7EB] placeholder:text-[#6B7280] focus:outline-none focus:border-[#4FD1FF]/30/40 focus:ring-1 focus:ring-[#4FD1FF]/15 transition-all"
  />
  </div>
  </Card>
@@ -96,7 +96,7 @@ export default function GoogleUsersPage() {
  </thead>
  <tbody>
  {filtered.map((g) => (
- <tr key={g.id} className="border-b border-[#4FD1FF]/8 hover:bg-white/[0.01] transition-colors">
+ <tr key={g.id} className="border-b border-[#4FD1FF]/8 hover:bg-[#2A2D37]/[0.08] transition-colors">
  <td className="px-5 py-3.5">
  <div className="flex items-center gap-3">
  <img src={g.google_picture} alt="" className="w-7 h-7 rounded-full ring-1 ring-[#4FD1FF]/10" referrerPolicy="no-referrer" />

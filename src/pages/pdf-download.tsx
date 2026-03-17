@@ -751,7 +751,7 @@ export default function PdfDownload() {
  <img
  src={pelaporSigUrls[selectedPelapor]}
  alt={`TTD ${selectedPelapor}`}
- className="h-8 rounded bg-white/10 p-0.5"
+ className="h-8 rounded bg-[#2A2D37]/60 p-0.5"
  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
  />
  <span className="text-[10px] text-green-400">✅ TTD {selectedPelapor} siap</span>

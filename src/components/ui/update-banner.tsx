@@ -17,13 +17,13 @@ export function UpdateBanner() {
           </span>
           <button
             onClick={refresh}
-            className="ml-2 px-3 py-1 text-xs font-semibold bg-white/20 text-white rounded-[10px] hover:bg-white/30 transition-colors backdrop-blur-sm"
+            className="ml-2 px-3 py-1 text-xs font-semibold bg-[#2A2D37]/60 text-[#E5E7EB] rounded-[10px] hover:bg-[#2A2D37]/80 transition-colors backdrop-blur-sm"
           >
             Refresh
           </button>
           <button
             onClick={() => setDismissed(true)}
-            className="ml-auto p-1 hover:bg-white/20 rounded-[8px] transition-colors"
+            className="ml-auto p-1 hover:bg-[#2A2D37]/60 rounded-[8px] transition-colors"
             aria-label="Tutup"
           >
             ✕

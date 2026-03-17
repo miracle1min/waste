@@ -103,7 +103,7 @@ export default function TenantsPage() {
  </thead>
  <tbody>
  {tenants.map((t) => (
- <tr key={t.id} className="border-b border-[#4FD1FF]/8 hover:bg-white/[0.01] transition-colors">
+ <tr key={t.id} className="border-b border-[#4FD1FF]/8 hover:bg-[#2A2D37]/[0.08] transition-colors">
  <td className="px-5 py-3.5">
  <p className="text-[#E5E7EB] font-medium">{t.name}</p>
  <p className="text-[10px] text-[#4FD1FF]/60">{t.id}</p>

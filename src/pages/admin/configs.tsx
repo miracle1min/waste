@@ -150,7 +150,7 @@ export default function ConfigsPage() {
  const tenant = tenants.find((t) => t.id === c.tenant_id);
  return (
  <tr key={c.tenant_id} onClick={() => handleSelectTenant(c.tenant_id)}
- className="border-b border-[#4FD1FF]/8 hover:bg-white/[0.01] cursor-pointer transition-colors">
+ className="border-b border-[#4FD1FF]/8 hover:bg-[#2A2D37]/[0.08] cursor-pointer transition-colors">
  <td className="px-5 py-3.5 text-[#E5E7EB] font-medium">{tenant?.name || c.tenant_id}</td>
  <td className="px-5 py-3.5 text-[#4FD1FF] text-xs">{c.google_spreadsheet_id ? c.google_spreadsheet_id.substring(0, 15) + "..." : "—"}</td>
  <td className="px-5 py-3.5 text-[#4FD1FF] text-xs">{c.r2_bucket_name || "—"}</td>

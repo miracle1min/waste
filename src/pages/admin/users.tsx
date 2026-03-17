@@ -106,7 +106,7 @@ export default function UsersPage() {
  </thead>
  <tbody>
  {users.map((u) => (
- <tr key={u.id} className="border-b border-[#4FD1FF]/8 hover:bg-white/[0.01] transition-colors">
+ <tr key={u.id} className="border-b border-[#4FD1FF]/8 hover:bg-[#2A2D37]/[0.08] transition-colors">
  <td className="px-5 py-3.5 text-[#E5E7EB] font-medium">{u.username}</td>
  <td className="px-5 py-3.5 text-[#4FD1FF] text-xs">{getTenantName(u.tenant_id)}</td>
  <td className="px-5 py-3.5">

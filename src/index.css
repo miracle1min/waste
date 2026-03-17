@@ -23,6 +23,16 @@ html, body, #root {
     font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 
+  /* Force dark background on all select option elements */
+  select option {
+    background-color: #23262F;
+    color: #E5E7EB;
+  }
+  
+  select option:checked {
+    background-color: #2A2D37;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;

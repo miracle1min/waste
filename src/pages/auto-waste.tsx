@@ -511,7 +511,7 @@ export default function AutoWaste() {
 
       {/* ========== GLOBAL PROGRESS OVERLAY ========== */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] bg-[#1A1C22]/95 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
             {/* Animated icon */}
             <div className="flex justify-center">
@@ -544,7 +544,7 @@ export default function AutoWaste() {
 
             {/* Current station status */}
             {globalProgress.currentStation && (
-              <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/8 text-center">
+              <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/[0.06] text-center">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
                   <span className="text-sm text-white font-medium">
@@ -564,7 +564,7 @@ export default function AutoWaste() {
                   submitStatusMap[st] === "success" ? "bg-green-950/30 border border-green-800/30" :
                   submitStatusMap[st] === "uploading" ? "bg-[#4FD1FF]/5 border border-[rgba(79,209,255,0.08)]" :
                   submitStatusMap[st] === "error" ? "bg-red-950/30 border border-red-800/30" :
-                  "bg-[#23262F]/30 border border-[rgba(79,209,255,0.06)]/30"
+                  "bg-[#23262F]/80 border border-[rgba(79,209,255,0.06)]/30"
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">{STATION_ICONS[st]}</span>
@@ -647,7 +647,7 @@ export default function AutoWaste() {
                     className={`p-3 lg:p-5 rounded-lg lg:rounded-xl border-2 text-center transition-all duration-200 ${
                       selectedStations.includes(st)
                         ? "border-[#4FD1FF]/20 bg-[#4FD1FF]/15 text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
-                        : "border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30 text-[#9CA3AF] hover:border-[rgba(79,209,255,0.12)]"
+                        : "border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-[#9CA3AF] hover:border-[rgba(79,209,255,0.12)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
                     }`}
                   >
                     <div className="text-xl lg:text-3xl">{STATION_ICONS[st]}</div>
@@ -672,7 +672,7 @@ export default function AutoWaste() {
                 <select
                   value={selectedShift}
                   onChange={e => setSelectedShift(e.target.value as Shift)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih Shift --</option>
                   {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -696,14 +696,14 @@ export default function AutoWaste() {
                 <select
                   value={selectedQC}
                   onChange={e => setSelectedQC(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih QC --</option>
                   {validQC.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
                 {selectedQC && signatureUrls[selectedQC] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-[#2A2D37]/80 border border-[rgba(79,209,255,0.08)]/30">
-                    <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-white/10 p-0.5" />
+                    <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37]/60 p-0.5" />
                     <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
@@ -713,14 +713,14 @@ export default function AutoWaste() {
                 <select
                   value={selectedManajer}
                   onChange={e => setSelectedManajer(e.target.value)}
-                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none"
+                  className="w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#23262F]/80 border border-[#4FD1FF]/15 rounded-lg text-white text-sm lg:text-base focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]"
                 >
                   <option value="" disabled>-- Pilih Manajer --</option>
                   {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
                 {selectedManajer && signatureUrls[selectedManajer] && (
                   <div className="flex items-center gap-2 mt-1 p-1.5 rounded bg-[#2A2D37]/80 border border-[rgba(79,209,255,0.08)]/30">
-                    <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-white/10 p-0.5" />
+                    <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37]/60 p-0.5" />
                     <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
                   </div>
                 )}
@@ -754,7 +754,7 @@ export default function AutoWaste() {
             </div>
 
             {/* Format reference */}
-            <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/8">
+            <div className="p-3 rounded-lg border border-[rgba(79,209,255,0.08)] bg-[#4FD1FF]/[0.06]">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs lg:text-sm font-bold text-[#4FD1FF]">📝 Format tiap baris</span>
                 <Button
@@ -828,7 +828,7 @@ Contoh:
 
                 {/* Parse errors for this station */}
                 {parseErrorsMap[station].length > 0 && (
-                  <div className="p-2 rounded-lg border border-red-800/50 bg-red-950/20 space-y-1">
+                  <div className="p-2 rounded-lg border border-red-800/50 bg-red-950/30 space-y-1">
                     <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
                       <AlertTriangle className="w-3 h-3" />
                       <span>{station} — Error ({parseErrorsMap[station].length})</span>
@@ -867,15 +867,15 @@ Contoh:
 
             {/* Info cards */}
             <div className="grid grid-cols-3 gap-2 lg:gap-3">
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30 text-center">
+              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Station</p>
                 <p className="text-sm lg:text-lg font-bold text-white">{selectedStations.length}x</p>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30 text-center">
+              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Shift</p>
                 <p className="text-sm lg:text-lg font-bold text-white">{selectedShift}</p>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30 text-center">
+              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 text-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Jam</p>
                 <p className="text-sm lg:text-lg font-bold text-yellow-400">{jam} WIB</p>
               </div>
@@ -883,21 +883,21 @@ Contoh:
 
             {/* QC & Manajer */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30">
+              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">QC</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm lg:text-base font-bold text-[#4FD1FF]">{selectedQC}</p>
                   {signatureUrls[selectedQC] && (
-                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-white/10 p-0.5" />
+                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#2A2D37]/60 p-0.5" />
                   )}
                 </div>
               </div>
-              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/30">
+              <div className="p-2.5 lg:p-4 rounded-lg border border-[rgba(79,209,255,0.08)]/50 bg-[#23262F]/80 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
                 <p className="text-[10px] lg:text-xs text-[#6B7280]">Manajer</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm lg:text-base font-bold text-purple-400">{selectedManajer}</p>
                   {signatureUrls[selectedManajer] && (
-                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-white/10 p-0.5" />
+                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#2A2D37]/60 p-0.5" />
                   )}
                 </div>
               </div>
@@ -930,7 +930,7 @@ Contoh:
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs lg:text-sm">
                       <thead>
-                        <tr className="bg-[#2A2D37]/30 text-[#9CA3AF]">
+                        <tr className="bg-[#2A2D37]/80 text-[#9CA3AF]">
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">#</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Produk</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Lot</th>
@@ -982,7 +982,7 @@ Contoh:
 
             {/* Error summary banner */}
             {selectedStations.some(st => submitStatusMap[st] === "error") && !isSubmitting && (
-              <div className="p-4 rounded-lg border border-red-800/50 bg-red-950/20 space-y-3">
+              <div className="p-4 rounded-lg border border-red-800/50 bg-red-950/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                   <span className="text-sm font-bold text-red-400">
@@ -1032,7 +1032,7 @@ Contoh:
         {/* ========== STEP: SUCCESS ========== */}
         {step === "success" && (
           <div className="space-y-6 w-full text-center py-8">
-            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
             <div>
