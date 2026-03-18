@@ -358,6 +358,119 @@ export async function appendGroupToGoogleSheets(
   });
 }
 
+export async function appendTesterToGoogleSheets(
+  credentialsString: string,
+  spreadsheetId: string,
+  data: {
+    tanggal: string;
+    shift: string;
+    storeName: string;
+    testerItems: string[];
+    testerAllOk: boolean;
+    resultText: string;
+    jam: string;
+    parafQCUrl: string;
+    parafManagerUrl: string;
+  }
+): Promise<void> {
+  const credentials = JSON.parse(credentialsString);
+  const accessToken = await getAccessToken(credentials);
+  const tabName = formatWIBForSheetTab(data.tanggal);
+  await ensureSheetTab(accessToken, spreadsheetId, tabName);
+
+  // Find insertion point: first row of this shift, or append at end
+  const existingData = await sheetsRequest(
+    accessToken,
+    `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:A`
+  );
+  const values = existingData.values || [];
+
+  // Find the first row with this shift value (skip header row 0)
+  let insertIndex = values.length; // default: append at end
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0]?.toUpperCase() === data.shift.toUpperCase()) {
+      insertIndex = i;
+      break;
+    }
+  }
+
+  const checkedItems = data.testerItems.join(', ');
+  const statusMark = data.testerAllOk ? '✅ AMAN' : '⚠️ KENDALA';
+
+  const rowData = [
+    toUpper(data.shift),
+    toUpper(data.storeName),
+    'TESTER',
+    checkedItems,
+    statusMark,
+    data.testerItems.length.toString(),
+    '/ 5',
+    '-',
+    data.resultText,
+    data.jam,
+    buildImageFormula(data.parafQCUrl),
+    buildImageFormula(data.parafManagerUrl),
+    '', '', '', '', '', '', '', '', '', ''
+  ];
+
+  const sheetId = await getSheetId(accessToken, spreadsheetId, tabName);
+
+  if (insertIndex < values.length) {
+    // Insert a new row at the position
+    await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
+      requests: [{
+        insertDimension: {
+          range: { sheetId, dimension: 'ROWS', startIndex: insertIndex, endIndex: insertIndex + 1 },
+          inheritFromBefore: false,
+        }
+      }]
+    });
+
+    // Write data to the inserted row
+    await sheetsRequest(
+      accessToken,
+      `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A${insertIndex + 1}:V${insertIndex + 1}?valueInputOption=USER_ENTERED`,
+      'PUT',
+      { values: [rowData] }
+    );
+  } else {
+    // No existing rows for this shift, just append
+    await sheetsRequest(
+      accessToken,
+      `${SHEETS_BASE_URL}/${spreadsheetId}/values/${encodeURIComponent(tabName)}!A:V:append?valueInputOption=USER_ENTERED`,
+      'POST',
+      { values: [rowData] }
+    );
+  }
+
+  // Style the tester row
+  const bgColor = data.testerAllOk
+    ? { red: 0.85, green: 0.95, blue: 0.85 }
+    : { red: 1.0, green: 0.93, blue: 0.8 };
+
+  const targetRow = insertIndex < values.length ? insertIndex : values.length;
+
+  await sheetsRequest(accessToken, `${SHEETS_BASE_URL}/${spreadsheetId}:batchUpdate`, 'POST', {
+    requests: [
+      {
+        repeatCell: {
+          range: { sheetId, startRowIndex: targetRow, endRowIndex: targetRow + 1, startColumnIndex: 0, endColumnIndex: 22 },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: bgColor,
+              textFormat: { bold: true },
+              horizontalAlignment: 'CENTER',
+              verticalAlignment: 'MIDDLE',
+              wrapStrategy: 'WRAP'
+            }
+          },
+          fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)'
+        }
+      }
+    ]
+  });
+}
+
 export async function appendGroupedToGoogleSheets(
   credentialsString: string, spreadsheetId: string, data: any, imageUrls: any, shift?: string, storeName?: string
 ): Promise<void> {

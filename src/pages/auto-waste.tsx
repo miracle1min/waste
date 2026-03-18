@@ -149,6 +149,23 @@ export default function AutoWaste() {
   const [selectedManajer, setSelectedManajer] = useState<string>("");
   const [jam, setJam] = useState("");
 
+  // Tester state
+  const [testerEnabled, setTesterEnabled] = useState(false);
+  const [testerChecks, setTesterChecks] = useState<Record<string, boolean>>({
+    'All biang BAR': false,
+    'All produk Dimsum': false,
+    'Mie': false,
+    'Cabai': false,
+    'Acin': false,
+  });
+  const [testerKendala, setTesterKendala] = useState('');
+  const [testerSubmitStatus, setTesterSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const testerAllChecked = Object.values(testerChecks).every(v => v);
+  const testerResultText = testerAllChecked
+    ? 'Semua sisa bahan dan produk AMAN & Approved.'
+    : testerKendala;
+
   // Multi-station selection
   const [selectedStations, setSelectedStations] = useState<Station[]>([]);
   const allStationsSelected = selectedStations.length === VALID_STATIONS.length;
@@ -191,7 +208,7 @@ export default function AutoWaste() {
   });
 
   // Config validation
-  const configReady = selectedShift && selectedQC && selectedManajer && selectedStations.length > 0 && jam;
+  const configReady = selectedShift && selectedQC && selectedManajer && (selectedStations.length > 0 || testerEnabled) && jam;
 
   // Toggle station selection
   const toggleStation = (station: Station) => {
@@ -329,6 +346,67 @@ export default function AutoWaste() {
     }
 
     const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
+
+    // Submit tester first if enabled (and not a retry of failed stations)
+    if (testerEnabled && !retryStations) {
+      setTesterSubmitStatus('submitting');
+      try {
+        const testerForm = new FormData();
+        testerForm.append('mode', 'submit-tester');
+        testerForm.append('storeName', storeName);
+        testerForm.append('shift', selectedShift);
+        testerForm.append('tanggal', selectedDate);
+        testerForm.append('jam', jamFormatted);
+        testerForm.append('testerItems', JSON.stringify(
+          Object.entries(testerChecks).filter(([_, v]) => v).map(([k]) => k)
+        ));
+        testerForm.append('testerAllOk', testerAllChecked ? 'true' : 'false');
+        testerForm.append('testerKendala', testerKendala);
+        testerForm.append('parafQCUrl', qcUrl);
+        testerForm.append('parafManagerUrl', mgrUrl);
+
+        const testerRes = await apiFetch("/api/auto-submit", {
+          method: "POST",
+          body: testerForm,
+        }, { maxRetries: 2, timeout: 30000 });
+        const testerResult = await testerRes.json();
+        if (!testerRes.ok || !testerResult.success) {
+          throw new Error(testerResult.message || 'Tester submission failed');
+        }
+        setTesterSubmitStatus('success');
+      } catch (error) {
+        setTesterSubmitStatus('error');
+        const errorMsg = error instanceof Error ? error.message : 'Tester error';
+        toast({ title: "❌ Tester Gagal", description: errorMsg, variant: "destructive" });
+        // Continue with station submissions even if tester fails
+      }
+    }
+
+    // If tester-only (no stations), handle completion
+    if (stationsToSubmit.length === 0) {
+      setIsSubmitting(false);
+      // Send WA notification for tester-only
+      if (testerEnabled && testerSubmitStatus !== 'error') {
+        try {
+          const notifForm = new FormData();
+          notifForm.append('mode', 'send-wa-notif');
+          notifForm.append('storeName', storeName);
+          notifForm.append('shift', selectedShift);
+          notifForm.append('tanggal', selectedDate);
+          notifForm.append('stations', JSON.stringify([]));
+          notifForm.append('testerAllOk', testerAllChecked ? 'true' : 'false');
+          notifForm.append('testerKendala', testerKendala);
+          notifForm.append('testerItems', JSON.stringify(
+            Object.entries(testerChecks).filter(([_, v]) => v).map(([k]) => k)
+          ));
+          apiFetch("/api/auto-submit", { method: "POST", body: notifForm }).catch(() => {});
+        } catch {}
+      }
+      setStep("success");
+      toast({ title: "✅ Tester Berhasil!", description: "Data tester berhasil disimpan" });
+      return;
+    }
+
     let successCount = 0;
     let failCount = 0;
     const failedStations: Station[] = [];
@@ -439,6 +517,13 @@ export default function AutoWaste() {
         notifForm.append('shift', selectedShift);
         notifForm.append('tanggal', selectedDate);
         notifForm.append('stations', JSON.stringify(stationsPayload));
+        if (testerEnabled) {
+          notifForm.append('testerAllOk', testerAllChecked ? 'true' : 'false');
+          notifForm.append('testerKendala', testerKendala);
+          notifForm.append('testerItems', JSON.stringify(
+            Object.entries(testerChecks).filter(([_, v]) => v).map(([k]) => k)
+          ));
+        }
         apiFetch("/api/auto-submit", { method: "POST", body: notifForm }).catch(() => {});
       } catch (e) {
         console.error('[WA Notif] Failed to send combined notification:', e);
@@ -467,7 +552,7 @@ export default function AutoWaste() {
         variant: "destructive",
       });
     }
-  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap, stationErrors]);
+  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap, stationErrors, testerEnabled, testerChecks, testerAllChecked, testerKendala, testerSubmitStatus]);
 
   // Retry only failed stations
   const handleRetryFailed = useCallback(() => {
@@ -498,6 +583,10 @@ export default function AutoWaste() {
     setSelectedQC("");
     setSelectedManajer("");
     setJam("");
+    setTesterEnabled(false);
+    setTesterChecks({ 'All biang BAR': false, 'All produk Dimsum': false, 'Mie': false, 'Cabai': false, 'Acin': false });
+    setTesterKendala('');
+    setTesterSubmitStatus('idle');
     setStep("config");
   }, []);
 
@@ -718,9 +807,111 @@ export default function AutoWaste() {
                   </button>
                 ))}
               </div>
+              {/* Tester toggle */}
+              <div className="mt-3 pt-3 border-t border-[rgba(79,209,255,0.08)]">
+                <button
+                  onClick={() => setTesterEnabled(prev => !prev)}
+                  className={`w-full p-3 lg:p-4 rounded-xl border-2 text-center transition-all duration-200 ${
+                    testerEnabled
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                      : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-amber-500/20 hover:text-amber-300 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xl">🧪</span>
+                    <span className="text-sm lg:text-base font-bold">TESTER</span>
+                    {testerEnabled && <span className="text-[8px] text-amber-400/80">✓</span>}
+                  </div>
+                  <p className="text-[9px] lg:text-[10px] mt-1 opacity-70">QC Checklist Bahan</p>
+                </button>
+              </div>
+
+              {/* Tester checklist section */}
+              {testerEnabled && (
+                <div className="mt-3 p-4 rounded-xl bg-[#1A1C22] border border-amber-500/15 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-amber-400 flex items-center gap-2">
+                      🧪 Checklist Tester
+                    </h3>
+                    <button
+                      onClick={() => {
+                        const allChecked = Object.values(testerChecks).every(v => v);
+                        const newVal = !allChecked;
+                        setTesterChecks(prev => {
+                          const updated = { ...prev };
+                          for (const key of Object.keys(updated)) updated[key] = newVal;
+                          return updated;
+                        });
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                        testerAllChecked
+                          ? "bg-amber-500/15 text-amber-400 border border-amber-500/25 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"
+                          : "bg-[#23262F] text-[#9CA3AF] border border-[rgba(79,209,255,0.12)] hover:border-amber-500/25 hover:text-amber-400"
+                      }`}
+                    >
+                      <CheckCheck className="w-3 h-3" />
+                      {testerAllChecked ? "Semua ✓" : "Centang Semua"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {Object.entries(testerChecks).map(([item, checked]) => (
+                      <label
+                        key={item}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${
+                          checked
+                            ? "border-green-500/20 bg-green-500/[0.05]"
+                            : "border-[rgba(79,209,255,0.08)] bg-[#23262F] hover:border-amber-500/15"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => setTesterChecks(prev => ({ ...prev, [item]: !prev[item] }))}
+                          className="w-4 h-4 rounded border-[rgba(79,209,255,0.2)] bg-[#1A1C22] text-amber-500 focus:ring-amber-500/30 accent-amber-500"
+                        />
+                        <span className={`text-sm ${checked ? "text-green-400" : "text-[#E5E7EB]"}`}>
+                          {checked ? "☑️" : "◻️"} {item}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Kendala textarea - show when NOT all checked */}
+                  {!testerAllChecked && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-amber-400 font-medium">⚠️ Jelaskan kendala:</label>
+                      <textarea
+                        value={testerKendala}
+                        onChange={e => setTesterKendala(e.target.value)}
+                        placeholder="Jelaskan kendala yang ditemukan..."
+                        className={`${CLAY_INPUT} h-20 resize-none`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Result preview */}
+                  <div className={`px-3 py-2 rounded-lg text-xs font-medium ${
+                    testerAllChecked
+                      ? "bg-green-500/[0.08] border border-green-500/15 text-green-400"
+                      : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
+                  }`}>
+                    {testerAllChecked
+                      ? "✅ Semua sisa bahan dan produk AMAN & Approved."
+                      : `⚠️ Ada kendala: ${testerKendala || "(belum diisi)"}`
+                    }
+                  </div>
+                </div>
+              )}
+
               {selectedStations.length > 0 && (
                 <p className="text-[10px] lg:text-xs text-[#4FD1FF]/70 text-center mt-3">
-                  {selectedStations.length} station dipilih — data akan disubmit terpisah per station
+                  {selectedStations.length} station dipilih{testerEnabled ? " + Tester" : ""} — data akan disubmit terpisah per station
+                </p>
+              )}
+              {selectedStations.length === 0 && testerEnabled && (
+                <p className="text-[10px] lg:text-xs text-amber-400/70 text-center mt-3">
+                  🧪 Tester only mode — checklist akan disubmit langsung
                 </p>
               )}
             </div>
@@ -799,11 +990,21 @@ export default function AutoWaste() {
 
             {/* CTA Button */}
             <Button
-              onClick={() => setStep("paste")}
+              onClick={() => {
+                if (selectedStations.length === 0 && testerEnabled) {
+                  // Tester-only: skip paste/preview, go to preview directly
+                  setStep("preview");
+                } else {
+                  setStep("paste");
+                }
+              }}
               disabled={!configReady}
               className={CLAY_BTN_PRIMARY}
             >
-              Gas, Paste Data Item ({selectedStations.length} Station) →
+              {selectedStations.length === 0 && testerEnabled
+                ? "Gas, Submit Tester →"
+                : `Gas, Paste Data Item (${selectedStations.length} Station${testerEnabled ? " + Tester" : ""}) →`
+              }
             </Button>
           </div>
         )}
@@ -966,6 +1167,43 @@ Contoh:
               </div>
             </div>
 
+            {/* Tester preview card */}
+            {testerEnabled && (
+              <div className={`${CLAY_CARD} border-amber-500/15`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/[0.08] flex items-center justify-center">
+                    <span className="text-xl">🧪</span>
+                  </div>
+                  <div>
+                    <span className="text-base lg:text-lg font-bold text-amber-400">TESTER</span>
+                    <span className="text-xs lg:text-sm text-[#9CA3AF] ml-2">QC Checklist</span>
+                  </div>
+                  {testerSubmitStatus === 'success' && <span className="ml-auto text-green-400 text-xs">✅ Done</span>}
+                  {testerSubmitStatus === 'error' && <span className="ml-auto text-red-400 text-xs">❌ Error</span>}
+                </div>
+                <div className="space-y-1.5">
+                  {Object.entries(testerChecks).map(([item, checked]) => (
+                    <div key={item} className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
+                      checked ? "text-green-400 bg-green-500/[0.05]" : "text-red-400 bg-red-500/[0.05]"
+                    }`}>
+                      <span>{checked ? "☑️" : "☐"}</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-medium ${
+                  testerAllChecked
+                    ? "bg-green-500/[0.08] border border-green-500/15 text-green-400"
+                    : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
+                }`}>
+                  {testerAllChecked
+                    ? "✅ Semua sisa bahan dan produk AMAN & Approved."
+                    : `⚠️ Kendala: ${testerKendala || "(kosong)"}`
+                  }
+                </div>
+              </div>
+            )}
+
             {/* Per-station items + documentation */}
             {selectedStations.map(station => (
               <div key={station} className={CLAY_CARD}>
@@ -1070,7 +1308,7 @@ Contoh:
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
-                onClick={() => setStep("paste")}
+                onClick={() => setStep(selectedStations.length > 0 ? "paste" : "config")}
                 disabled={isSubmitting}
                 className={`flex-1 ${CLAY_BTN_OUTLINE}`}
               >
@@ -1078,13 +1316,13 @@ Contoh:
               </Button>
               <Button
                 onClick={() => handleSubmit()}
-                disabled={isSubmitting || selectedStations.some(st => dokumentasiFilesMap[st].length === 0)}
+                disabled={isSubmitting || (selectedStations.length > 0 && selectedStations.some(st => dokumentasiFilesMap[st].length === 0))}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-200"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
                 ) : (
-                  <><Send className="w-4 h-4 mr-2" /> Kirim {selectedStations.length} Station</>
+                  <><Send className="w-4 h-4 mr-2" /> Kirim {selectedStations.length > 0 ? `${selectedStations.length} Station` : ""}{ testerEnabled ? (selectedStations.length > 0 ? " + Tester" : "Tester") : ""}</>
                 )}
               </Button>
             </div>
@@ -1131,6 +1369,19 @@ Contoh:
               </div>
 
               <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+
+              {testerEnabled && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#E5E7EB]">🧪 TESTER</span>
+                  <span className={`text-xs font-bold ${
+                    testerSubmitStatus === "success" ? "text-green-400" : testerSubmitStatus === "error" ? "text-red-400" : "text-[#9CA3AF]"
+                  }`}>
+                    {testerSubmitStatus === "success"
+                      ? (testerAllChecked ? "✅ AMAN" : "⚠️ Kendala")
+                      : testerSubmitStatus === "error" ? "❌ Error" : "—"}
+                  </span>
+                </div>
+              )}
 
               {selectedStations.map(station => (
                 <div key={station} className="flex items-center justify-between">

@@ -16,6 +16,11 @@ interface WasteNotifData {
   tanggal: string;
   submittedBy?: string;
   stations: StationData[];
+  tester?: {
+    allOk: boolean;
+    items: string[];
+    kendala?: string;
+  };
 }
 
 // Station icon mapping
@@ -53,6 +58,17 @@ export async function sendWhatsAppNotif(data: WasteNotifData): Promise<void> {
     return `${icon} *${st.kategoriInduk}*\n${items}`;
   }).join('\n\n');
 
+  // Build tester section if present
+  let testerSection = '';
+  if (data.tester) {
+    const icon = data.tester.allOk ? '✅' : '⚠️';
+    const status = data.tester.allOk
+      ? 'Semua sisa bahan dan produk AMAN & Approved.'
+      : `Kendala: ${data.tester.kendala}`;
+    const checkedItems = data.tester.items.map(item => `  ☑️ ${item}`).join('\n');
+    testerSection = `\n🧪 *TESTER*\n${checkedItems}\n${icon} ${status}\n`;
+  }
+
   const totalItems = data.stations.reduce((sum, st) => sum + st.productList.length, 0);
 
   const message = `✅ *WASTE SUKSES!*
@@ -62,7 +78,7 @@ export async function sendWhatsAppNotif(data: WasteNotifData): Promise<void> {
 ⏰ *Shift:* ${data.shift}
 📊 *Station:* ${data.stations.length} station | ${totalItems} item
 👤 *Dilaporkan Oleh:* ${data.submittedBy || 'Unknown'}
-
+${testerSection}
 📋 *Data Waste-nya ini wak:*
 
 ${stationSections}`;

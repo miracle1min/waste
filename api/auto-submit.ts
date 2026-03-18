@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseForm, fileToBuffer } from './_lib/parse-form.js';
 import { uploadToR2 } from './_lib/r2.js';
-import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
+import { appendGroupedToGoogleSheets, appendTesterToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
@@ -77,6 +77,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (fields.mode === 'send-wa-notif') {
       try {
         const stations = JSON.parse(fields.stations || '[]');
+        const testerData = fields.testerAllOk !== undefined ? {
+          allOk: fields.testerAllOk === 'true',
+          items: safeJsonParse(fields.testerItems || '[]'),
+          kendala: fields.testerKendala || '',
+        } : undefined;
         await sendWhatsAppNotif({
           storeName: fields.storeName || 'Unknown',
           shift: fields.shift || '',
@@ -85,12 +90,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ? `${jwtPayload.displayName} (${jwtPayload.username})`
             : jwtPayload?.username || 'Unknown',
           stations,
+          tester: testerData,
         });
         return res.json({ success: true, message: 'Notification sent' });
       } catch (err) {
         console.error('[WA Notif] Failed:', err);
         return res.json({ success: true, message: 'Notification failed but ok' });
       }
+    }
+
+    // === Submit Tester Mode ===
+    if (fields.mode === 'submit-tester') {
+      const testerItems = safeJsonParse(fields.testerItems);
+      const testerAllOk = fields.testerAllOk === 'true';
+      const testerKendala = fields.testerKendala || '';
+      const tanggal = fields.tanggal;
+      const toUpperLocal = (v: any) => v != null ? String(v).toUpperCase() : '';
+      const shift = toUpperLocal(fields.shift || 'OPENING');
+      const storeName = toUpperLocal(fields.storeName || 'BEKASI KP. BULU');
+      const jam = fields.jam || '';
+
+      const resultText = testerAllOk
+        ? 'Semua sisa bahan dan produk AMAN & Approved.'
+        : testerKendala;
+
+      if (!tanggal) {
+        return res.status(400).json({ success: false, message: 'Tanggal wajib diisi!' });
+      }
+
+      const tenantId = getAuthorizedTenantId(req, jwtPayload);
+      const tenantCreds = await resolveTenantCredentials(tenantId);
+
+      if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
+        return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
+      }
+
+      await appendTesterToGoogleSheets(
+        tenantCreds.googleSheetsCredentials,
+        tenantCreds.googleSpreadsheetId,
+        {
+          tanggal,
+          shift,
+          storeName,
+          testerItems,
+          testerAllOk,
+          resultText,
+          jam,
+          parafQCUrl: fields.parafQCUrl || '',
+          parafManagerUrl: fields.parafManagerUrl || '',
+        }
+      );
+
+      return res.json({ success: true, message: 'Tester berhasil disimpan' });
     }
 
     // Force all string data to UPPERCASE for consistency

@@ -227,9 +227,24 @@ async function generatePdfForDate(
      }
    }
 
-   type RowEntry = { entry: any | null; stationIdx: number; docUrls: string[] };
+   type RowEntry = { entry: any | null; stationIdx: number; docUrls: string[]; isTester?: boolean };
    const rowEntries: RowEntry[] = [];
    const rows: string[][] = [];
+
+   // Check for TESTER entry — should appear FIRST
+   const testerEntry = shiftData.find((e: any) => e.station?.toUpperCase() === 'TESTER');
+   if (testerEntry) {
+     const statusText = String(testerEntry.alasanPemusnahan || testerEntry.namaProduk || '-');
+     const kodeProduk = String(testerEntry.kodeProduk || '-');
+     const jumlah = String(testerEntry.jumlahProduk || '-');
+     const unit = String(testerEntry.unit || '-');
+     rows.push([
+       'T', statusText, kodeProduk, jumlah, unit, '-',
+       String(testerEntry.alasanPemusnahan || '-'),
+       parseJamValue(testerEntry.jamTanggalPemusnahan || '-'), '', '', '-'
+     ]);
+     rowEntries.push({ entry: testerEntry, stationIdx: -1, docUrls: [], isTester: true });
+   }
 
    stationOrder.forEach((station, idx) => {
      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
@@ -277,6 +292,17 @@ async function generatePdfForDate(
          const photoRows = Math.ceil(rowEntry.docUrls.length / 2);
          const photoHeight = photoRows * 14 + (photoRows - 1) * 1 + 3;
          data.cell.styles.minCellHeight = Math.max(data.cell.styles.minCellHeight, photoHeight);
+       }
+       // Style tester rows with colored background
+       if (rowEntry?.isTester) {
+         const kodeProduk = String(rowEntry.entry?.kodeProduk || '');
+         const isAman = kodeProduk.includes('AMAN');
+         if (isAman) {
+           data.cell.styles.fillColor = [220, 240, 220]; // light green
+         } else {
+           data.cell.styles.fillColor = [255, 237, 204]; // light orange
+         }
+         data.cell.styles.fontStyle = 'bold';
        }
      },
      didDrawCell: (data: any) => {
