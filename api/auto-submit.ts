@@ -125,6 +125,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
       }
 
+      // Parse pre-uploaded documentation URLs for tester
+      const testerDokumentasiUrls: string[] = [];
+      if (fields.dokumentasiUrls) {
+        try {
+          const parsed = JSON.parse(fields.dokumentasiUrls);
+          if (Array.isArray(parsed)) testerDokumentasiUrls.push(...parsed);
+        } catch {}
+      }
+
       await appendTesterToGoogleSheets(
         tenantCreds.googleSheetsCredentials,
         tenantCreds.googleSpreadsheetId,
@@ -138,6 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           jam,
           parafQCUrl: fields.parafQCUrl || '',
           parafManagerUrl: fields.parafManagerUrl || '',
+          dokumentasiUrls: testerDokumentasiUrls,
         }
       );
 

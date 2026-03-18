@@ -198,6 +198,12 @@ async function generatePdfForDate(
    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
 
    const allDocUrlsForShift: string[] = [];
+   // Include tester documentation in total count
+   const testerEntryForDocs = shiftData.find((e: any) => e.station?.toUpperCase() === 'TESTER');
+   if (testerEntryForDocs?.dokumentasi) {
+     const testerDocUrls = testerEntryForDocs.dokumentasi.map((d: string) => extractImageUrl(d)).filter((u: string) => u);
+     allDocUrlsForShift.push(...testerDocUrls);
+   }
    for (const station of stationOrder) {
      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
      if (entry?.dokumentasi) {
@@ -207,6 +213,23 @@ async function generatePdfForDate(
    }
    let fetchedCount = 0;
    const totalPhotos = allDocUrlsForShift.length;
+
+   // Pre-fetch tester signatures and documentation
+   if (testerEntryForDocs) {
+     const tQcUrl = extractImageUrl(testerEntryForDocs.parafQC);
+     const tMgrUrl = extractImageUrl(testerEntryForDocs.parafManager);
+     if (tQcUrl) await fetchSigImage(tQcUrl);
+     if (tMgrUrl) await fetchSigImage(tMgrUrl);
+     if (testerEntryForDocs.dokumentasi) {
+       const tDocUrls = testerEntryForDocs.dokumentasi.map((d: string) => extractImageUrl(d)).filter((u: string) => u);
+       for (const docUrl of tDocUrls) {
+         await fetchDocPhoto(docUrl);
+         fetchedCount++;
+         onProgress?.(`📸 ${shift} - Foto Tester ${fetchedCount}/${totalPhotos}`);
+         onDetailProgress?.(fetchedCount, totalPhotos, `foto_${shift}`);
+       }
+     }
+   }
 
    for (const station of stationOrder) {
      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
@@ -240,12 +263,13 @@ async function generatePdfForDate(
      const satuan = String(testerEntry.unit || '-').replace(/,\s*/g, '\n');
      const metode = String(testerEntry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
      const alasan = String(testerEntry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
+     const testerDocUrls = (testerEntry.dokumentasi || []).map((d: string) => extractImageUrl(d)).filter((u: string) => u);
      rows.push([
        'T', namaProduk, kodeProduk, jumlahProduk, satuan, metode,
        alasan,
-       parseJamValue(testerEntry.jamTanggalPemusnahan || '-'), '', '', '-'
+       parseJamValue(testerEntry.jamTanggalPemusnahan || '-'), '', '', testerDocUrls.length > 0 ? '' : '-'
      ]);
-     rowEntries.push({ entry: testerEntry, stationIdx: -1, docUrls: [], isTester: true });
+     rowEntries.push({ entry: testerEntry, stationIdx: -1, docUrls: testerDocUrls, isTester: true });
    }
 
    stationOrder.forEach((station, idx) => {

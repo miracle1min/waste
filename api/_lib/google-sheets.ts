@@ -371,6 +371,7 @@ export async function appendTesterToGoogleSheets(
     jam: string;
     parafQCUrl: string;
     parafManagerUrl: string;
+    dokumentasiUrls?: string[];
   }
 ): Promise<void> {
   const credentials = JSON.parse(credentialsString);
@@ -401,6 +402,10 @@ export async function appendTesterToGoogleSheets(
   const units = data.testerItems.map(() => 'PCS').join('\n');
   const methods = data.testerItems.map(() => 'TESTER BY QC').join('\n');
 
+  const dokumentasiCols = data.dokumentasiUrls && data.dokumentasiUrls.length > 0
+    ? buildDokumentasiColumns(data.dokumentasiUrls.join('\n'))
+    : Array.from({ length: 10 }, () => '');
+
   const rowData = [
     toUpper(data.shift),
     toUpper(data.storeName),
@@ -414,7 +419,7 @@ export async function appendTesterToGoogleSheets(
     data.jam,
     buildImageFormula(data.parafQCUrl),
     buildImageFormula(data.parafManagerUrl),
-    '-'
+    ...dokumentasiCols
   ];
 
   const sheetId = await getSheetId(accessToken, spreadsheetId, tabName);
