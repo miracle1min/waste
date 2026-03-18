@@ -395,22 +395,21 @@ export async function appendTesterToGoogleSheets(
   }
 
   const checkedItems = data.testerItems.join(', ');
-  const statusMark = data.testerAllOk ? '✅ AMAN' : '⚠️ KENDALA';
 
   const rowData = [
     toUpper(data.shift),
     toUpper(data.storeName),
     'TESTER',
     checkedItems,
-    statusMark,
-    data.testerItems.length.toString(),
-    '/ 5',
+    '-',
+    '-',
+    '-',
     '-',
     data.resultText,
     data.jam,
     buildImageFormula(data.parafQCUrl),
     buildImageFormula(data.parafManagerUrl),
-    '', '', '', '', '', '', '', '', '', ''
+    '-'
   ];
 
   const sheetId = await getSheetId(accessToken, spreadsheetId, tabName);
