@@ -150,6 +150,23 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     }
   }, []);
 
+  // Show "just updated" info banner if force-refreshed by deploy
+  const [justUpdated, setJustUpdated] = useState(() => {
+    const flag = localStorage.getItem("waste_app_just_updated");
+    if (flag) {
+      localStorage.removeItem("waste_app_just_updated");
+      return true;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (justUpdated) {
+      const t = setTimeout(() => setJustUpdated(false), 8000);
+      return () => clearTimeout(t);
+    }
+  }, [justUpdated]);
+
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
@@ -470,6 +487,13 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 <div className="flex-1 h-px bg-[rgba(79,209,255,0.08)]" />
               </div>
             </div>
+
+            {justUpdated && (
+              <div className="rounded-[12px] border border-[#4FD1FF]/20 bg-[#4FD1FF]/10 p-3 flex items-center gap-2 animate-in fade-in duration-300">
+                <CheckCircle2 className="h-4 w-4 text-[#4FD1FF] flex-shrink-0" />
+                <span className="text-[#4FD1FF] text-sm">Aplikasi berhasil di-update! Silakan login kembali.</span>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-[12px] border border-[#F87171]/20 bg-[#F87171]/10 p-3 flex items-center gap-2">
