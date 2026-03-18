@@ -58,6 +58,17 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2020",
     cssCodeSplit: true,
+    modulePreload: {
+      // Only preload direct imports, skip heavy vendor chunks
+      resolveDependencies: (filename: string, deps: string[], { hostId, hostType }: { hostId: string; hostType: "html" | "js"; }) => {
+        // For HTML entry, only preload core chunks, not heavy ones
+        return deps.filter(dep => 
+          !dep.includes('vendor-pdf') && 
+          !dep.includes('vendor-charts') && 
+          !dep.includes('html2canvas')
+        );
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
