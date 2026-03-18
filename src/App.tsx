@@ -8,8 +8,8 @@ import { LoginForm } from "@/components/ui/login-form";
 import { useAuth } from "@/hooks/useAuth";
 import React, { Suspense } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
+const Analytics = React.lazy(() => import("@vercel/analytics/react").then(m => ({ default: m.Analytics })));
+const SpeedInsights = React.lazy(() => import("@vercel/speed-insights/react").then(m => ({ default: m.SpeedInsights })));
 import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
 import { UpdateBanner } from "@/components/ui/update-banner";
 import { AppLayout } from "@/components/ui/app-layout";
@@ -139,8 +139,10 @@ function App() {
             <LoginForm onLogin={login} />
           )}
           <PWAInstallPrompt />
-          <Analytics />
-          <SpeedInsights />
+          <Suspense fallback={null}>
+            <Analytics />
+            <SpeedInsights />
+          </Suspense>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

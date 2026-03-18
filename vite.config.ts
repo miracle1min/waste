@@ -28,8 +28,24 @@ function versionPlugin() {
   };
 }
 
+
+function asyncCssPlugin() {
+  return {
+    name: "async-css",
+    enforce: "post" as const,
+    transformIndexHtml(html: string) {
+      return html.replace(
+        /<link rel="stylesheet" crossorigin href="(\/assets\/[^"]+\.css)">/g,
+        (_match: string, p1: string) => {
+          return `<link rel="stylesheet" href="${p1}" media="print" onload="this.media=&apos;all&apos;" /><noscript><link rel="stylesheet" href="${p1}" /></noscript>`;
+        }
+      );
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), versionPlugin()],
+  plugins: [react(), versionPlugin(), asyncCssPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -59,7 +75,6 @@ export default defineConfig({
             "@radix-ui/react-switch",
             "@radix-ui/react-slot",
           ],
-          "vendor-motion": ["framer-motion"],
           "vendor-charts": ["recharts"],
           "vendor-pdf": ["jspdf", "jspdf-autotable"],
           "vendor-query": ["@tanstack/react-query"],

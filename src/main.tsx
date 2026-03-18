@@ -4,13 +4,11 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+// Register Service Worker for PWA — deferred to avoid blocking main thread
+const registerSW = () => {
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
-        console.log('✅ Service Worker registered:', reg.scope);
-        // Auto-update check
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           if (newWorker) {
@@ -23,5 +21,10 @@ if ('serviceWorker' in navigator) {
         });
       })
       .catch((err) => console.warn('SW registration failed:', err));
-  });
+  }
+};
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(registerSW);
+} else {
+  setTimeout(registerSW, 3000);
 }

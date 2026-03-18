@@ -124,9 +124,9 @@ export default function AutoWaste() {
   // Fetch real IP address
   const [clientIP, setClientIP] = useState<string>("...");
   useEffect(() => {
-    apiFetch("/api/client-info")
+    fetch("https://api.ipify.org?format=json")
       .then(res => res.json())
-      .then(data => { if (data.success) setClientIP(data.ip); })
+      .then(data => { if (data.ip) setClientIP(data.ip); })
       .catch(() => setClientIP("N/A"));
   }, []);
 
