@@ -63,7 +63,8 @@ export default defineConfig({
       resolveDependencies: (filename: string, deps: string[], { hostId, hostType }: { hostId: string; hostType: "html" | "js"; }) => {
         // For HTML entry, only preload core chunks, not heavy ones
         return deps.filter(dep => 
-          !dep.includes('vendor-pdf') && 
+          !dep.includes('jspdf') && 
+          !dep.includes('autotable') &&
           !dep.includes('vendor-charts') && 
           !dep.includes('html2canvas')
         );
@@ -71,25 +72,32 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-ui": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-select",
-            "@radix-ui/react-toast",
-            "@radix-ui/react-tooltip",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-label",
-            "@radix-ui/react-checkbox",
-            "@radix-ui/react-switch",
-            "@radix-ui/react-slot",
-          ],
-          "vendor-charts": ["recharts"],
-          "vendor-pdf": ["jspdf", "jspdf-autotable"],
-          "vendor-query": ["@tanstack/react-query"],
-          "vendor-utils": ["date-fns", "clsx", "tailwind-merge", "class-variance-authority", "zod"],
+        manualChunks(id) {
+          // jspdf: NOT in manualChunks - let Vite naturally code-split via dynamic import in pdf-download.tsx
+          // Charts - only loaded by dashboard (lazy route)
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-') || id.includes('node_modules/victory')) {
+            return 'vendor-charts';
+          }
+          // html2canvas - only used in pdf-download
+          if (id.includes('node_modules/html2canvas')) {
+            return 'html2canvas';
+          }
+          // Core UI components - needed by most pages
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'vendor-ui';
+          }
+          // React core - always needed
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'vendor-react';
+          }
+          // Query lib
+          if (id.includes('node_modules/@tanstack/react-query')) {
+            return 'vendor-query';
+          }
+          // Utils
+          if (id.includes('node_modules/date-fns') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/zod')) {
+            return 'vendor-utils';
+          }
         },
       },
     },
