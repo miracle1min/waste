@@ -81,7 +81,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
             <button
               key={item.path + item.label}
               onClick={() => setLocation(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-left transition-all duration-200 ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-left transition-all duration-200 ${
                 isActive
                   ? "bg-[#23262F] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] text-[#E5E7EB]"
                   : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#23262F]/40"
