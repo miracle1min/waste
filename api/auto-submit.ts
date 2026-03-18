@@ -5,6 +5,7 @@ import { appendGroupedToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
+import { sendWhatsAppNotif } from './_lib/twilio-wa.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -180,6 +181,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
     }
+
+    // Fire-and-forget WhatsApp notification to admin
+    sendWhatsAppNotif({
+      kategoriInduk,
+      storeName,
+      shift,
+      tanggal: tanggal || '',
+      productList,
+      jumlahProdukList: data.jumlahProdukList,
+      unitList,
+      submittedBy: jwtPayload?.username || jwtPayload?.name || 'Unknown',
+    }).catch(err => console.error('[WA Notif] Background send failed:', err));
 
     const response: any = {
       success: true,
