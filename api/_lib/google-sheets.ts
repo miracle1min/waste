@@ -394,17 +394,22 @@ export async function appendTesterToGoogleSheets(
     }
   }
 
-  const checkedItems = data.testerItems.join(', ');
+  const itemCount = data.testerItems.length;
+  const productNames = data.testerItems.map((v: string) => v.toUpperCase()).join('\n');
+  const kodeProdukList = data.testerItems.map(() => '-').join('\n');
+  const quantities = data.testerItems.map(() => '1').join('\n');
+  const units = data.testerItems.map(() => 'PCS').join('\n');
+  const methods = data.testerItems.map(() => 'TESTER BY QC').join('\n');
 
   const rowData = [
     toUpper(data.shift),
     toUpper(data.storeName),
     'TESTER',
-    checkedItems,
-    '-',
-    '-',
-    '-',
-    '-',
+    productNames,
+    kodeProdukList,
+    quantities,
+    units,
+    methods,
     data.resultText,
     data.jam,
     buildImageFormula(data.parafQCUrl),

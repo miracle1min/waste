@@ -152,11 +152,11 @@ export default function AutoWaste() {
   // Tester state
   const [testerEnabled, setTesterEnabled] = useState(false);
   const [testerChecks, setTesterChecks] = useState<Record<string, boolean>>({
-    'All biang BAR': false,
-    'All produk Dimsum': false,
-    'Mie': false,
-    'Cabai': false,
-    'Acin': false,
+    'MIE GACOAN LV. 1': false,
+    'UDANG KEJU': false,
+    'UDANG RAMBUTAN': false,
+    'LUMPIA UDANG': false,
+    'ALL BIANG BAR': false,
   });
   const [testerKendala, setTesterKendala] = useState('');
   const [testerSubmitStatus, setTesterSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -584,7 +584,7 @@ export default function AutoWaste() {
     setSelectedManajer("");
     setJam("");
     setTesterEnabled(false);
-    setTesterChecks({ 'All biang BAR': false, 'All produk Dimsum': false, 'Mie': false, 'Cabai': false, 'Acin': false });
+    setTesterChecks({ 'MIE GACOAN LV. 1': false, 'UDANG KEJU': false, 'UDANG RAMBUTAN': false, 'LUMPIA UDANG': false, 'ALL BIANG BAR': false });
     setTesterKendala('');
     setTesterSubmitStatus('idle');
     setStep("config");

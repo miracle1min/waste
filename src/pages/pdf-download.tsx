@@ -234,11 +234,15 @@ async function generatePdfForDate(
    // Check for TESTER entry — should appear FIRST
    const testerEntry = shiftData.find((e: any) => e.station?.toUpperCase() === 'TESTER');
    if (testerEntry) {
-     const checkedItems = String(testerEntry.namaProduk || '-');
-     const resultText = String(testerEntry.alasanPemusnahan || '-');
+     const namaProduk = String(testerEntry.namaProduk || '-').replace(/,\s*/g, '\n');
+     const kodeProduk = String(testerEntry.kodeProduk || '-').replace(/,\s*/g, '\n');
+     const jumlahProduk = String(testerEntry.jumlahProduk || '-').replace(/,\s*/g, '\n');
+     const satuan = String(testerEntry.unit || '-').replace(/,\s*/g, '\n');
+     const metode = String(testerEntry.metodePemusnahan || '-').replace(/,\s*/g, '\n');
+     const alasan = String(testerEntry.alasanPemusnahan || '-').replace(/,\s*/g, '\n');
      rows.push([
-       'T', checkedItems, '-', '-', '-', '-',
-       resultText,
+       'T', namaProduk, kodeProduk, jumlahProduk, satuan, metode,
+       alasan,
        parseJamValue(testerEntry.jamTanggalPemusnahan || '-'), '', '', '-'
      ]);
      rowEntries.push({ entry: testerEntry, stationIdx: -1, docUrls: [], isTester: true });
