@@ -182,17 +182,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
     }
 
-    // Fire-and-forget WhatsApp notification to admin
-    sendWhatsAppNotif({
-      kategoriInduk,
-      storeName,
-      shift,
-      tanggal: tanggal || '',
-      productList,
-      jumlahProdukList: data.jumlahProdukList,
-      unitList,
-      submittedBy: jwtPayload?.username || jwtPayload?.name || 'Unknown',
-    }).catch(err => console.error('[WA Notif] Background send failed:', err));
+    // Send WhatsApp notification (must await — Vercel kills process after res.json)
+    try {
+      await sendWhatsAppNotif({
+        kategoriInduk,
+        storeName,
+        shift,
+        tanggal: tanggal || '',
+        productList,
+        jumlahProdukList: data.jumlahProdukList,
+        unitList,
+        submittedBy: jwtPayload?.username || jwtPayload?.name || 'Unknown',
+      });
+    } catch (err) {
+      console.error('[WA Notif] Send failed:', err);
+      // Don't fail the submission if notification fails
+    }
 
     const response: any = {
       success: true,
