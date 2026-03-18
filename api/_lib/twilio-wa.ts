@@ -1,17 +1,21 @@
 /**
  * Twilio WhatsApp notification helper
- * Sends waste submission alerts to admin via WhatsApp
+ * Sends combined waste submission alert to admin via WhatsApp
  */
 
-interface WasteNotifData {
+interface StationData {
   kategoriInduk: string;
-  storeName: string;
-  shift: string;
-  tanggal: string;
   productList: string[];
   jumlahProdukList: number[];
   unitList: string[];
+}
+
+interface WasteNotifData {
+  storeName: string;
+  shift: string;
+  tanggal: string;
   submittedBy?: string;
+  stations: StationData[];
 }
 
 // Station icon mapping
@@ -38,31 +42,33 @@ export async function sendWhatsAppNotif(data: WasteNotifData): Promise<void> {
     return;
   }
 
-  const icon = getStationIcon(data.kategoriInduk);
+  // Build station sections
+  const stationSections = data.stations.map(st => {
+    const icon = getStationIcon(st.kategoriInduk);
+    const items = st.productList.map((product, i) => {
+      const qty = st.jumlahProdukList[i] || 0;
+      const unit = st.unitList[i] || 'PCS';
+      return `  • ${product} — ${qty} ${unit}`;
+    }).join('\n');
+    return `${icon} *${st.kategoriInduk}*\n${items}`;
+  }).join('\n\n');
 
-  // Build item list
-  const items = data.productList.map((product, i) => {
-    const qty = data.jumlahProdukList[i] || 0;
-    const unit = data.unitList[i] || 'PCS';
-    return `  - ${product} — ${qty} ${unit}`;
-  }).join('\n');
+  const totalItems = data.stations.reduce((sum, st) => sum + st.productList.length, 0);
 
   const message = `✅ *WASTE SUKSES!*
 
 🏪 *Resto:* ${data.storeName}
 📅 *Tanggal:* ${data.tanggal}
 ⏰ *Shift:* ${data.shift}
-🏷️ *Station:* ${data.kategoriInduk}
+📊 *Station:* ${data.stations.length} station | ${totalItems} item
 👤 *Dilaporkan Oleh:* ${data.submittedBy || 'Unknown'}
 
 📋 *Data Waste-nya ini wak:*
 
-${icon} *${data.kategoriInduk}*
-${items}`;
+${stationSections}`;
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
-  // Manually encode to avoid URLSearchParams converting '+' to spaces
   const bodyParts = [
     `From=${encodeURIComponent(`whatsapp:${TWILIO_WA_SENDER}`)}`,
     `To=${encodeURIComponent(`whatsapp:${TWILIO_WA_ADMIN}`)}`,
@@ -84,7 +90,7 @@ ${items}`;
       const errBody = await resp.text();
       console.error(`[Twilio WA] Error ${resp.status}:`, errBody);
     } else {
-      console.log('[Twilio WA] Notification sent successfully');
+      console.log('[Twilio WA] Combined notification sent successfully');
     }
   } catch (err) {
     console.error('[Twilio WA] Failed to send:', err);

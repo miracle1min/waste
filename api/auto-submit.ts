@@ -73,6 +73,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true, url });
     }
 
+    // === Combined WhatsApp Notification Mode ===
+    if (fields.mode === 'send-wa-notif') {
+      try {
+        const stations = JSON.parse(fields.stations || '[]');
+        await sendWhatsAppNotif({
+          storeName: fields.storeName || 'Unknown',
+          shift: fields.shift || '',
+          tanggal: fields.tanggal || '',
+          submittedBy: jwtPayload?.displayName && jwtPayload.displayName !== jwtPayload.username
+            ? `${jwtPayload.displayName} (${jwtPayload.username})`
+            : jwtPayload?.username || 'Unknown',
+          stations,
+        });
+        return res.json({ success: true, message: 'Notification sent' });
+      } catch (err) {
+        console.error('[WA Notif] Failed:', err);
+        return res.json({ success: true, message: 'Notification failed but ok' });
+      }
+    }
+
     // Force all string data to UPPERCASE for consistency
     const toUpper = (v: any) => v != null ? String(v).toUpperCase() : '';
 
@@ -180,25 +200,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await appendGroupedToGoogleSheets(creds.googleSheetsCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
     } else {
       return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
-    }
-
-    // Send WhatsApp notification (must await — Vercel kills process after res.json)
-    try {
-      await sendWhatsAppNotif({
-        kategoriInduk,
-        storeName,
-        shift,
-        tanggal: tanggal || '',
-        productList,
-        jumlahProdukList: data.jumlahProdukList,
-        unitList,
-        submittedBy: jwtPayload?.displayName && jwtPayload.displayName !== jwtPayload.username
-        ? `${jwtPayload.displayName} (${jwtPayload.username})`
-        : jwtPayload?.username || 'Unknown',
-      });
-    } catch (err) {
-      console.error('[WA Notif] Send failed:', err);
-      // Don't fail the submission if notification fails
     }
 
     const response: any = {

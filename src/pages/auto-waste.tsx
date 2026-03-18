@@ -420,6 +420,31 @@ export default function AutoWaste() {
     setGlobalProgress(prev => ({ ...prev, percent: 100, phase: "" }));
     setIsSubmitting(false);
 
+    // Send combined WhatsApp notification for successful stations
+    const successfulStations = stationsToSubmit.filter(st => !failedStations.includes(st));
+    if (successfulStations.length > 0) {
+      try {
+        const stationsPayload = successfulStations.map(station => {
+          const items = parsedItemsMap[station];
+          return {
+            kategoriInduk: station,
+            productList: items.map(i => i.namaProduk),
+            jumlahProdukList: items.map(i => i.qty),
+            unitList: items.map(i => i.unit),
+          };
+        });
+        const notifForm = new FormData();
+        notifForm.append('mode', 'send-wa-notif');
+        notifForm.append('storeName', storeName);
+        notifForm.append('shift', selectedShift);
+        notifForm.append('tanggal', selectedDate);
+        notifForm.append('stations', JSON.stringify(stationsPayload));
+        apiFetch("/api/auto-submit", { method: "POST", body: notifForm }).catch(() => {});
+      } catch (e) {
+        console.error('[WA Notif] Failed to send combined notification:', e);
+      }
+    }
+
     if (failCount === 0) {
       setStep("success");
       toast({
