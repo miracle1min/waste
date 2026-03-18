@@ -92,7 +92,7 @@ export function PWAInstallPrompt() {
             </div>
             <button
               onClick={handleDismiss}
-              className="text-[#6B7280] hover:text-[#E5E7EB] transition-colors p-1 -mt-1 -mr-1"
+              className="text-[#9CA3AF] hover:text-[#E5E7EB] transition-colors p-1 -mt-1 -mr-1"
               aria-label="Tutup"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

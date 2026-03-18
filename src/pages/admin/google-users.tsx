@@ -194,7 +194,7 @@ export default function GoogleUsersPage() {
             placeholder="Cari email, nama, atau username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1A1C22]/60 border border-[#4FD1FF]/15 text-sm font-sans text-[#E5E7EB] placeholder:text-[#6B7280] focus:outline-none focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1A1C22]/60 border border-[#4FD1FF]/15 text-sm font-sans text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 transition-all"
           />
         </div>
       </Card>

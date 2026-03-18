@@ -180,16 +180,16 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
           <div className="space-y-2">
             <CloudUpload className={cn(
               "w-8 h-8 sm:w-10 sm:h-10 mx-auto",
-              isDragOver ? "text-[#4FD1FF]" : "text-[#6B7280]"
+              isDragOver ? "text-[#4FD1FF]" : "text-[#9CA3AF]"
             )} />
             <div className="px-2">
               <p className="text-sm font-medium text-[#E5E7EB]">
                 {isCompressing ? "Memproses gambar..." : `${label} (Maks ${maxFiles} file)`}
               </p>
-              <p className="text-xs text-[#6B7280] mt-1">
+              <p className="text-xs text-[#9CA3AF] mt-1">
                 Drag & drop atau klik untuk memilih
               </p>
-              <p className="text-xs text-[#6B7280]">
+              <p className="text-xs text-[#9CA3AF]">
                 Format: JPG, PNG, JPEG • Auto resize ke 0.9MB
               </p>
             </div>
@@ -223,7 +223,7 @@ export const MultiFileUpload = forwardRef<HTMLInputElement, MultiFileUploadProps
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-center text-[#E5E7EB] file-name-mobile leading-tight">{file.name}</p>
-                  <p className="text-xs text-center text-[#6B7280] file-size-mobile">
+                  <p className="text-xs text-center text-[#9CA3AF] file-size-mobile">
                     {(file.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>

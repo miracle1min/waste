@@ -296,7 +296,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 <div className="w-8 h-px bg-[#6B7280]/40" />
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-[#6B7280]/40" />
-                  <span className="text-[10px] text-[#6B7280]">Aktif</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Aktif</span>
                 </div>
               </div>
 
@@ -459,7 +459,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 <h1 className="text-4xl lg:text-5xl font-black tracking-wider">
                   <GlitchText text="AWAS" />
                 </h1>
-                <p className="text-[#6B7280] text-xs mt-2 tracking-widest">
+                <p className="text-[#9CA3AF] text-xs mt-2 tracking-widest">
                   APLIKASI WASTE ALWAYS SIMPLE
                 </p>
               </div>
@@ -486,9 +486,9 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   name="tenant_id"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase mb-1.5 ml-1">
+                      <label htmlFor="tenant-select" className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase mb-1.5 ml-1">
                         Pilih Resto
-                      </div>
+                      </label>
                       <FormControl>
                         <div className="relative">
                           <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4FD1FF]/60" />
@@ -508,6 +508,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                             <>
                               <select
                                 {...field}
+                                id="tenant-select"
+                                aria-label="Pilih Resto"
                                 disabled={loadingTenants}
                                 className="w-full h-12 pl-11 pr-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:outline-none hover:border-[#4FD1FF]/20 transition-all duration-200 appearance-none cursor-pointer"
                               >
@@ -551,7 +553,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                             placeholder="Ketik username lo..."
                             disabled={isSubmitting}
                             autoComplete="username"
-                            className="h-12 pl-11 bg-[#1A1C22] border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] placeholder:text-[#6B7280] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:ring-offset-0 hover:border-[#4FD1FF]/20 transition-all duration-200"
+                            className="h-12 pl-11 bg-[#1A1C22] border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:ring-offset-0 hover:border-[#4FD1FF]/20 transition-all duration-200"
                           />
                         </div>
                       </FormControl>
@@ -577,7 +579,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                             placeholder="••••••••"
                             disabled={isSubmitting}
                             autoComplete="current-password"
-                            className="h-12 pl-11 bg-[#1A1C22] border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] placeholder:text-[#6B7280] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:ring-offset-0 hover:border-[#4FD1FF]/20 transition-all duration-200"
+                            className="h-12 pl-11 bg-[#1A1C22] border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:ring-offset-0 hover:border-[#4FD1FF]/20 transition-all duration-200"
                             onKeyDown={(e) => { if (e.key === "Enter") form.handleSubmit(handleSubmit)(); }}
                           />
                         </div>
@@ -606,7 +608,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             {/* Divider */}
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[rgba(79,209,255,0.08)]" />
-              <span className="text-[#6B7280] text-xs">atau</span>
+              <span className="text-[#9CA3AF] text-xs">atau</span>
               <div className="flex-1 h-px bg-[rgba(79,209,255,0.08)]" />
             </div>
 
@@ -632,7 +634,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             </button>
 
             <div className="text-center">
-              <p className="text-[10px] text-[#6B7280]">Super Admin? Kosongin aja resto-nya</p>
+              <p className="text-[10px] text-[#9CA3AF]">Super Admin? Kosongin aja resto-nya</p>
             </div>
 
             <div className="text-center min-h-[20px]">
@@ -648,15 +650,15 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
             <div className="flex items-center gap-3 pt-2">
               <div className="flex-1 h-px bg-[rgba(79,209,255,0.08)]" />
-              <span className="text-[10px] text-[#6B7280]">By DirgaX | Jgn lupa ☕</span>
+              <span className="text-[10px] text-[#9CA3AF]">By DirgaX | Jgn lupa ☕</span>
               <div className="flex-1 h-px bg-[rgba(79,209,255,0.08)]" />
             </div>
           </div>
         </div>
 
         <div className="mt-3 flex justify-between items-center px-2">
-          <span className="text-[9px] text-[#6B7280]">SYS.v4.0.0</span>
-          <span className="flex items-center gap-1.5 text-[9px] text-[#6B7280]">
+          <span className="text-[9px] text-[#9CA3AF]">SYS.v4.0.0</span>
+          <span className="flex items-center gap-1.5 text-[9px] text-[#9CA3AF]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80] shadow-[0_0_4px_rgba(74,222,128,0.6)]" /> ONLINE
           </span>
         </div>

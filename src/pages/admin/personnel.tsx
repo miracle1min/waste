@@ -181,7 +181,7 @@ export default function PersonnelPage() {
                                 alt="TTD" className="w-full h-full object-contain p-0.5"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                             ) : (
-                              <span className="text-[9px] font-sans text-[#6B7280]">No TTD</span>
+                              <span className="text-[9px] font-sans text-[#9CA3AF]">No TTD</span>
                             )}
                           </div>
                           <div className="min-w-0">

@@ -109,7 +109,7 @@ const CLAY_INPUT = "w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#1A1C22] border borde
 const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]`;
 const CLAY_BTN_PRIMARY = "w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:shadow-[8px_8px_16px_rgba(0,0,0,0.6),-4px_-4px_10px_rgba(255,255,255,0.05)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.05)] transition-all duration-200";
 const CLAY_BTN_OUTLINE = "border-[rgba(79,209,255,0.12)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] transition-all duration-200";
-const LABEL = "text-[10px] lg:text-xs text-[#6B7280] font-sans uppercase tracking-wide";
+const LABEL = "text-[10px] lg:text-xs text-[#9CA3AF] font-sans uppercase tracking-wide";
 const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
 
 // ========================
@@ -511,7 +511,7 @@ export default function AutoWaste() {
             <Zap className="w-5 h-5 text-[#4FD1FF]" />
             <div>
               <h1 className="text-sm font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Waste Otomatis</h1>
-              <p className="text-[10px] text-[#6B7280]">Fast Mode • Batch Submit</p>
+              <p className="text-[10px] text-[#9CA3AF]">Fast Mode • Batch Submit</p>
               {tenantName && <p className="text-[10px] text-[#4FD1FF]/60 font-sans truncate">{tenantName}</p>}
             </div>
           </div>
@@ -592,7 +592,7 @@ export default function AutoWaste() {
                       submitStatusMap[st] === "success" ? "text-green-400" :
                       submitStatusMap[st] === "uploading" ? "text-[#4FD1FF]" :
                       submitStatusMap[st] === "error" ? "text-red-400" :
-                      "text-[#6B7280]"
+                      "text-[#9CA3AF]"
                     }`}>{st}</span>
                   </div>
                   <div className="text-xs">
@@ -603,7 +603,7 @@ export default function AutoWaste() {
                         ❌ <span className="text-[9px] max-w-[100px] truncate">{stationErrors[st]}</span>
                       </span>
                     )}
-                    {submitStatusMap[st] === "pending" && <span className="text-[#6B7280]">⏳</span>}
+                    {submitStatusMap[st] === "pending" && <span className="text-[#9CA3AF]">⏳</span>}
                   </div>
                 </div>
               ))}
@@ -614,7 +614,7 @@ export default function AutoWaste() {
 
       <main className="flex-1 w-full px-4 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
         {/* User Identity Badge */}
-        <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#6B7280] font-mono">
+        <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#9CA3AF] font-mono">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">
             <span className="text-[#4FD1FF]/70">👤</span>
             <span className="text-[#9CA3AF]">{qcName || "—"}</span>
@@ -633,7 +633,7 @@ export default function AutoWaste() {
             <div className="hidden lg:flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">AUTO WASTE</h2>
-                <span className="text-sm text-[#6B7280]">Fast Mode • Batch Submit</span>
+                <span className="text-sm text-[#9CA3AF]">Fast Mode • Batch Submit</span>
               </div>
             </div>
 
@@ -766,7 +766,7 @@ export default function AutoWaste() {
               </div>
 
               {isLoadingSignatures && (
-                <p className="text-xs lg:text-sm text-[#6B7280] text-center flex items-center justify-center gap-1 mt-3">
+                <p className="text-xs lg:text-sm text-[#9CA3AF] text-center flex items-center justify-center gap-1 mt-3">
                   <Loader2 className="w-3 h-3 animate-spin" /> Lagi ambil TTD...
                 </p>
               )}
@@ -833,7 +833,7 @@ Contoh:
                       setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                     }}
                     placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
-                    className={`w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all resize-none placeholder:text-[#6B7280]`}
+                    className={`w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all resize-none placeholder:text-[#9CA3AF]`}
                   />
                   {rawTexts[station] && (
                     <button
@@ -841,7 +841,7 @@ Contoh:
                         setRawTexts(prev => ({ ...prev, [station]: "" }));
                         setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
                       }}
-                      className="absolute top-2 right-2 p-1 text-[#6B7280] hover:text-[#E5E7EB] transition-colors"
+                      className="absolute top-2 right-2 p-1 text-[#9CA3AF] hover:text-[#E5E7EB] transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -951,14 +951,14 @@ Contoh:
                   </div>
                   <div>
                     <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
-                    <span className="text-xs lg:text-sm text-[#6B7280] ml-2">({parsedItemsMap[station].length} item)</span>
+                    <span className="text-xs lg:text-sm text-[#9CA3AF] ml-2">({parsedItemsMap[station].length} item)</span>
                   </div>
                   {isSubmitting && (
                     <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${
                       submitStatusMap[station] === "uploading" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
                       submitStatusMap[station] === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
                       submitStatusMap[station] === "error" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                      "bg-[#2A2D37] text-[#6B7280] border border-[rgba(79,209,255,0.06)]"
+                      "bg-[#2A2D37] text-[#9CA3AF] border border-[rgba(79,209,255,0.06)]"
                     }`}>
                       {submitStatusMap[station] === "uploading" ? "⏳ Uploading..." :
                        submitStatusMap[station] === "success" ? "✅ Done" :
@@ -972,7 +972,7 @@ Contoh:
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs lg:text-sm">
                       <thead>
-                        <tr className="bg-[#1A1C22] text-[#6B7280]">
+                        <tr className="bg-[#1A1C22] text-[#9CA3AF]">
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">#</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Produk</th>
                           <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Lot</th>
@@ -984,7 +984,7 @@ Contoh:
                       <tbody>
                         {parsedItemsMap[station].map((item, i) => (
                           <tr key={i} className="border-t border-[rgba(79,209,255,0.06)] hover:bg-[#1A1C22]/50 transition-colors">
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#6B7280]">{i + 1}</td>
+                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#9CA3AF]">{i + 1}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] font-medium truncate max-w-[100px] lg:max-w-[250px]">{item.namaProduk}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] text-[11px] lg:text-sm">{item.kodeLot || "-"}</td>
                             <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-center text-yellow-400 font-bold">{item.qty}</td>
@@ -1081,27 +1081,27 @@ Contoh:
 
             <div className={`${CLAY_CARD} text-left space-y-2 text-sm lg:text-base`}>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Tanggal</span>
+                <span className="text-[#9CA3AF]">Tanggal</span>
                 <span className="text-[#E5E7EB] font-medium">{selectedDate}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Resto</span>
+                <span className="text-[#9CA3AF]">Resto</span>
                 <span className="text-[#E5E7EB] font-medium">{storeName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Shift</span>
+                <span className="text-[#9CA3AF]">Shift</span>
                 <span className="text-[#E5E7EB] font-medium">{selectedShift}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Jam</span>
+                <span className="text-[#9CA3AF]">Jam</span>
                 <span className="text-yellow-400 font-medium">{jam} WIB</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">QC</span>
+                <span className="text-[#9CA3AF]">QC</span>
                 <span className="text-[#4FD1FF] font-medium">{selectedQC}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Manajer</span>
+                <span className="text-[#9CA3AF]">Manajer</span>
                 <span className="text-[#9F7AEA] font-medium">{selectedManajer}</span>
               </div>
 
@@ -1121,7 +1121,7 @@ Contoh:
               <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
 
               <div className="flex items-center justify-between">
-                <span className="text-[#6B7280]">Total</span>
+                <span className="text-[#9CA3AF]">Total</span>
                 <span className="text-[#E5E7EB] font-bold text-base lg:text-lg">{totalItems} produk</span>
               </div>
             </div>

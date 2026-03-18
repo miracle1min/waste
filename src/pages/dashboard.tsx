@@ -172,7 +172,7 @@ function Section({ title, icon, children, defaultOpen = true, badge, action }: {
         </div>
         <div className="flex items-center gap-2">
           {action}
-          <ChevronDown className={`w-4 h-4 text-[#6B7280] transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-4 h-4 text-[#9CA3AF] transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
         </div>
       </button>
       <div className={`transition-all duration-300 ease-in-out ${open ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"}`}>
@@ -314,7 +314,7 @@ export default function Dashboard() {
         </div>
         <div>
           <h1 className="text-base font-bold text-white">Dashboard</h1>
-          {tenantName && <p className="text-[10px] text-[#6B7280] -mt-0.5">{tenantName}</p>}
+          {tenantName && <p className="text-[10px] text-[#9CA3AF] -mt-0.5">{tenantName}</p>}
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* Date range pills */}
@@ -326,7 +326,7 @@ export default function Dashboard() {
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 ${
                   range === opt
                     ? "bg-[#4FD1FF]/15 text-[#4FD1FF] shadow-[inset_0_1px_0_rgba(79,209,255,0.1)]"
-                    : "text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[#2A2D37]/50"
+                    : "text-[#9CA3AF] hover:text-[#9CA3AF] hover:bg-[#2A2D37]/50"
                 }`}
               >
                 {rangeLabels[opt]}
@@ -356,7 +356,7 @@ export default function Dashboard() {
                 Dashboard
               </h1>
               {tenantName && (
-                <p className="text-[10px] text-[#6B7280] flex items-center gap-1 mt-0.5">
+                <p className="text-[10px] text-[#9CA3AF] flex items-center gap-1 mt-0.5">
                   <Store className="w-2.5 h-2.5" />
                   {tenantName}
                 </p>
@@ -410,7 +410,7 @@ export default function Dashboard() {
               </button>
               {showRangeMenu && (
                 <div className="absolute right-0 mt-1.5 w-60 bg-[#2A2D37] border border-[rgba(79,209,255,0.12)] rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] z-50 p-3">
-                  <p className="text-[10px] text-[#6B7280] font-medium uppercase tracking-wider mb-2">Pilih Rentang Tanggal</p>
+                  <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wider mb-2">Pilih Rentang Tanggal</p>
                   <div className="space-y-1.5">
                     <div>
                       <label className="text-[10px] text-[#9CA3AF] mb-0.5 block">Dari</label>
@@ -446,7 +446,7 @@ export default function Dashboard() {
             </div>
             <div className="text-center">
               <p className="text-red-400 font-medium mb-1">{error}</p>
-              <p className="text-[#6B7280] text-xs">Cek koneksi internet atau coba lagi nanti</p>
+              <p className="text-[#9CA3AF] text-xs">Cek koneksi internet atau coba lagi nanti</p>
             </div>
             <Button onClick={fetchData} variant="outline" className="border-[rgba(79,209,255,0.12)] text-[#4FD1FF] mt-2">
               <RefreshCw className="w-3.5 h-3.5 mr-2" /> Coba Lagi
@@ -470,7 +470,7 @@ export default function Dashboard() {
                       <span className="text-lg">{greetingEmoji}</span>
                       <h1 className="text-base sm:text-lg font-bold text-white">{greeting}, <span className="bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">{userName}</span></h1>
                     </div>
-                    <p className="text-xs text-[#6B7280] flex items-center gap-1.5">
+                    <p className="text-xs text-[#9CA3AF] flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
                       {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                       <span className="text-[#4FD1FF]/40">•</span>
@@ -485,7 +485,7 @@ export default function Dashboard() {
                         <Zap className="w-4 h-4 text-[#4FD1FF]" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Entry Terakhir</p>
+                        <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider">Entry Terakhir</p>
                         <p className="text-xs font-bold text-white truncate">{data.lastEntry.station} • {data.lastEntry.shift}</p>
                         <p className="text-[10px] text-[#4FD1FF]/70">{data.lastEntry.date} — QC: {userName}</p>
                       </div>
@@ -496,7 +496,7 @@ export default function Dashboard() {
                 {/* QC Names */}
                 {data.qcNames && data.qcNames.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-[rgba(79,209,255,0.06)] flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-[#6B7280] font-medium mr-0.5">QC Aktif:</span>
+                    <span className="text-[10px] text-[#9CA3AF] font-medium mr-0.5">QC Aktif:</span>
                     {data.qcNames.map((qc: string) => (
                       <span key={qc} className="text-[10px] bg-[#4FD1FF]/8 text-[#4FD1FF] px-2.5 py-0.5 rounded-full border border-[#4FD1FF]/12 font-medium">{qc}</span>
                     ))}
@@ -536,7 +536,7 @@ export default function Dashboard() {
                     <p className={`text-xl sm:text-2xl font-bold ${card.textColor} tabular-nums`}>
                       <AnimatedNumber value={card.value} />
                     </p>
-                    <p className="text-[10px] text-[#6B7280] mt-0.5 uppercase tracking-wider font-medium">{card.label}</p>
+                    <p className="text-[10px] text-[#9CA3AF] mt-0.5 uppercase tracking-wider font-medium">{card.label}</p>
                   </div>
                 </div>
               ))}
@@ -560,7 +560,7 @@ export default function Dashboard() {
                           className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
                             statPeriod === key
                               ? "bg-[#4FD1FF]/15 text-[#4FD1FF]"
-                              : "text-[#6B7280] hover:text-[#9CA3AF]"
+                              : "text-[#9CA3AF] hover:text-[#9CA3AF]"
                           }`}
                         >
                           {label}
@@ -571,7 +571,7 @@ export default function Dashboard() {
                         className={`px-2.5 py-1 text-[10px] font-medium transition-all flex items-center gap-0.5 ${
                           statPeriod === "custom"
                             ? "bg-[#4FD1FF]/15 text-[#4FD1FF]"
-                            : "text-[#6B7280] hover:text-[#9CA3AF]"
+                            : "text-[#9CA3AF] hover:text-[#9CA3AF]"
                         }`}
                       >
                         📅
@@ -602,9 +602,9 @@ export default function Dashboard() {
                     return (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 rounded-xl bg-[#2A2D37] border border-[rgba(79,209,255,0.06)] flex items-center justify-center mx-auto mb-3">
-                          <Package className="w-5 h-5 text-[#6B7280]" />
+                          <Package className="w-5 h-5 text-[#9CA3AF]" />
                         </div>
-                        <p className="text-sm text-[#6B7280]">Belum ada data waste untuk {periodLabel}</p>
+                        <p className="text-sm text-[#9CA3AF]">Belum ada data waste untuk {periodLabel}</p>
                       </div>
                     );
                   }
@@ -642,14 +642,14 @@ export default function Dashboard() {
                                       color: STATION_COLORS[station] || '#64748b'
                                     }}>#{idx + 1}</span>
                                   </div>
-                                  <p className="text-[10px] text-[#6B7280]">{stationItemCount} item • {pct}% dari total</p>
+                                  <p className="text-[10px] text-[#9CA3AF]">{stationItemCount} item • {pct}% dari total</p>
                                 </div>
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-bold" style={{ color: STATION_COLORS[station] || '#64748b' }}>
                                   {stationTotal.toLocaleString("id-ID")}
                                 </p>
-                                <p className="text-[9px] text-[#6B7280]">total qty</p>
+                                <p className="text-[9px] text-[#9CA3AF]">total qty</p>
                               </div>
                             </div>
 
@@ -744,7 +744,7 @@ export default function Dashboard() {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-center py-12 text-[#6B7280] text-sm">Tidak ada data untuk periode ini</div>
+                <div className="text-center py-12 text-[#9CA3AF] text-sm">Tidak ada data untuk periode ini</div>
               )}
             </Section>
 
@@ -767,7 +767,7 @@ export default function Dashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="text-center py-12 text-[#6B7280] text-sm">Tidak ada data</div>
+                  <div className="text-center py-12 text-[#9CA3AF] text-sm">Tidak ada data</div>
                 )}
               </Section>
 
@@ -810,7 +810,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-[#6B7280] text-sm">Tidak ada data</div>
+                  <div className="text-center py-12 text-[#9CA3AF] text-sm">Tidak ada data</div>
                 )}
               </Section>
             </div>
@@ -831,7 +831,7 @@ export default function Dashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-center py-12 text-[#6B7280] text-sm">Tidak ada data</div>
+                <div className="text-center py-12 text-[#9CA3AF] text-sm">Tidak ada data</div>
               )}
             </Section>
 
@@ -853,7 +853,7 @@ export default function Dashboard() {
                           {i < 3 ? (
                             <span className="text-sm">{medals[i]}</span>
                           ) : (
-                            <span className="text-[11px] font-bold text-[#6B7280]">{i + 1}</span>
+                            <span className="text-[11px] font-bold text-[#9CA3AF]">{i + 1}</span>
                           )}
                         </div>
 
@@ -885,7 +885,7 @@ export default function Dashboard() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-[#6B7280] text-sm">Tidak ada data</div>
+                <div className="text-center py-12 text-[#9CA3AF] text-sm">Tidak ada data</div>
               )}
             </Section>
           </>

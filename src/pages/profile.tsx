@@ -57,7 +57,7 @@ export default function Profile() {
                 <Building2 className="w-4 h-4 text-[#4FD1FF]" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] text-[#6B7280] font-sans uppercase">Tenant / Resto</p>
+                <p className="text-[10px] text-[#9CA3AF] font-sans uppercase">Tenant / Resto</p>
                 <p className="text-sm text-[#E5E7EB] font-medium truncate">{tenantName}</p>
                 {storeCode && <p className="text-xs text-[#9CA3AF] font-sans">{storeCode}</p>}
               </div>
@@ -70,7 +70,7 @@ export default function Profile() {
                 <Clock className="w-4 h-4 text-[#4FD1FF]" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] text-[#6B7280] font-sans uppercase">Sesi Login</p>
+                <p className="text-[10px] text-[#9CA3AF] font-sans uppercase">Sesi Login</p>
                 <p className="text-sm text-[#E5E7EB] font-medium">
                   {sessionStart.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
                   {" "}{sessionStart.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
@@ -86,8 +86,8 @@ export default function Profile() {
           <img src={wasteLogo} alt="AWAS" className="w-10 h-10 rounded-xl" />
           <div>
             <p className="text-sm font-bold text-[#E5E7EB]">AWAS</p>
-            <p className="text-[10px] text-[#6B7280] font-sans">Aplikasi Waste Always Simple</p>
-            <p className="text-[10px] text-[#6B7280] font-sans">v3.4.0 • Made with ☕ By ~/DirgaX</p>
+            <p className="text-[10px] text-[#9CA3AF] font-sans">Aplikasi Waste Always Simple</p>
+            <p className="text-[10px] text-[#9CA3AF] font-sans">v3.4.0 • Made with ☕ By ~/DirgaX</p>
           </div>
         </div>
 

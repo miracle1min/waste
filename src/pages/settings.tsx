@@ -215,7 +215,7 @@ function TenantsTab() {
  <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-[#4FD1FF] mx-auto" /><p className="text-xs font-sans text-[#4FD1FF]/60 mt-2">Loading...</p></div>
  ) : tenants.length === 0 ? (
  <div className="text-center py-12 border border-dashed border-[#4FD1FF]/10 rounded-xl">
- <Store className="h-8 w-8 text-[#6B7280] mx-auto" /><p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Belum ada store. Tambahin dulu yuk!</p>
+ <Store className="h-8 w-8 text-[#9CA3AF] mx-auto" /><p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Belum ada store. Tambahin dulu yuk!</p>
  </div>
  ) : (
  <div className="overflow-x-auto rounded-xl border border-[#4FD1FF]/10">
@@ -389,7 +389,7 @@ function UsersTab() {
  <div className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin text-[#4FD1FF] mx-auto" /><p className="text-xs font-sans text-[#4FD1FF]/60 mt-2">Loading...</p></div>
  ) : users.length === 0 ? (
  <div className="text-center py-12 border border-dashed border-[#4FD1FF]/10 rounded-xl">
- <Users className="h-8 w-8 text-[#6B7280] mx-auto" /><p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Belum ada user.</p>
+ <Users className="h-8 w-8 text-[#9CA3AF] mx-auto" /><p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Belum ada user.</p>
  </div>
  ) : (
  <div className="overflow-x-auto rounded-xl border border-[#4FD1FF]/10">
@@ -547,7 +547,7 @@ function PersonnelTab() {
 
  {tenants.length === 0 ? (
  <div className="text-center py-12 border border-dashed border-[#4FD1FF]/10 rounded-xl">
- <UserCheck className="h-8 w-8 text-[#6B7280] mx-auto" />
+ <UserCheck className="h-8 w-8 text-[#9CA3AF] mx-auto" />
  <p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Bikin store dulu di tab Tenant</p>
  </div>
  ) : (
@@ -600,7 +600,7 @@ function PersonnelTab() {
  <label className="text-[10px] font-sans text-[#4FD1FF]/60 uppercase">Nama Singkat (key)</label>
  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
  className="w-full h-10 px-3 bg-[#1A1C22] border border-[#4FD1FF]/10 rounded-lg font-sans text-sm text-[#E5E7EB] focus:border-[#4FD1FF]/30 focus:outline-none" placeholder="PAJAR" />
- <p className="text-[10px] font-sans text-[#6B7280] mt-0.5">Nama pendek, huruf kapital</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] mt-0.5">Nama pendek, huruf kapital</p>
  </div>
  <div>
  <label className="text-[10px] font-sans text-[#4FD1FF]/60 uppercase">Nama Lengkap</label>
@@ -643,12 +643,12 @@ function PersonnelTab() {
  </div>
  <div>
  <p className="text-[10px] font-sans text-green-400">✅ TTD Ready</p>
- <p className="text-[10px] font-sans text-[#6B7280] truncate max-w-[200px]">{form.signature_url}</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] truncate max-w-[200px]">{form.signature_url}</p>
  </div>
  </div>
  )}
  </div>
- <p className="text-[10px] font-sans text-[#6B7280] mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
  </div>
  </div>
  <div className="flex gap-2 pt-2">
@@ -667,7 +667,7 @@ function PersonnelTab() {
  {/* Personnel List */}
  {filtered.length === 0 ? (
  <div className="text-center py-8 border border-dashed border-[#4FD1FF]/10 rounded-xl">
- <UserCheck className="h-8 w-8 text-[#6B7280] mx-auto" />
+ <UserCheck className="h-8 w-8 text-[#9CA3AF] mx-auto" />
  <p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">{personnel.length === 0 ? "Belum ada personil. Tambahin dulu!" : "Ga ada data untuk filter ini"}</p>
  </div>
  ) : (
@@ -683,7 +683,7 @@ function PersonnelTab() {
  alt="TTD" className="w-full h-full object-contain p-1"
  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
  ) : (
- <span className="text-[10px] font-sans text-[#6B7280]">No TTD</span>
+ <span className="text-[10px] font-sans text-[#9CA3AF]">No TTD</span>
  )}
  </div>
  <div>
@@ -709,7 +709,7 @@ function PersonnelTab() {
  </div>
  </div>
  {p.signature_url && (
- <p className="text-[10px] font-sans text-[#6B7280] mt-2 truncate">📎 {p.signature_url}</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] mt-2 truncate">📎 {p.signature_url}</p>
  )}
  </div>
  ))}
@@ -806,7 +806,7 @@ function ConfigsTab() {
 
  {tenants.length === 0 ? (
  <div className="text-center py-12 border border-dashed border-[#4FD1FF]/10 rounded-xl">
- <Database className="h-8 w-8 text-[#6B7280] mx-auto" />
+ <Database className="h-8 w-8 text-[#9CA3AF] mx-auto" />
  <p className="text-sm font-sans text-[#4FD1FF]/60 mt-2">Bikin store dulu di tab Tenant, baru bisa isi config</p>
  </div>
  ) : (
@@ -850,7 +850,7 @@ function ConfigsTab() {
  className="w-full h-10 px-3 bg-[#1A1C22] border border-[#4FD1FF]/10 rounded-lg font-sans text-sm text-[#E5E7EB] focus:border-[#4FD1FF]/30 focus:outline-none"
  placeholder={field.placeholder}
  />
- <p className="text-[10px] font-sans text-[#6B7280] mt-0.5">{field.desc}</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] mt-0.5">{field.desc}</p>
  </div>
  ))}
  </div>

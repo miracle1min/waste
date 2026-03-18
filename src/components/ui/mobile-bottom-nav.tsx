@@ -40,7 +40,7 @@ export function MobileBottomNav() {
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
                 active
                   ? "text-[#4FD1FF]"
-                  : "text-[#6B7280] active:text-[#9CA3AF]"
+                  : "text-[#9CA3AF] active:text-[#9CA3AF]"
               }`}
             >
               <div className={`relative p-1.5 rounded-[12px] transition-all duration-300 ${

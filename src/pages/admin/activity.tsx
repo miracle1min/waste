@@ -173,7 +173,7 @@ export default function ActivityLogPage() {
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Cari username, action, atau store..."
-              className="w-full h-11 pl-10 pr-4 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#6B7280] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all"
+              className="w-full h-11 pl-10 pr-4 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all"
             />
           </div>
 

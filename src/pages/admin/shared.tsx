@@ -151,7 +151,7 @@ export function Input({ label, hint, ...props }: { label: string; hint?: string 
   return (
     <div>
       <label className="block text-[11px] font-sans text-[#4FD1FF]/80 mb-1.5">{label}</label>
-      <input {...props} className={`w-full h-11 px-3.5 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#6B7280] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all ${props.className || ""}`} />
+      <input {...props} className={`w-full h-11 px-3.5 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all ${props.className || ""}`} />
       {hint && <p className="text-[10px] font-sans text-[#4FD1FF]/60 mt-1">{hint}</p>}
     </div>
   );

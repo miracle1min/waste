@@ -43,7 +43,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
             <h1 className="text-base font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent leading-tight">
               AWAS
             </h1>
-            <p className="text-[9px] text-[#6B7280] font-mono leading-tight">Aplikasi Waste Always Simple</p>
+            <p className="text-[9px] text-[#9CA3AF] font-mono leading-tight">Aplikasi Waste Always Simple</p>
           </div>
         </div>
         {tenantName && (
@@ -66,7 +66,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
                 👑 Super Admin
               </span>
             ) : (
-              <span className="text-[9px] text-[#6B7280] font-mono">QC Staff</span>
+              <span className="text-[9px] text-[#9CA3AF] font-mono">QC Staff</span>
             )}
           </div>
         </div>
@@ -90,7 +90,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#4FD1FF] to-[#9F7AEA] shadow-[0_0_6px_rgba(79,209,255,0.3)]" />
               )}
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#4FD1FF]" : "text-[#6B7280]"}`} />
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#4FD1FF]" : "text-[#9CA3AF]"}`} />
               <span className={`text-sm font-medium ${isActive ? "text-[#E5E7EB]" : ""}`}>{item.label}</span>
             </button>
           );
@@ -112,8 +112,8 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
           {isLoggingOut ? "Keluar..." : "Logout"}
         </button>
         <div className="text-center space-y-0.5 pt-1">
-          <p className="text-[9px] font-mono text-[#6B7280]">v3.3.0</p>
-          <p className="text-[9px] text-[#6B7280]">Made with ☕ By ~/DirgaX</p>
+          <p className="text-[9px] font-mono text-[#9CA3AF]">v3.3.0</p>
+          <p className="text-[9px] text-[#9CA3AF]">Made with ☕ By ~/DirgaX</p>
         </div>
       </div>
     </aside>

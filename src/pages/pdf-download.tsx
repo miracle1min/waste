@@ -410,7 +410,7 @@ function CollapsibleSection({ title, icon, defaultOpen = true, badge, children }
          )}
        </div>
        <div className={`transform transition-transform duration-300 ${open ? "rotate-180" : ""}`}>
-         <ChevronDown className="w-4 h-4 text-[#6B7280]" />
+         <ChevronDown className="w-4 h-4 text-[#9CA3AF]" />
        </div>
      </button>
      <div className={`transition-all duration-300 ease-in-out ${open ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"}`}>
@@ -628,7 +628,7 @@ export default function PdfDownload() {
        </div>
        <div>
          <h1 className="text-lg font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Generate PDF</h1>
-         <p className="text-[11px] text-[#6B7280]">BA Waste Report — Cetak & Arsipkan</p>
+         <p className="text-[11px] text-[#9CA3AF]">BA Waste Report — Cetak & Arsipkan</p>
        </div>
        <div className="ml-auto flex items-center gap-3">
          {tenantName && (
@@ -651,7 +651,7 @@ export default function PdfDownload() {
                <Printer className="w-3.5 h-3.5 text-[#4FD1FF] flex-shrink-0" />
                Generate PDF
              </h1>
-             <p className="text-[10px] text-[#6B7280]">BA Waste Report</p>
+             <p className="text-[10px] text-[#9CA3AF]">BA Waste Report</p>
            </div>
          </div>
          <div className="flex items-center gap-1.5">
@@ -673,22 +673,22 @@ export default function PdfDownload() {
            </div>
            <div className="flex-1 min-w-0">
              <h2 className="text-sm font-bold text-[#E5E7EB]">PDF Generator</h2>
-             <p className="text-[10px] text-[#6B7280]">Cetak Berita Acara Pemusnahan Produk</p>
+             <p className="text-[10px] text-[#9CA3AF]">Cetak Berita Acara Pemusnahan Produk</p>
            </div>
          </div>
          {/* Quick stats */}
          <div className="grid grid-cols-3 gap-2">
            <div className="bg-[#14161A]/60 rounded-xl px-3 py-2.5 border border-[rgba(79,209,255,0.05)] text-center">
              <p className="text-lg font-bold text-[#4FD1FF] tabular-nums">{availableDates.length}</p>
-             <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-0.5">Total Hari</p>
+             <p className="text-[9px] text-[#9CA3AF] uppercase tracking-wider mt-0.5">Total Hari</p>
            </div>
            <div className="bg-[#14161A]/60 rounded-xl px-3 py-2.5 border border-[rgba(79,209,255,0.05)] text-center">
              <p className="text-lg font-bold text-[#9F7AEA] tabular-nums">{monthOptions.length}</p>
-             <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-0.5">Bulan</p>
+             <p className="text-[9px] text-[#9CA3AF] uppercase tracking-wider mt-0.5">Bulan</p>
            </div>
            <div className="bg-[#14161A]/60 rounded-xl px-3 py-2.5 border border-[rgba(79,209,255,0.05)] text-center">
              <p className="text-lg font-bold text-emerald-400 tabular-nums">{selectedPdfDates.size}</p>
-             <p className="text-[9px] text-[#6B7280] uppercase tracking-wider mt-0.5">Dipilih</p>
+             <p className="text-[9px] text-[#9CA3AF] uppercase tracking-wider mt-0.5">Dipilih</p>
            </div>
          </div>
        </div>
@@ -697,9 +697,9 @@ export default function PdfDownload() {
          <SkeletonLoader />
        ) : availableDates.length === 0 ? (
          <div className="bg-[#1E2028] rounded-2xl border border-[rgba(79,209,255,0.06)] p-8 text-center shadow-[4px_4px_12px_rgba(0,0,0,0.35)]">
-           <FolderOpen className="w-12 h-12 text-[#6B7280] mx-auto mb-3" />
+           <FolderOpen className="w-12 h-12 text-[#9CA3AF] mx-auto mb-3" />
            <p className="text-sm text-[#9CA3AF]">Belum ada data buat generate PDF nih</p>
-           <p className="text-[10px] text-[#6B7280] mt-1">Input waste dulu ya di menu lain</p>
+           <p className="text-[10px] text-[#9CA3AF] mt-1">Input waste dulu ya di menu lain</p>
          </div>
        ) : (
          <>
@@ -726,11 +726,11 @@ export default function PdfDownload() {
                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                        isActive ? "bg-[#4FD1FF]/15 border border-[#4FD1FF]/20" : "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
                      }`}>
-                       <Calendar className={`w-4 h-4 ${isActive ? "text-[#4FD1FF]" : "text-[#6B7280]"}`} />
+                       <Calendar className={`w-4 h-4 ${isActive ? "text-[#4FD1FF]" : "text-[#9CA3AF]"}`} />
                      </div>
                      <div className="flex-1 min-w-0">
                        <p className={`text-xs font-semibold ${isActive ? "text-[#4FD1FF]" : "text-[#E5E7EB]"}`}>{m.label}</p>
-                       <p className="text-[10px] text-[#6B7280]">{m.count} hari tersedia</p>
+                       <p className="text-[10px] text-[#9CA3AF]">{m.count} hari tersedia</p>
                      </div>
                      {isActive && <CheckCircle className="w-4 h-4 text-[#4FD1FF] flex-shrink-0" />}
                    </button>
@@ -748,7 +748,7 @@ export default function PdfDownload() {
            >
              {!selectedMonth ? (
                <div className="text-center py-6">
-                 <Calendar className="w-8 h-8 text-[#6B7280] mx-auto mb-2" />
+                 <Calendar className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
                  <p className="text-xs text-[#9CA3AF]">Pilih bulan dulu di atas 👆</p>
                </div>
              ) : filteredDates.length === 0 ? (
@@ -757,7 +757,7 @@ export default function PdfDownload() {
                <>
                  {/* Select all toggle */}
                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-[rgba(79,209,255,0.06)]">
-                   <span className="text-[10px] text-[#6B7280] uppercase tracking-wider font-medium">
+                   <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">
                      {selectedMonthLabel}
                    </span>
                    <button
@@ -795,7 +795,7 @@ export default function PdfDownload() {
                          {isSelected ? (
                            <CheckSquare className="w-4 h-4 text-[#4FD1FF] flex-shrink-0" />
                          ) : (
-                           <Square className="w-4 h-4 text-[#6B7280]/50 flex-shrink-0" />
+                           <Square className="w-4 h-4 text-[#9CA3AF]/50 flex-shrink-0" />
                          )}
                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                            isSelected ? "bg-[#4FD1FF]/15 border border-[#4FD1FF]/20" : "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
@@ -804,10 +804,10 @@ export default function PdfDownload() {
                          </div>
                          <div className="text-left flex-1 min-w-0">
                            <span className={`font-medium text-xs ${isSelected ? "text-[#E5E7EB]" : "text-[#E5E7EB]/80"}`}>{dayName}</span>
-                           <span className="text-[#6B7280] ml-1.5 text-[10px] tabular-nums">{display}</span>
+                           <span className="text-[#9CA3AF] ml-1.5 text-[10px] tabular-nums">{display}</span>
                            {isWeekend && <span className="ml-1.5 text-[9px] text-amber-400/60">●</span>}
                          </div>
-                         <FileText className={`w-3 h-3 flex-shrink-0 ${isSelected ? 'text-[#4FD1FF]/60' : 'text-[#6B7280]/30'}`} />
+                         <FileText className={`w-3 h-3 flex-shrink-0 ${isSelected ? 'text-[#4FD1FF]/60' : 'text-[#9CA3AF]/30'}`} />
                        </button>
                      );
                    })}
@@ -824,14 +824,14 @@ export default function PdfDownload() {
              defaultOpen={true}
            >
              <div className="space-y-3">
-               <p className="text-[10px] text-[#6B7280]">
+               <p className="text-[10px] text-[#9CA3AF]">
                  Pilih nama QC yang akan tercantum sebagai pelapor di PDF <span className="text-red-400">*wajib</span>
                </p>
 
                {loadingSignatures ? (
                  <div className="flex items-center gap-2 py-3">
                    <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
-                   <span className="text-xs text-[#6B7280]">Loading signatures...</span>
+                   <span className="text-xs text-[#9CA3AF]">Loading signatures...</span>
                  </div>
                ) : Object.keys(pelaporSigUrls).length === 0 ? (
                  <div className="bg-amber-500/[0.06] border border-amber-500/15 rounded-xl px-3 py-3 text-center">
@@ -855,7 +855,7 @@ export default function PdfDownload() {
                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                            isActive ? "bg-[#9F7AEA]/15 border border-[#9F7AEA]/20" : "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
                          }`}>
-                           <span className={`text-sm font-bold ${isActive ? "text-[#9F7AEA]" : "text-[#6B7280]"}`}>
+                           <span className={`text-sm font-bold ${isActive ? "text-[#9F7AEA]" : "text-[#9CA3AF]"}`}>
                              {name.charAt(0).toUpperCase()}
                            </span>
                          </div>
@@ -884,7 +884,7 @@ export default function PdfDownload() {
                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                    />
                    <div className="min-w-0">
-                     <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">Preview TTD</p>
+                     <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider">Preview TTD</p>
                      <p className="text-xs font-semibold text-emerald-400">{selectedPelapor}</p>
                    </div>
                  </div>
@@ -908,7 +908,7 @@ export default function PdfDownload() {
                  </div>
                  <div className="flex-1 min-w-0">
                    <p className="text-xs font-semibold text-[#E5E7EB] truncate">{pdfProgress || 'Mempersiapkan...'}</p>
-                   <p className="text-[10px] text-[#6B7280] mt-0.5">
+                   <p className="text-[10px] text-[#9CA3AF] mt-0.5">
                      PDF {pdfProgressNum.current} dari {pdfProgressNum.total}
                    </p>
                  </div>
@@ -929,7 +929,7 @@ export default function PdfDownload() {
                {photoProgress.total > 0 && (
                  <div className="bg-[#14161A]/60 rounded-xl px-3 py-2 border border-[rgba(79,209,255,0.05)]">
                    <div className="flex items-center justify-between mb-1.5">
-                     <span className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                     <span className="text-[10px] text-[#9CA3AF] flex items-center gap-1">
                        <ImageIcon className="w-3 h-3" /> Foto dokumentasi
                      </span>
                      <span className="text-[10px] text-emerald-400 tabular-nums font-medium">
@@ -945,7 +945,7 @@ export default function PdfDownload() {
                  </div>
                )}
 
-               <p className="text-[9px] text-[#6B7280] text-center">⏳ Mohon tunggu, sedang memproses...</p>
+               <p className="text-[9px] text-[#9CA3AF] text-center">⏳ Mohon tunggu, sedang memproses...</p>
              </div>
            )}
 
@@ -964,7 +964,7 @@ export default function PdfDownload() {
                      );
                    })}
                    {selectedPdfDates.size > 8 && (
-                     <span className="text-[9px] text-[#6B7280]">+{selectedPdfDates.size - 8} lagi</span>
+                     <span className="text-[9px] text-[#9CA3AF]">+{selectedPdfDates.size - 8} lagi</span>
                    )}
                  </div>
                </div>
@@ -989,7 +989,7 @@ export default function PdfDownload() {
              </Button>
 
              {selectedPdfDates.size === 0 && !pdfGenerating && (
-               <p className="text-[10px] text-[#6B7280] text-center mt-2">Pilih tanggal dan pelapor untuk mulai generate</p>
+               <p className="text-[10px] text-[#9CA3AF] text-center mt-2">Pilih tanggal dan pelapor untuk mulai generate</p>
              )}
            </div>
 

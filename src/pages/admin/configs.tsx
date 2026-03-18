@@ -121,7 +121,7 @@ export default function ConfigsPage() {
                             type={field.secret && !showSecrets[field.key] ? "password" : "text"}
                             value={(form as any)[field.key]}
                             onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                            className="w-full h-11 px-3.5 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#6B7280] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all"
+                            className="w-full h-11 px-3.5 bg-[#1A1C22]/60 border border-[#4FD1FF]/15 rounded-xl font-sans text-sm text-[#E5E7EB] placeholder:text-[#9CA3AF] focus:border-[#4FD1FF]/40 focus:ring-1 focus:ring-[#4FD1FF]/15 focus:outline-none transition-all"
                             placeholder={field.placeholder}
                           />
                           {field.hint && <p className="text-[10px] font-sans text-[#4FD1FF]/60 mt-1">{field.hint}</p>}

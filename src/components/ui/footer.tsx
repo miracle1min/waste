@@ -7,7 +7,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-5">
         <div className="flex items-center justify-center gap-2">
           <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#4FD1FF]/20"></div>
-          <p className="text-xs sm:text-sm text-[#6B7280] font-medium tracking-wide">
+          <p className="text-xs sm:text-sm text-[#9CA3AF] font-medium tracking-wide">
             Made with ☕ By{' '}
             <a 
               href="https://www.facebook.com/hipnotismagic" 
