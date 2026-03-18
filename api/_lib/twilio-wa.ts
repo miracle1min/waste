@@ -55,11 +55,13 @@ ${items}${moreItems}
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
-  const body = new URLSearchParams({
-    From: `whatsapp:${TWILIO_WA_SENDER}`,
-    To: `whatsapp:${TWILIO_WA_ADMIN}`,
-    Body: message,
-  });
+  // Manually encode to avoid URLSearchParams converting '+' to spaces
+  const bodyParts = [
+    `From=${encodeURIComponent(`whatsapp:${TWILIO_WA_SENDER}`)}`,
+    `To=${encodeURIComponent(`whatsapp:${TWILIO_WA_ADMIN}`)}`,
+    `Body=${encodeURIComponent(message)}`,
+  ];
+  const bodyStr = bodyParts.join('&');
 
   try {
     const resp = await fetch(url, {
@@ -68,7 +70,7 @@ ${items}${moreItems}
         'Authorization': 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: body.toString(),
+      body: bodyStr,
     });
 
     if (!resp.ok) {
