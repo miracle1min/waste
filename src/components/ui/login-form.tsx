@@ -448,7 +448,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <div className="relative">
-                  <img src={logoUrl} alt="Logo" className="relative h-24 w-24 lg:h-28 lg:w-28 object-contain drop-shadow-[0_4px_12px_rgba(79,209,255,0.15)]" />
+                  <img src={logoUrl} alt="Logo" width={112} height={112} fetchPriority="high" className="relative h-24 w-24 lg:h-28 lg:w-28 object-contain drop-shadow-[0_4px_12px_rgba(79,209,255,0.15)]" />
                 </div>
               </div>
 
