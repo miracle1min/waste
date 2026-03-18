@@ -64,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = createToken({
       userId: user.id,
       username: user.username,
+      displayName: user.display_name || user.username,
       role: user.role,
       tenantId: user.tenant_id || "",
     });

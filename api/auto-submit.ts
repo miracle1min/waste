@@ -192,7 +192,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         productList,
         jumlahProdukList: data.jumlahProdukList,
         unitList,
-        submittedBy: jwtPayload?.username || jwtPayload?.name || 'Unknown',
+        submittedBy: jwtPayload?.displayName && jwtPayload.displayName !== jwtPayload.username
+        ? `${jwtPayload.displayName} (${jwtPayload.username})`
+        : jwtPayload?.username || 'Unknown',
       });
     } catch (err) {
       console.error('[WA Notif] Send failed:', err);

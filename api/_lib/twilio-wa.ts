@@ -14,6 +14,17 @@ interface WasteNotifData {
   submittedBy?: string;
 }
 
+// Station icon mapping
+function getStationIcon(station: string): string {
+  const s = station.toUpperCase();
+  if (s.includes('NOODLE') || s.includes('MIE')) return '🍜';
+  if (s.includes('DIMSUM')) return '🥟';
+  if (s.includes('BAR') || s.includes('DRINK') || s.includes('BEVERAGE')) return '🍹';
+  if (s.includes('PRODUKSI') || s.includes('KITCHEN')) return '🏭';
+  if (s.includes('FOOD')) return '🍽️';
+  return '📦';
+}
+
 export async function sendWhatsAppNotif(data: WasteNotifData): Promise<void> {
   const {
     TWILIO_ACCOUNT_SID,
@@ -27,31 +38,27 @@ export async function sendWhatsAppNotif(data: WasteNotifData): Promise<void> {
     return;
   }
 
-  // Build item summary (max 10 items shown)
-  const items = data.productList.slice(0, 10).map((product, i) => {
+  const icon = getStationIcon(data.kategoriInduk);
+
+  // Build item list
+  const items = data.productList.map((product, i) => {
     const qty = data.jumlahProdukList[i] || 0;
     const unit = data.unitList[i] || 'PCS';
-    return `• ${product} — ${qty} ${unit}`;
+    return `  - ${product} — ${qty} ${unit}`;
   }).join('\n');
 
-  const moreItems = data.productList.length > 10
-    ? `\n... dan ${data.productList.length - 10} item lainnya`
-    : '';
+  const message = `✅ *WASTE SUKSES!*
 
-  const totalItems = data.productList.length;
-
-  const message = `🗑️ *WASTE SUBMISSION*
-
-📍 *Store:* ${data.storeName}
+🏪 *Resto:* ${data.storeName}
 📅 *Tanggal:* ${data.tanggal}
 ⏰ *Shift:* ${data.shift}
-🏷️ *Kategori:* ${data.kategoriInduk}
-👤 *Submitted by:* ${data.submittedBy || 'Unknown'}
+🏷️ *Station:* ${data.kategoriInduk}
+👤 *Dilaporkan Oleh:* ${data.submittedBy || 'Unknown'}
 
-📦 *${totalItems} Item(s):*
-${items}${moreItems}
+📋 *Data Waste-nya ini wak:*
 
-✅ Data berhasil disimpan ke Google Sheets.`;
+${icon} *${data.kategoriInduk}*
+${items}`;
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
