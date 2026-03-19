@@ -1035,8 +1035,8 @@ export default function AiAssistant() {
           className="relative flex items-end rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300 min-h-[48px]"
         >
-          <button className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] rounded-xl bg-[#2A2A2A] flex items-center justify-center
-            text-[#666] hover:text-white hover:bg-[#333] transition-colors duration-200">
+          <button className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] flex items-center justify-center
+            text-[#666] hover:text-white transition-colors duration-200">
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
           <textarea
@@ -1060,7 +1060,7 @@ export default function AiAssistant() {
               input.trim() && !isLoading
                 ? `bg-gradient-to-br from-[#7C3AED] to-[#6366F1] text-white
                    hover:opacity-90 active:scale-95`
-                : `bg-[#2A2A2A] text-[#555] cursor-not-allowed`
+                : `text-[#555] cursor-not-allowed`
             }`}
           >
             {isLoading ? (
