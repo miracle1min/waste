@@ -8,6 +8,7 @@ import {
   AlertCircle,
   ChevronDown,
   ArrowUp,
+  Plus,
   FileDown,
   Download,
   CheckCircle,
@@ -880,7 +881,7 @@ export default function AiAssistant() {
   // ==================== RENDER ====================
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-64px)] lg:h-screen max-w-3xl mx-auto relative bg-black">
+    <div className="flex flex-col h-dvh max-w-3xl mx-auto relative bg-black">
       {/* ===== HEADER ===== */}
       <div className="sticky top-0 z-20 bg-black px-4 py-3">
         <div className="flex items-center justify-between">
@@ -1041,15 +1042,15 @@ export default function AiAssistant() {
       )}
 
       {/* ===== INPUT AREA ===== */}
-      <div className="flex-shrink-0 px-4 pt-2 pb-4">
+      <div className="flex-shrink-0 px-4 pt-2 pb-24 lg:pb-4">
         <div
           className="relative flex items-end rounded-full bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300"
         >
-          <div className="flex-shrink-0 pl-3 pb-3">
-            <button className="w-8 h-8 rounded-full border border-[#444] flex items-center justify-center
-              text-[#888] hover:text-white hover:border-[#666] transition-colors duration-200">
-              <span className="text-lg leading-none">+</span>
+          <div className="flex-shrink-0 pl-3 pb-2.5">
+            <button className="w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center
+              text-[#888] hover:text-white hover:bg-[#333] transition-colors duration-200">
+              <Plus className="w-4 h-4 stroke-[2]" />
             </button>
           </div>
           <textarea
@@ -1064,7 +1065,7 @@ export default function AiAssistant() {
             resize-none outline-none px-3 py-3.5 max-h-[140px] leading-relaxed
             disabled:opacity-50"
           />
-          <div className="flex-shrink-0 pr-2 pb-2">
+          <div className="flex-shrink-0 pr-2 pb-2.5">
             <button
               onClick={sendMessage}
               disabled={!input.trim() || isLoading}
