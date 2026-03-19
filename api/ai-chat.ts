@@ -48,6 +48,14 @@ interface DaySummary {
   shiftTotals: Record<string, number>;
 }
 
+// Parse tab name "DD/MM/YY" to Date
+function parseTabToDate(tab: string): Date | null {
+  const match = tab.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+}
+
 async function fetchWasteData(
   tenantId: string,
   daysBack: number = 7
@@ -62,19 +70,33 @@ async function fetchWasteData(
     const accessToken = await getGoogleAccessToken(credentials, 'readonly');
     const SPREADSHEET_ID = tenantCreds.googleSpreadsheetId;
 
-    // Get business date in WIB
-    const wibNow = getWIBDate();
+    // Step 1: Fetch actual tab names from spreadsheet (same approach as dashboard-data)
+    const metaController = new AbortController();
+    const metaTimeout = setTimeout(() => metaController.abort(), 15000);
+    const spreadsheet = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`,
+      { headers: { Authorization: `Bearer ${accessToken}` }, signal: metaController.signal }
+    ).then(r => r.json()) as any;
+    clearTimeout(metaTimeout);
 
-    // Build tab names for today + last N days
-    const tabs: string[] = [];
-    for (let i = 0; i < daysBack; i++) {
-      const d = new Date(wibNow);
-      d.setUTCDate(d.getUTCDate() - i);
-      tabs.push(formatDateToTab(d));
+    const allTabs = (spreadsheet.sheets || [])
+      .map((s: any) => s.properties?.title)
+      .filter((t: string) => /^\d{2}\/\d{2}\/\d{2}$/.test(t))
+      .sort((a: string, b: string) => {
+        const da = parseTabToDate(a);
+        const db = parseTabToDate(b);
+        return (db?.getTime() || 0) - (da?.getTime() || 0); // newest first
+      });
+
+    // Step 2: Take only the most recent N tabs
+    const tabs = allTabs.slice(0, daysBack);
+
+    if (tabs.length === 0) {
+      return { today: null, recentDays: [], error: 'Tidak ada tab data di spreadsheet' };
     }
 
-    // Batch fetch all tabs
-    const ranges = tabs.map(t => `${encodeURIComponent(t)}!A2:V1000`).join('&ranges=');
+    // Step 3: Batch fetch only existing tabs
+    const ranges = tabs.map((t: string) => `${encodeURIComponent(t)}!A2:V1000`).join('&ranges=');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -134,8 +156,8 @@ async function fetchWasteData(
       }
 
       // Convert tab DD/MM/YY to YYYY-MM-DD
-      const parts = tab.split('/');
-      const isoDate = `20${parts[2]}-${parts[1]}-${parts[0]}`;
+      const tabDate = parseTabToDate(tab);
+      const isoDate = tabDate ? tabDate.toISOString().split('T')[0] : tab;
 
       daySummaries.push({ date: isoDate, tab, entries, totalItems, totalQty, stationTotals, shiftTotals });
     }
