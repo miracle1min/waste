@@ -140,36 +140,157 @@ export default function AiAssistant() {
     });
   };
 
-  const renderText = (text: string) => {
-    const parts = text.split(/(```[\s\S]*?```)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("```") && part.endsWith("```")) {
-        const code = part.slice(3, -3).replace(/^\w*\n/, "");
+  // Full markdown renderer
+  const renderMarkdown = (text: string) => {
+    // Split by code blocks first
+    const blocks = text.split(/(```[\s\S]*?```)/g);
+    return blocks.map((block, i) => {
+      // Code blocks
+      if (block.startsWith("```") && block.endsWith("```")) {
+        const match = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
+        const lang = match?.[1] || "";
+        const code = match?.[2] || block.slice(3, -3);
         return (
-          <pre
-            key={i}
-            className="my-2.5 p-3.5 rounded-xl bg-[#13151A] border border-[rgba(79,209,255,0.06)] text-xs font-mono overflow-x-auto text-[#C9CBCF] leading-relaxed"
-          >
-            <code>{code}</code>
-          </pre>
+          <div key={i} className="my-3 rounded-xl overflow-hidden border border-[rgba(79,209,255,0.06)]">
+            {lang && (
+              <div className="px-3.5 py-1.5 bg-[#0D0F13] text-[10px] text-[#9CA3AF]/60 font-mono uppercase tracking-wider border-b border-[rgba(79,209,255,0.06)]">
+                {lang}
+              </div>
+            )}
+            <pre className="p-3.5 bg-[#13151A] text-xs font-mono overflow-x-auto text-[#C9CBCF] leading-relaxed">
+              <code>{code}</code>
+            </pre>
+          </div>
         );
       }
-      return (
-        <span key={i}>
-          {part.split("\n").map((line, j) => (
-            <span key={j}>
-              {j > 0 && <br />}
-              {renderInline(line)}
-            </span>
-          ))}
-        </span>
-      );
+
+      // Regular text — parse line by line
+      const lines = block.split("\n");
+      const elements: JSX.Element[] = [];
+      let listBuffer: { type: "ul" | "ol"; items: string[] } | null = null;
+
+      const flushList = () => {
+        if (!listBuffer) return;
+        const ListTag = listBuffer.type === "ul" ? "ul" : "ol";
+        const listClass = listBuffer.type === "ul"
+          ? "list-disc pl-5 my-2 space-y-1"
+          : "list-decimal pl-5 my-2 space-y-1";
+        elements.push(
+          <ListTag key={`list-${elements.length}`} className={listClass}>
+            {listBuffer.items.map((item, j) => (
+              <li key={j} className="text-sm text-[#D1D5DB] leading-relaxed">
+                {renderInline(item)}
+              </li>
+            ))}
+          </ListTag>
+        );
+        listBuffer = null;
+      };
+
+      lines.forEach((line, j) => {
+        const trimmed = line.trim();
+
+        // Headings
+        if (trimmed.startsWith("### ")) {
+          flushList();
+          elements.push(
+            <h4 key={`h3-${j}`} className="text-sm font-bold text-[#E5E7EB] mt-3 mb-1.5">
+              {renderInline(trimmed.slice(4))}
+            </h4>
+          );
+          return;
+        }
+        if (trimmed.startsWith("## ")) {
+          flushList();
+          elements.push(
+            <h3 key={`h2-${j}`} className="text-[15px] font-bold text-[#E5E7EB] mt-3 mb-1.5">
+              {renderInline(trimmed.slice(3))}
+            </h3>
+          );
+          return;
+        }
+        if (trimmed.startsWith("# ")) {
+          flushList();
+          elements.push(
+            <h2 key={`h1-${j}`} className="text-base font-bold text-[#E5E7EB] mt-3 mb-1.5">
+              {renderInline(trimmed.slice(2))}
+            </h2>
+          );
+          return;
+        }
+
+        // Horizontal rule
+        if (/^[-*_]{3,}$/.test(trimmed)) {
+          flushList();
+          elements.push(
+            <hr key={`hr-${j}`} className="my-3 border-[rgba(79,209,255,0.08)]" />
+          );
+          return;
+        }
+
+        // Unordered list
+        if (/^[-*•]\s/.test(trimmed)) {
+          const item = trimmed.replace(/^[-*•]\s+/, "");
+          if (listBuffer && listBuffer.type === "ul") {
+            listBuffer.items.push(item);
+          } else {
+            flushList();
+            listBuffer = { type: "ul", items: [item] };
+          }
+          return;
+        }
+
+        // Ordered list
+        if (/^\d+[.)]\s/.test(trimmed)) {
+          const item = trimmed.replace(/^\d+[.)]\s+/, "");
+          if (listBuffer && listBuffer.type === "ol") {
+            listBuffer.items.push(item);
+          } else {
+            flushList();
+            listBuffer = { type: "ol", items: [item] };
+          }
+          return;
+        }
+
+        // Blockquote
+        if (trimmed.startsWith("> ")) {
+          flushList();
+          elements.push(
+            <blockquote
+              key={`bq-${j}`}
+              className="my-2 pl-3.5 border-l-2 border-[#4FD1FF]/25 text-sm text-[#9CA3AF] italic"
+            >
+              {renderInline(trimmed.slice(2))}
+            </blockquote>
+          );
+          return;
+        }
+
+        // Empty line
+        if (trimmed === "") {
+          flushList();
+          return;
+        }
+
+        // Regular paragraph
+        flushList();
+        elements.push(
+          <p key={`p-${j}`} className="text-sm text-[#D1D5DB] leading-relaxed my-1">
+            {renderInline(trimmed)}
+          </p>
+        );
+      });
+
+      flushList();
+      return <div key={i}>{elements}</div>;
     });
   };
 
   const renderInline = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*|`[^`]+`)/g);
+    // Bold, italic, inline code, links
+    const parts = text.split(/(\*\*.*?\*\*|_.*?_|\*.*?\*|`[^`]+`|\[.*?\]\(.*?\))/g);
     return parts.map((part, i) => {
+      // Bold
       if (part.startsWith("**") && part.endsWith("**")) {
         return (
           <strong key={i} className="font-semibold text-[#E5E7EB]">
@@ -177,6 +298,16 @@ export default function AiAssistant() {
           </strong>
         );
       }
+      // Italic with _ or *
+      if ((part.startsWith("_") && part.endsWith("_") && part.length > 2) ||
+          (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**") && part.length > 2)) {
+        return (
+          <em key={i} className="italic text-[#D1D5DB]">
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+      // Inline code
       if (part.startsWith("`") && part.endsWith("`")) {
         return (
           <code
@@ -185,6 +316,21 @@ export default function AiAssistant() {
           >
             {part.slice(1, -1)}
           </code>
+        );
+      }
+      // Links
+      const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+      if (linkMatch) {
+        return (
+          <a
+            key={i}
+            href={linkMatch[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#4FD1FF] underline underline-offset-2 decoration-[#4FD1FF]/30 hover:decoration-[#4FD1FF]/60 transition-colors"
+          >
+            {linkMatch[1]}
+          </a>
         );
       }
       return <span key={i}>{part}</span>;
@@ -213,7 +359,7 @@ export default function AiAssistant() {
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <p className="text-[11px] text-[#9CA3AF]">
-                  Gemini 3.1 Flash-Lite
+                  Online · Siap membantu
                 </p>
               </div>
             </div>
@@ -318,23 +464,25 @@ export default function AiAssistant() {
 
             {/* Message bubble */}
             <div
-              className={`max-w-[78%] text-sm leading-relaxed
+              className={`text-sm leading-relaxed
               ${
                 msg.role === "user"
-                  ? `rounded-[20px] rounded-br-md px-4 py-3
+                  ? `max-w-[78%] rounded-[20px] rounded-br-md px-4 py-3
                      bg-gradient-to-br from-[#4FD1FF]/18 to-[#4FD1FF]/8
                      border border-[rgba(79,209,255,0.18)] text-[#E5E7EB]
                      shadow-[5px_5px_12px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(79,209,255,0.03)]`
                   : msg.error
-                  ? `rounded-[20px] rounded-bl-md px-4 py-3
+                  ? `max-w-[88%] rounded-[20px] rounded-bl-md px-4 py-3
                      bg-red-500/5 border border-red-500/15 text-red-300`
-                  : `rounded-[20px] rounded-bl-md px-4 py-3
+                  : `max-w-[88%] rounded-[20px] rounded-bl-md px-4 py-3.5
                      bg-[#23262F] border border-[rgba(255,255,255,0.04)] text-[#D1D5DB]
                      shadow-[5px_5px_12px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.015)]`
               }`}
             >
-              <div className="whitespace-pre-wrap break-words">
-                {msg.role === "model" ? renderText(msg.text) : msg.text}
+              <div className="break-words">
+                {msg.role === "model" ? renderMarkdown(msg.text) : (
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                )}
               </div>
               <div
                 className={`text-[10px] mt-2 ${
@@ -436,7 +584,7 @@ export default function AiAssistant() {
           </div>
         </div>
         <p className="text-[10px] text-[#9CA3AF]/30 text-center mt-2.5">
-          AWAS AI · Gemini 3.1 Flash-Lite · Selalu verifikasi info penting
+          AWAS AI · Selalu verifikasi info penting
         </p>
       </div>
     </div>
