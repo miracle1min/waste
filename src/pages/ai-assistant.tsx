@@ -8,6 +8,9 @@ import {
   AlertCircle,
   ChevronDown,
   ArrowUp,
+  FileDown,
+  Download,
+  CheckCircle,
 } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -18,6 +21,227 @@ interface ChatMessage {
   text: string;
   timestamp: Date;
   error?: boolean;
+  pdfDate?: string; // If set, this message has a PDF to generate
+  pdfState?: "idle" | "loading" | "done" | "error";
+  pdfBlobUrl?: string;
+  pdfFileName?: string;
+  pdfError?: string;
+}
+
+// ==================== PDF HELPERS ====================
+
+const parseJamValue = (raw: string): string => {
+  if (!raw || raw === '-') return '-';
+  if (raw.includes('WIB')) return raw;
+  if (raw.includes('\n')) {
+    return raw.split('\n').map(line => parseJamValue(line.trim())).join('\n');
+  }
+  const num = parseFloat(raw);
+  if (!isNaN(num) && num > 40000) {
+    const timeFraction = num % 1;
+    const totalMinutes = Math.round(timeFraction * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+    const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes} WIB`;
+  }
+  const dtMatch = raw.match(/T(\d{2}:\d{2})/);
+  if (dtMatch) return `${dtMatch[1]} WIB`;
+  const timeMatch = raw.match(/^(\d{2}:\d{2})/);
+  if (timeMatch) return `${timeMatch[1]} WIB`;
+  return raw;
+};
+
+const extractImageUrl = (val: string): string => {
+  if (!val) return '';
+  const match = val.match(/=IMAGE\(["']([^"']+)["']/i);
+  return match ? match[1] : (val.startsWith('http') ? val : '');
+};
+
+async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: string }> {
+  // Fetch data
+  const res = await apiFetch(`/api/get-day-data?date=${date}`);
+  if (!res.ok) throw new Error(`Gagal ambil data: ${res.status}`);
+  const dayData = await res.json();
+  if (!dayData.success || !dayData.grouped) throw new Error(dayData.error || 'Data kosong untuk tanggal ini');
+
+  // Dynamic import jsPDF
+  const jsPDF = (await import('jspdf')).default;
+  const autoTable = (await import('jspdf-autotable')).default;
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 10;
+
+  // Logo
+  let logoImg: string | null = null;
+  try {
+    const logoRes = await fetch('/logo-ppa.png');
+    if (logoRes.ok) {
+      const blob = await logoRes.blob();
+      logoImg = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {}
+
+  // Header
+  if (logoImg) doc.addImage(logoImg, 'PNG', margin, 7, 18, 18);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PT. PESTA PORA ABADI', pageWidth / 2, 12, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text('FORM PEMUSNAHAN PRODUK', pageWidth / 2, 19, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Dok.No. PPA/FORM/OPS-STORE/016', pageWidth - margin, 10, { align: 'right' });
+
+  // Info
+  const dateObj = new Date(date + 'T00:00:00');
+  const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const dayName = dayNames[dateObj.getDay()];
+  const dateDisplay = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
+
+  doc.setFontSize(9);
+  const infoY = 28;
+  doc.text(`Hari: ${dayName}`, margin, infoY);
+  doc.text(`Tanggal: ${dateDisplay}`, margin + 50, infoY);
+  doc.text(`Store: ${dayData.storeName || '-'}`, margin + 110, infoY);
+
+  // Tables per shift
+  const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];
+  const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
+  let startY = 33;
+
+  // Sig image cache
+  const sigCache: Record<string, string> = {};
+  const fetchSigImage = async (url: string): Promise<string | null> => {
+    if (!url || url === '-' || !url.startsWith('http')) return null;
+    if (sigCache[url]) return sigCache[url];
+    try {
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) return null;
+      const data = await proxyRes.json();
+      if (data.success && data.dataUrl) { sigCache[url] = data.dataUrl; return data.dataUrl; }
+      return null;
+    } catch { return null; }
+  };
+
+  for (const shift of shifts) {
+    const shiftData = dayData.grouped[shift] || [];
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    if (startY > pageHeight - 30) {
+      doc.addPage();
+      startY = 15;
+    }
+
+    // Shift header
+    doc.setFillColor(200, 200, 200);
+    doc.rect(margin, startY, pageWidth - 2 * margin, 6, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
+    startY += 7;
+
+    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER']];
+    const rows: string[][] = [];
+
+    type RowEntry = { entry: any | null; isTester?: boolean };
+    const rowEntries: RowEntry[] = [];
+
+    // Tester entry first
+    const testerEntry = shiftData.find((e: any) => e.station?.toUpperCase() === 'TESTER');
+    if (testerEntry) {
+      rows.push([
+        'T',
+        String(testerEntry.namaProduk || '-').replace(/,\s*/g, '\n'),
+        String(testerEntry.kodeProduk || '-').replace(/,\s*/g, '\n'),
+        String(testerEntry.jumlahProduk || '-').replace(/,\s*/g, '\n'),
+        String(testerEntry.unit || '-').replace(/,\s*/g, '\n'),
+        String(testerEntry.metodePemusnahan || '-').replace(/,\s*/g, '\n'),
+        String(testerEntry.alasanPemusnahan || '-').replace(/,\s*/g, '\n'),
+        parseJamValue(testerEntry.jamTanggalPemusnahan || '-'),
+        '', ''
+      ]);
+      rowEntries.push({ entry: testerEntry, isTester: true });
+    }
+
+    // Station entries
+    stationOrder.forEach((station, idx) => {
+      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+      if (entry) {
+        rowEntries.push({ entry });
+        rows.push([
+          (idx + 1).toString(),
+          String(entry.namaProduk || '-').replace(/,\s*/g, '\n'),
+          String(entry.kodeProduk || '-').replace(/,\s*/g, '\n'),
+          String(entry.jumlahProduk || '-').replace(/,\s*/g, '\n'),
+          String(entry.unit || '-').replace(/,\s*/g, '\n'),
+          String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n'),
+          String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n'),
+          parseJamValue(entry.jamTanggalPemusnahan || '-'),
+          '', ''
+        ]);
+      } else {
+        rowEntries.push({ entry: null });
+        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+      }
+    });
+
+    autoTable(doc, {
+      head: headers, body: rows, startY,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 8, valign: 'middle' as const },
+      headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center' as const, valign: 'middle' as const },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' as const },
+        1: { cellWidth: 50 }, 2: { cellWidth: 30 },
+        3: { cellWidth: 18, halign: 'center' as const }, 4: { cellWidth: 20, halign: 'center' as const },
+        5: { cellWidth: 28 }, 6: { cellWidth: 42 },
+        7: { cellWidth: 22 }, 8: { cellWidth: 28, halign: 'center' as const },
+        9: { cellWidth: 28, halign: 'center' as const },
+      },
+      tableWidth: pageWidth - 2 * margin, theme: 'grid' as const,
+      didDrawCell: async (data: any) => {
+        if (data.section !== 'body') return;
+        const rowIdx = data.row.index;
+        const colIdx = data.column.index;
+        const rowEntry = rowEntries[rowIdx];
+        if (!rowEntry?.entry) return;
+
+        // QC signature (col 8) and Manager signature (col 9)
+        if (colIdx === 8 || colIdx === 9) {
+          const url = colIdx === 8
+            ? extractImageUrl(rowEntry.entry.parafQC)
+            : extractImageUrl(rowEntry.entry.parafManager);
+          if (url) {
+            const sigImg = await fetchSigImage(url);
+            if (sigImg) {
+              try {
+                const imgSize = Math.min(data.cell.width - 2, data.cell.height - 2, 12);
+                const x = data.cell.x + (data.cell.width - imgSize) / 2;
+                const y = data.cell.y + (data.cell.height - imgSize) / 2;
+                doc.addImage(sigImg, 'PNG', x, y, imgSize, imgSize);
+              } catch {}
+            }
+          }
+        }
+      },
+    });
+
+    startY = (doc as any).lastAutoTable?.finalY + 5 || startY + 40;
+  }
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'italic');
+  doc.text(`Generated by AWAS AI · ${new Date().toLocaleString('id-ID')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
+
+  const blob = doc.output('blob');
+  const fileName = `waste-report-${date}.pdf`;
+  return { blob, fileName };
 }
 
 // ==================== COMPONENT ====================
@@ -50,6 +274,44 @@ export default function AiAssistant() {
     const { scrollTop, scrollHeight, clientHeight } = container;
     setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 100);
   }, []);
+
+  // ==================== PDF GENERATION ====================
+
+  const handlePdfGenerate = async (msgId: string, date: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId ? { ...m, pdfState: "loading" as const } : m
+      )
+    );
+
+    try {
+      const { blob, fileName } = await generateWastePdf(date);
+      const blobUrl = URL.createObjectURL(blob);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, pdfState: "done" as const, pdfBlobUrl: blobUrl, pdfFileName: fileName }
+            : m
+        )
+      );
+    } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, pdfState: "error" as const, pdfError: err.message || "Gagal generate PDF" }
+            : m
+        )
+      );
+    }
+  };
+
+  const handlePdfDownload = (blobUrl: string, fileName: string) => {
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName;
+    a.click();
+  };
 
   // ==================== SEND ====================
 
@@ -90,14 +352,30 @@ export default function AiAssistant() {
         throw new Error(data.error || "Gagal mendapat respons dari AI.");
       }
 
+      // Check for PDF tag
+      let replyText = data.reply;
+      let pdfDate: string | undefined;
+      const pdfMatch = replyText.match(/<<PDF:(\d{4}-\d{2}-\d{2})>>/);
+      if (pdfMatch) {
+        pdfDate = pdfMatch[1];
+        replyText = replyText.replace(/<<PDF:\d{4}-\d{2}-\d{2}>>/g, "").trim();
+      }
+
       const aiMsg: ChatMessage = {
         id: `a_${Date.now()}`,
         role: "model",
-        text: data.reply,
+        text: replyText,
         timestamp: new Date(),
+        pdfDate,
+        pdfState: pdfDate ? "idle" : undefined,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+
+      // Auto-start PDF generation
+      if (pdfDate) {
+        setTimeout(() => handlePdfGenerate(aiMsg.id, pdfDate!), 300);
+      }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: `e_${Date.now()}`,
@@ -121,6 +399,10 @@ export default function AiAssistant() {
   };
 
   const clearChat = () => {
+    // Revoke blob URLs
+    messages.forEach((m) => {
+      if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl);
+    });
     setMessages([]);
   };
 
@@ -140,12 +422,15 @@ export default function AiAssistant() {
     });
   };
 
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  };
+
   // Full markdown renderer
   const renderMarkdown = (text: string) => {
-    // Split by code blocks first
     const blocks = text.split(/(```[\s\S]*?```)/g);
     return blocks.map((block, i) => {
-      // Code blocks
       if (block.startsWith("```") && block.endsWith("```")) {
         const match = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
         const lang = match?.[1] || "";
@@ -164,7 +449,6 @@ export default function AiAssistant() {
         );
       }
 
-      // Regular text — parse line by line
       const lines = block.split("\n");
       const elements: JSX.Element[] = [];
       let listBuffer: { type: "ul" | "ol"; items: string[] } | null = null;
@@ -190,95 +474,51 @@ export default function AiAssistant() {
       lines.forEach((line, j) => {
         const trimmed = line.trim();
 
-        // Headings
         if (trimmed.startsWith("### ")) {
           flushList();
-          elements.push(
-            <h4 key={`h3-${j}`} className="text-sm font-bold text-[#E5E7EB] mt-3 mb-1.5">
-              {renderInline(trimmed.slice(4))}
-            </h4>
-          );
+          elements.push(<h4 key={`h3-${j}`} className="text-sm font-bold text-[#E5E7EB] mt-3 mb-1.5">{renderInline(trimmed.slice(4))}</h4>);
           return;
         }
         if (trimmed.startsWith("## ")) {
           flushList();
-          elements.push(
-            <h3 key={`h2-${j}`} className="text-[15px] font-bold text-[#E5E7EB] mt-3 mb-1.5">
-              {renderInline(trimmed.slice(3))}
-            </h3>
-          );
+          elements.push(<h3 key={`h2-${j}`} className="text-[15px] font-bold text-[#E5E7EB] mt-3 mb-1.5">{renderInline(trimmed.slice(3))}</h3>);
           return;
         }
         if (trimmed.startsWith("# ")) {
           flushList();
-          elements.push(
-            <h2 key={`h1-${j}`} className="text-base font-bold text-[#E5E7EB] mt-3 mb-1.5">
-              {renderInline(trimmed.slice(2))}
-            </h2>
-          );
+          elements.push(<h2 key={`h1-${j}`} className="text-base font-bold text-[#E5E7EB] mt-3 mb-1.5">{renderInline(trimmed.slice(2))}</h2>);
           return;
         }
-
-        // Horizontal rule
         if (/^[-*_]{3,}$/.test(trimmed)) {
           flushList();
-          elements.push(
-            <hr key={`hr-${j}`} className="my-3 border-[rgba(79,209,255,0.08)]" />
-          );
+          elements.push(<hr key={`hr-${j}`} className="my-3 border-[rgba(79,209,255,0.08)]" />);
           return;
         }
-
-        // Unordered list
         if (/^[-*•]\s/.test(trimmed)) {
           const item = trimmed.replace(/^[-*•]\s+/, "");
-          if (listBuffer && listBuffer.type === "ul") {
-            listBuffer.items.push(item);
-          } else {
-            flushList();
-            listBuffer = { type: "ul", items: [item] };
-          }
+          if (listBuffer && listBuffer.type === "ul") { listBuffer.items.push(item); }
+          else { flushList(); listBuffer = { type: "ul", items: [item] }; }
           return;
         }
-
-        // Ordered list
         if (/^\d+[.)]\s/.test(trimmed)) {
           const item = trimmed.replace(/^\d+[.)]\s+/, "");
-          if (listBuffer && listBuffer.type === "ol") {
-            listBuffer.items.push(item);
-          } else {
-            flushList();
-            listBuffer = { type: "ol", items: [item] };
-          }
+          if (listBuffer && listBuffer.type === "ol") { listBuffer.items.push(item); }
+          else { flushList(); listBuffer = { type: "ol", items: [item] }; }
           return;
         }
-
-        // Blockquote
         if (trimmed.startsWith("> ")) {
           flushList();
           elements.push(
-            <blockquote
-              key={`bq-${j}`}
-              className="my-2 pl-3.5 border-l-2 border-[#4FD1FF]/25 text-sm text-[#9CA3AF] italic"
-            >
+            <blockquote key={`bq-${j}`} className="my-2 pl-3.5 border-l-2 border-[#4FD1FF]/25 text-sm text-[#9CA3AF] italic">
               {renderInline(trimmed.slice(2))}
             </blockquote>
           );
           return;
         }
+        if (trimmed === "") { flushList(); return; }
 
-        // Empty line
-        if (trimmed === "") {
-          flushList();
-          return;
-        }
-
-        // Regular paragraph
         flushList();
-        elements.push(
-          <p key={`p-${j}`} className="text-sm text-[#D1D5DB] leading-relaxed my-1">
-            {renderInline(trimmed)}
-          </p>
-        );
+        elements.push(<p key={`p-${j}`} className="text-sm text-[#D1D5DB] leading-relaxed my-1">{renderInline(trimmed)}</p>);
       });
 
       flushList();
@@ -287,54 +527,110 @@ export default function AiAssistant() {
   };
 
   const renderInline = (text: string) => {
-    // Bold, italic, inline code, links
     const parts = text.split(/(\*\*.*?\*\*|_.*?_|\*.*?\*|`[^`]+`|\[.*?\]\(.*?\))/g);
     return parts.map((part, i) => {
-      // Bold
       if (part.startsWith("**") && part.endsWith("**")) {
-        return (
-          <strong key={i} className="font-semibold text-[#E5E7EB]">
-            {part.slice(2, -2)}
-          </strong>
-        );
+        return <strong key={i} className="font-semibold text-[#E5E7EB]">{part.slice(2, -2)}</strong>;
       }
-      // Italic with _ or *
       if ((part.startsWith("_") && part.endsWith("_") && part.length > 2) ||
           (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**") && part.length > 2)) {
-        return (
-          <em key={i} className="italic text-[#D1D5DB]">
-            {part.slice(1, -1)}
-          </em>
-        );
+        return <em key={i} className="italic text-[#D1D5DB]">{part.slice(1, -1)}</em>;
       }
-      // Inline code
       if (part.startsWith("`") && part.endsWith("`")) {
-        return (
-          <code
-            key={i}
-            className="px-1.5 py-0.5 rounded-md bg-[#13151A] text-[#4FD1FF] text-xs font-mono border border-[rgba(79,209,255,0.08)]"
-          >
-            {part.slice(1, -1)}
-          </code>
-        );
+        return <code key={i} className="px-1.5 py-0.5 rounded-md bg-[#13151A] text-[#4FD1FF] text-xs font-mono border border-[rgba(79,209,255,0.08)]">{part.slice(1, -1)}</code>;
       }
-      // Links
       const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
       if (linkMatch) {
-        return (
-          <a
-            key={i}
-            href={linkMatch[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#4FD1FF] underline underline-offset-2 decoration-[#4FD1FF]/30 hover:decoration-[#4FD1FF]/60 transition-colors"
-          >
-            {linkMatch[1]}
-          </a>
-        );
+        return <a key={i} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-[#4FD1FF] underline underline-offset-2 decoration-[#4FD1FF]/30 hover:decoration-[#4FD1FF]/60 transition-colors">{linkMatch[1]}</a>;
       }
       return <span key={i}>{part}</span>;
     });
+  };
+
+  // ==================== PDF CARD RENDERER ====================
+
+  const renderPdfCard = (msg: ChatMessage) => {
+    if (!msg.pdfDate) return null;
+
+    return (
+      <div className="mt-3 rounded-2xl overflow-hidden border border-[rgba(79,209,255,0.12)] bg-[#1A1C22]/80">
+        {/* Card header */}
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-[rgba(79,209,255,0.06)]">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#4FD1FF]/15 to-[#9F7AEA]/15 flex items-center justify-center border border-[rgba(79,209,255,0.1)]">
+            <FileDown className="w-4 h-4 text-[#4FD1FF]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-[#E5E7EB] truncate">
+              Laporan Waste
+            </p>
+            <p className="text-[10px] text-[#9CA3AF]">
+              {formatDateDisplay(msg.pdfDate)}
+            </p>
+          </div>
+        </div>
+
+        {/* Card body */}
+        <div className="px-4 py-3">
+          {msg.pdfState === "idle" && (
+            <button
+              onClick={() => handlePdfGenerate(msg.id, msg.pdfDate!)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
+              bg-gradient-to-r from-[#4FD1FF]/15 to-[#9F7AEA]/10
+              border border-[rgba(79,209,255,0.15)] text-xs font-medium text-[#4FD1FF]
+              shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
+              hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(79,209,255,0.1)]
+              active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]
+              transition-all duration-200"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              Generate PDF
+            </button>
+          )}
+
+          {msg.pdfState === "loading" && (
+            <div className="flex items-center justify-center gap-2.5 py-2.5">
+              <Loader2 className="w-4 h-4 text-[#4FD1FF] animate-spin" />
+              <span className="text-xs text-[#9CA3AF]">Generating PDF...</span>
+            </div>
+          )}
+
+          {msg.pdfState === "done" && msg.pdfBlobUrl && (
+            <button
+              onClick={() => handlePdfDownload(msg.pdfBlobUrl!, msg.pdfFileName!)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
+              bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400
+              shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
+              hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(16,185,129,0.1)]
+              active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]
+              transition-all duration-200"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download PDF
+              <CheckCircle className="w-3 h-3 ml-0.5" />
+            </button>
+          )}
+
+          {msg.pdfState === "error" && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 py-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                <span className="text-xs text-red-300">{msg.pdfError}</span>
+              </div>
+              <button
+                onClick={() => handlePdfGenerate(msg.id, msg.pdfDate!)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                bg-[#23262F] border border-[rgba(255,255,255,0.06)] text-xs text-[#9CA3AF]
+                hover:text-[#E5E7EB] hover:border-[rgba(79,209,255,0.12)]
+                active:scale-[0.98] transition-all duration-200"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Coba Lagi
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // ==================== RENDER ====================
@@ -380,7 +676,6 @@ export default function AiAssistant() {
             </button>
           )}
         </div>
-        {/* Bottom border glow line */}
         <div className="mt-3 h-px bg-gradient-to-r from-transparent via-[rgba(79,209,255,0.12)] to-transparent" />
       </div>
 
@@ -413,7 +708,7 @@ export default function AiAssistant() {
                 "💡 Tips mengurangi waste di kitchen",
                 "📊 Cara analisis data waste harian",
                 "🔒 Standar food safety yang harus dipenuhi",
-                "📱 Cara pakai fitur auto-waste",
+                "📄 Buatkan PDF waste hari ini",
               ].map((prompt) => (
                 <button
                   key={prompt}
@@ -484,6 +779,10 @@ export default function AiAssistant() {
                   <p className="whitespace-pre-wrap">{msg.text}</p>
                 )}
               </div>
+
+              {/* PDF Card */}
+              {msg.pdfDate && renderPdfCard(msg)}
+
               <div
                 className={`text-[10px] mt-2 ${
                   msg.role === "user"
@@ -559,7 +858,6 @@ export default function AiAssistant() {
             resize-none outline-none pl-5 pr-14 py-4 max-h-[140px] leading-relaxed
             disabled:opacity-50"
           />
-          {/* Send button — inside the input box, right-aligned */}
           <div className="absolute right-2.5 bottom-2.5">
             <button
               onClick={sendMessage}
