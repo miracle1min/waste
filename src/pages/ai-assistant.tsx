@@ -675,7 +675,7 @@ export default function AiAssistant() {
         }
         if (/^[-*_]{3,}$/.test(trimmed)) {
           flushList();
-          elements.push(<hr key={`hr-${j}`} className="my-3 border-[rgba(79,209,255,0.08)]" />);
+          elements.push(<hr key={`hr-${j}`} className="my-3 border-[#222]" />);
           return;
         }
         if (/^[-*•]\s/.test(trimmed)) {
@@ -721,7 +721,7 @@ export default function AiAssistant() {
         return <em key={i} className="italic text-[#D1D5DB]">{part.slice(1, -1)}</em>;
       }
       if (part.startsWith("`") && part.endsWith("`")) {
-        return <code key={i} className="px-1.5 py-0.5 rounded-md bg-[#13151A] text-[#4FD1FF] text-xs font-mono border border-[rgba(79,209,255,0.08)]">{part.slice(1, -1)}</code>;
+        return <code key={i} className="px-1.5 py-0.5 rounded-md bg-[#111] text-[#a78bfa] text-xs font-mono border border-[#222]">{part.slice(1, -1)}</code>;
       }
       const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
       if (linkMatch) {
@@ -737,11 +737,11 @@ export default function AiAssistant() {
     if (!msg.pdfDate) return null;
 
     return (
-      <div className="mt-3 rounded-2xl overflow-hidden border border-[rgba(79,209,255,0.12)] bg-[#1A1C22]/80">
+      <div className="mt-3 rounded-2xl overflow-hidden border border-[#222] bg-[#111]">
         {/* Card header */}
-        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-[rgba(79,209,255,0.06)]">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#4FD1FF]/15 to-[#9F7AEA]/15 flex items-center justify-center border border-[rgba(79,209,255,0.1)]">
-            <FileDown className="w-4 h-4 text-[#4FD1FF]" />
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-[#1a1a1a]">
+          <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center border border-[#222]">
+            <FileDown className="w-4 h-4 text-[#a78bfa]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-[#E5E7EB] truncate">
@@ -763,7 +763,7 @@ export default function AiAssistant() {
                   <User className="w-3 h-3" /> Pilih pelapor (TTD)
                 </p>
                 {Object.keys(pelaporSigUrls).length === 0 ? (
-                  <p className="text-[10px] text-amber-300/70 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-amber-300/70 bg-amber-500/[0.06] border border-[#333] rounded-lg px-3 py-2">
                     Belum ada data QC. Tambah di Settings → QC & Manajer
                   </p>
                 ) : (
@@ -776,26 +776,26 @@ export default function AiAssistant() {
                           onClick={() => setSelectedPelapor(prev => ({ ...prev, [msg.id]: name }))}
                           className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-all duration-200 ${
                             isActive
-                              ? "border-[#9F7AEA]/40 bg-[#9F7AEA]/[0.1] shadow-[0_0_8px_rgba(159,122,234,0.08)]"
-                              : "border-[rgba(79,209,255,0.06)] bg-[#14161A]/40 hover:border-[#9F7AEA]/15"
+                              ? "border-[#7C3AED]/40 bg-[#7C3AED]/10"
+                              : "border-[#222] bg-[#0a0a0a] hover:border-[#333]"
                           }`}
                         >
                           <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${
-                            isActive ? "bg-[#9F7AEA]/15 border border-[#9F7AEA]/20" : "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
+                            isActive ? "bg-[#7C3AED]/15 border border-[#7C3AED]/25" : "bg-[#1a1a1a] border border-[#222]"
                           }`}>
-                            <span className={`text-[10px] font-bold ${isActive ? "text-[#9F7AEA]" : "text-[#9CA3AF]"}`}>
+                            <span className={`text-[10px] font-bold ${isActive ? "text-[#a78bfa]" : "text-[#666]"}`}>
                               {name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-[10px] font-semibold truncate ${isActive ? "text-[#9F7AEA]" : "text-[#E5E7EB]"}`}>{name}</p>
+                            <p className={`text-[10px] font-semibold truncate ${isActive ? "text-[#a78bfa]" : "text-[#ccc]"}`}>{name}</p>
                             {sigUrl && (
                               <p className="text-[8px] text-emerald-400/70 flex items-center gap-0.5">
                                 <CheckCircle className="w-2 h-2" /> TTD ✓
                               </p>
                             )}
                           </div>
-                          {isActive && <CheckCircle className="w-3 h-3 text-[#9F7AEA] flex-shrink-0" />}
+                          {isActive && <CheckCircle className="w-3 h-3 text-[#a78bfa] flex-shrink-0" />}
                         </button>
                       );
                     })}
@@ -805,7 +805,7 @@ export default function AiAssistant() {
 
               {/* Signature preview */}
               {selectedPelapor[msg.id] && pelaporSigUrls[selectedPelapor[msg.id]] && (
-                <div className="flex items-center gap-2 bg-[#14161A]/60 rounded-lg px-3 py-2 border border-[rgba(79,209,255,0.05)]">
+                <div className="flex items-center gap-2 bg-[#0a0a0a] rounded-lg px-3 py-2 border border-[#222]">
                   <img
                     src={pelaporSigUrls[selectedPelapor[msg.id]]}
                     alt={`TTD ${selectedPelapor[msg.id]}`}
@@ -821,12 +821,11 @@ export default function AiAssistant() {
                 disabled={!selectedPelapor[msg.id]}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200
                 ${selectedPelapor[msg.id]
-                  ? `bg-gradient-to-r from-[#4FD1FF]/15 to-[#9F7AEA]/10
-                     border border-[rgba(79,209,255,0.15)] text-[#4FD1FF]
-                     shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
-                     hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(79,209,255,0.1)]
-                     active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]`
-                  : `bg-[#23262F]/50 border border-[rgba(255,255,255,0.04)] text-[#9CA3AF]/40 cursor-not-allowed`
+                  ? `bg-gradient-to-r from-[#7C3AED] to-[#6366F1]
+                     border border-transparent text-white
+                     hover:opacity-90
+                     active:scale-[0.98]`
+                  : `bg-[#1a1a1a] border border-[#222] text-[#555] cursor-not-allowed`
                 }`}
               >
                 <FileDown className="w-3.5 h-3.5" />
@@ -837,8 +836,8 @@ export default function AiAssistant() {
 
           {msg.pdfState === "loading" && (
             <div className="flex items-center justify-center gap-2.5 py-2.5">
-              <Loader2 className="w-4 h-4 text-[#4FD1FF] animate-spin" />
-              <span className="text-xs text-[#9CA3AF]">Generating PDF...</span>
+              <Loader2 className="w-4 h-4 text-[#a78bfa] animate-spin" />
+              <span className="text-xs text-[#888]">Generating PDF...</span>
             </div>
           )}
 
@@ -846,11 +845,8 @@ export default function AiAssistant() {
             <button
               onClick={() => handlePdfDownload(msg.pdfBlobUrl!, msg.pdfFileName!)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
-              bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400
-              shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
-              hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(16,185,129,0.1)]
-              active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]
-              transition-all duration-200"
+              bg-emerald-500/15 border border-emerald-500/25 text-xs font-medium text-emerald-400
+              hover:bg-emerald-500/20 active:scale-[0.98] transition-all duration-200"
             >
               <Download className="w-3.5 h-3.5" />
               Download PDF
@@ -867,8 +863,8 @@ export default function AiAssistant() {
               <button
                 onClick={() => handlePdfGenerate(msg.id, msg.pdfDate!)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
-                bg-[#23262F] border border-[rgba(255,255,255,0.06)] text-xs text-[#9CA3AF]
-                hover:text-[#E5E7EB] hover:border-[rgba(79,209,255,0.12)]
+                bg-[#111] border border-[#222] text-xs text-[#888]
+                hover:text-white hover:border-[#333]
                 active:scale-[0.98] transition-all duration-200"
               >
                 <FileDown className="w-3.5 h-3.5" />
@@ -884,74 +880,43 @@ export default function AiAssistant() {
   // ==================== RENDER ====================
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-64px)] lg:h-screen max-w-3xl mx-auto relative">
-      {/* ===== STICKY HEADER ===== */}
-      <div className="sticky top-0 z-20 bg-[#1A1C22]/95 backdrop-blur-md px-4 pt-4 pb-3">
+    <div className="flex flex-col h-[calc(100dvh-64px)] lg:h-screen max-w-3xl mx-auto relative bg-black">
+      {/* ===== HEADER ===== */}
+      <div className="sticky top-0 z-20 bg-black px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20
-              flex items-center justify-center border border-[rgba(79,209,255,0.15)]
-              shadow-[4px_4px_10px_rgba(0,0,0,0.35),-2px_-2px_6px_rgba(255,255,255,0.02)]"
-            >
-              <Sparkles className="w-5 h-5 text-[#4FD1FF]" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-[#E5E7EB] tracking-tight">
-                AWAS AI
-              </h1>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-[11px] text-[#9CA3AF]">
-                  Online · Siap membantu
-                </p>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1">
+            AWAS AI <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+          </h1>
 
-          {messages.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-[#9CA3AF]
-              bg-[#23262F] border border-[rgba(255,255,255,0.04)]
-              shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
-              hover:text-red-400 hover:border-red-500/15 hover:bg-red-500/5
-              active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)] active:scale-[0.97]
-              transition-all duration-200"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Hapus</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={clearChat}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#888]
+                hover:text-red-400 transition-colors duration-200"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Hapus</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="mt-3 h-px bg-gradient-to-r from-transparent via-[rgba(79,209,255,0.12)] to-transparent" />
       </div>
 
       {/* ===== MESSAGES ===== */}
       <div
         ref={chatContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-4 scroll-smooth"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 scroll-smooth"
       >
         {/* Empty state */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-8">
-            <div
-              className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-[#4FD1FF]/10 to-[#9F7AEA]/10
-              flex items-center justify-center mb-5 border border-[rgba(79,209,255,0.1)]
-              shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_10px_rgba(255,255,255,0.02)]"
-            >
-              <Bot className="w-8 h-8 text-[#4FD1FF]" />
-            </div>
-            <h2 className="text-lg font-bold text-[#E5E7EB] mb-1.5">
-              Hai! Gw AWAS AI 👋
+          <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-16">
+            <h2 className="text-3xl font-bold text-white mb-10">
+              How can I help?
             </h2>
-            <p className="text-sm text-[#9CA3AF] max-w-sm mb-8 leading-relaxed">
-              Asisten cerdas buat bantu kamu soal waste management, food safety,
-              dan penggunaan aplikasi AWAS.
-            </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-md">
+            <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm">
               {[
                 "💡 Tips mengurangi waste di kitchen",
                 "📊 Cara analisis data waste harian",
@@ -964,11 +929,9 @@ export default function AiAssistant() {
                     setInput(prompt.replace(/^[^\s]+\s/, ""));
                     inputRef.current?.focus();
                   }}
-                  className="text-left text-xs text-[#9CA3AF] px-4 py-3 rounded-2xl
-                  bg-[#23262F] border border-[rgba(255,255,255,0.04)]
-                  shadow-[4px_4px_10px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.02)]
-                  hover:border-[rgba(79,209,255,0.15)] hover:text-[#E5E7EB] hover:bg-[#272A33]
-                  hover:-translate-y-0.5 active:translate-y-0 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]
+                  className="text-left text-xs text-[#999] px-3.5 py-3 rounded-2xl
+                  bg-[#111] border border-[#222]
+                  hover:border-[#444] hover:text-white
                   transition-all duration-200 leading-relaxed"
                 >
                   {prompt}
@@ -982,25 +945,24 @@ export default function AiAssistant() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-end gap-2.5 ${
+            className={`flex items-start gap-2.5 ${
               msg.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
             {/* AI Avatar */}
             {msg.role === "model" && (
               <div
-                className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center
+                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5
                 ${
                   msg.error
-                    ? "bg-red-500/10 border border-red-500/15"
-                    : "bg-gradient-to-br from-[#4FD1FF]/12 to-[#9F7AEA]/12 border border-[rgba(79,209,255,0.1)]"
-                }
-                shadow-[3px_3px_6px_rgba(0,0,0,0.25)]`}
+                    ? "bg-red-500/10"
+                    : "bg-transparent"
+                }`}
               >
                 {msg.error ? (
-                  <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                  <AlertCircle className="w-4 h-4 text-red-400" />
                 ) : (
-                  <Sparkles className="w-3.5 h-3.5 text-[#4FD1FF]" />
+                  <Sparkles className="w-4 h-4 text-[#aaa]" />
                 )}
               </div>
             )}
@@ -1010,16 +972,13 @@ export default function AiAssistant() {
               className={`text-sm leading-relaxed
               ${
                 msg.role === "user"
-                  ? `max-w-[78%] rounded-[20px] rounded-br-md px-4 py-3
-                     bg-gradient-to-br from-[#4FD1FF]/18 to-[#4FD1FF]/8
-                     border border-[rgba(79,209,255,0.18)] text-[#E5E7EB]
-                     shadow-[5px_5px_12px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(79,209,255,0.03)]`
+                  ? `max-w-[78%] rounded-3xl px-4 py-2.5
+                     bg-gradient-to-r from-[#7C3AED] to-[#6366F1] text-white`
                   : msg.error
-                  ? `max-w-[88%] rounded-[20px] rounded-bl-md px-4 py-3
-                     bg-red-500/5 border border-red-500/15 text-red-300`
-                  : `max-w-[88%] rounded-[20px] rounded-bl-md px-4 py-3.5
-                     bg-[#23262F] border border-[rgba(255,255,255,0.04)] text-[#D1D5DB]
-                     shadow-[5px_5px_12px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.015)]`
+                  ? `max-w-[88%] rounded-3xl px-4 py-3
+                     bg-transparent text-red-300`
+                  : `max-w-[88%] rounded-3xl px-1 py-1
+                     bg-transparent text-[#ddd]`
               }`}
             >
               <div className="break-words">
@@ -1032,10 +991,10 @@ export default function AiAssistant() {
               {msg.pdfDate && renderPdfCard(msg)}
 
               <div
-                className={`text-[10px] mt-2 ${
+                className={`text-[10px] mt-1.5 ${
                   msg.role === "user"
-                    ? "text-[#4FD1FF]/35 text-right"
-                    : "text-[#9CA3AF]/40"
+                    ? "text-white/30 text-right"
+                    : "text-[#555]"
                 }`}
               >
                 {formatTime(msg.timestamp)}
@@ -1046,23 +1005,19 @@ export default function AiAssistant() {
 
         {/* Typing indicator */}
         {isLoading && (
-          <div className="flex items-end gap-2.5 justify-start">
+          <div className="flex items-start gap-2.5 justify-start">
             <div
-              className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-[#4FD1FF]/12 to-[#9F7AEA]/12
-              flex items-center justify-center border border-[rgba(79,209,255,0.1)]
-              shadow-[3px_3px_6px_rgba(0,0,0,0.25)]"
+              className="flex-shrink-0 w-7 h-7 rounded-full
+              flex items-center justify-center mt-0.5"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#4FD1FF] animate-pulse" />
+              <Sparkles className="w-4 h-4 text-[#aaa] animate-pulse" />
             </div>
-            <div
-              className="rounded-[20px] rounded-bl-md px-5 py-3.5 bg-[#23262F] border border-[rgba(255,255,255,0.04)]
-              shadow-[5px_5px_12px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.015)]"
-            >
+            <div className="rounded-3xl px-4 py-3">
               <div className="flex items-center gap-1.5">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#4FD1FF]/40 animate-bounce [animation-delay:0ms]" />
-                  <span className="w-2 h-2 rounded-full bg-[#4FD1FF]/40 animate-bounce [animation-delay:150ms]" />
-                  <span className="w-2 h-2 rounded-full bg-[#4FD1FF]/40 animate-bounce [animation-delay:300ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#555] animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#555] animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#555] animate-bounce [animation-delay:300ms]" />
                 </div>
               </div>
             </div>
@@ -1077,48 +1032,49 @@ export default function AiAssistant() {
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-10">
           <button
             onClick={() => scrollToBottom()}
-            className="p-2.5 rounded-full bg-[#23262F]/90 backdrop-blur-sm border border-[rgba(79,209,255,0.12)]
-            shadow-[4px_4px_10px_rgba(0,0,0,0.4)]
+            className="p-2 rounded-full bg-[#1A1A1A] border border-[#333]
             hover:-translate-y-0.5 active:scale-95 transition-all duration-200"
           >
-            <ChevronDown className="w-4 h-4 text-[#4FD1FF]" />
+            <ChevronDown className="w-4 h-4 text-[#888]" />
           </button>
         </div>
       )}
 
-      {/* ===== MODERN INPUT AREA ===== */}
+      {/* ===== INPUT AREA ===== */}
       <div className="flex-shrink-0 px-4 pt-2 pb-4">
         <div
-          className="relative rounded-[20px] bg-[#23262F] border border-[rgba(255,255,255,0.05)]
-          shadow-[6px_6px_14px_rgba(0,0,0,0.4),-3px_-3px_8px_rgba(255,255,255,0.02)]
-          focus-within:border-[rgba(79,209,255,0.2)] focus-within:shadow-[6px_6px_14px_rgba(0,0,0,0.4),-3px_-3px_8px_rgba(255,255,255,0.02),0_0_0_1px_rgba(79,209,255,0.08)]
-          transition-all duration-300"
+          className="relative flex items-end rounded-full bg-[#1A1A1A] border border-[#2A2A2A]
+          focus-within:border-[#444] transition-all duration-300"
         >
+          <div className="flex-shrink-0 pl-3 pb-3">
+            <button className="w-8 h-8 rounded-full border border-[#444] flex items-center justify-center
+              text-[#888] hover:text-white hover:border-[#666] transition-colors duration-200">
+              <span className="text-lg leading-none">+</span>
+            </button>
+          </div>
           <textarea
             ref={inputRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ketik pesan..."
+            placeholder="How can I help you today?"
             rows={1}
             disabled={isLoading}
-            className="w-full bg-transparent text-sm text-[#E5E7EB] placeholder-[#9CA3AF]/40
-            resize-none outline-none pl-5 pr-14 py-4 max-h-[140px] leading-relaxed
+            className="w-full bg-transparent text-sm text-white placeholder-[#666]
+            resize-none outline-none px-3 py-3.5 max-h-[140px] leading-relaxed
             disabled:opacity-50"
           />
-          <div className="absolute right-2.5 bottom-2.5">
+          <div className="flex-shrink-0 pr-2 pb-2">
             <button
               onClick={sendMessage}
               disabled={!input.trim() || isLoading}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center
+              className={`w-9 h-9 rounded-full flex items-center justify-center
               transition-all duration-200
               ${
                 input.trim() && !isLoading
-                  ? `bg-[#4FD1FF] text-[#1A1C22]
-                     shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(79,209,255,0.15)]
-                     hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_20px_rgba(79,209,255,0.25)]
-                     hover:scale-105 active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.25)]`
-                  : `bg-[#2A2D37] text-[#9CA3AF]/30 cursor-not-allowed`
+                  ? `bg-gradient-to-br from-[#7C3AED] to-[#6366F1] text-white
+                     hover:opacity-90 active:scale-95`
+                  : `bg-[#2A2A2A] text-[#555] cursor-not-allowed`
               }`}
             >
               {isLoading ? (
@@ -1129,7 +1085,7 @@ export default function AiAssistant() {
             </button>
           </div>
         </div>
-        <p className="text-[10px] text-[#9CA3AF]/30 text-center mt-2.5">
+        <p className="text-[10px] text-[#444] text-center mt-2.5">
           AWAS AI · Selalu verifikasi info penting
         </p>
       </div>
