@@ -11,6 +11,7 @@ import {
   FileDown,
   Download,
   CheckCircle,
+  User,
 } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -57,7 +58,11 @@ const extractImageUrl = (val: string): string => {
   return match ? match[1] : (val.startsWith('http') ? val : '');
 };
 
-async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: string }> {
+async function generateWastePdf(
+  date: string,
+  pelaporName?: string,
+  pelaporSigUrl?: string
+): Promise<{ blob: Blob; fileName: string }> {
   // Fetch data
   const res = await apiFetch(`/api/get-day-data?date=${date}`);
   if (!res.ok) throw new Error(`Gagal ambil data: ${res.status}`);
@@ -70,7 +75,9 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 10;
+  const storeName = localStorage.getItem('waste_app_store') || dayData.storeName || '-';
 
   // Logo
   let logoImg: string | null = null;
@@ -107,15 +114,17 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
   const infoY = 28;
   doc.text(`Hari: ${dayName}`, margin, infoY);
   doc.text(`Tanggal: ${dateDisplay}`, margin + 50, infoY);
-  doc.text(`Store: ${dayData.storeName || '-'}`, margin + 110, infoY);
+  doc.text(`Store: ${dayData.storeName || storeName}`, margin + 110, infoY);
 
   // Tables per shift
   const shifts = ['OPENING', 'MIDDLE', 'CLOSING', 'MIDNIGHT'];
   const stationOrder = ['NOODLE', 'PRODUKSI', 'BAR', 'DIMSUM'];
   let startY = 33;
 
-  // Sig image cache
+  // Image caches - pre-fetch everything BEFORE drawing
   const sigCache: Record<string, string> = {};
+  const docPhotoCache: Record<string, string> = {};
+
   const fetchSigImage = async (url: string): Promise<string | null> => {
     if (!url || url === '-' || !url.startsWith('http')) return null;
     if (sigCache[url]) return sigCache[url];
@@ -128,16 +137,43 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
     } catch { return null; }
   };
 
-  for (const shift of shifts) {
+  const fetchDocPhoto = async (url: string): Promise<string | null> => {
+    if (!url || url === '-' || !url.startsWith('http')) return null;
+    if (docPhotoCache[url]) return docPhotoCache[url];
+    try {
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!proxyRes.ok) return null;
+      const data = await proxyRes.json();
+      if (data.success && data.dataUrl) {
+        const resized = await new Promise<string>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 236; canvas.height = 236;
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 236, 236);
+            const scale = Math.max(236 / img.width, 236 / img.height);
+            const sw = 236 / scale, sh = 236 / scale;
+            const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 236, 236);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = () => resolve(data.dataUrl);
+          img.src = data.dataUrl;
+        });
+        docPhotoCache[url] = resized;
+        return resized;
+      }
+      return null;
+    } catch { return null; }
+  };
+
+  for (let shiftIdx = 0; shiftIdx < shifts.length; shiftIdx++) {
+    const shift = shifts[shiftIdx];
     const shiftData = dayData.grouped[shift] || [];
-    const pageHeight = doc.internal.pageSize.getHeight();
 
-    if (startY > pageHeight - 30) {
-      doc.addPage();
-      startY = 15;
-    }
-
-    // Shift header
     doc.setFillColor(200, 200, 200);
     doc.rect(margin, startY, pageWidth - 2 * margin, 6, 'F');
     doc.setFontSize(8);
@@ -145,15 +181,42 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
     doc.text(`WASTE ${shift}`, margin + 2, startY + 4);
     startY += 7;
 
-    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER']];
+    // 11 columns including DOKUMENTASI
+    const headers = [['NO', 'NAMA PRODUK', 'KODE PRODUK', 'JUMLAH', 'SATUAN', 'METODE', 'ALASAN', 'JAM', 'QC', 'MANAJER', 'DOKUMENTASI']];
+
+    type RowEntry = { entry: any | null; docUrls: string[]; isTester?: boolean };
+    const rowEntries: RowEntry[] = [];
     const rows: string[][] = [];
 
-    type RowEntry = { entry: any | null; isTester?: boolean };
-    const rowEntries: RowEntry[] = [];
-
-    // Tester entry first
+    // Pre-fetch ALL images for this shift BEFORE drawing table
     const testerEntry = shiftData.find((e: any) => e.station?.toUpperCase() === 'TESTER');
     if (testerEntry) {
+      const tQcUrl = extractImageUrl(testerEntry.parafQC);
+      const tMgrUrl = extractImageUrl(testerEntry.parafManager);
+      if (tQcUrl) await fetchSigImage(tQcUrl);
+      if (tMgrUrl) await fetchSigImage(tMgrUrl);
+      if (testerEntry.dokumentasi) {
+        const tDocUrls = testerEntry.dokumentasi.map((d: string) => extractImageUrl(d)).filter((u: string) => u);
+        for (const docUrl of tDocUrls) await fetchDocPhoto(docUrl);
+      }
+    }
+    for (const station of stationOrder) {
+      const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
+      if (entry) {
+        const qcUrl = extractImageUrl(entry.parafQC);
+        const mgrUrl = extractImageUrl(entry.parafManager);
+        if (qcUrl) await fetchSigImage(qcUrl);
+        if (mgrUrl) await fetchSigImage(mgrUrl);
+        if (entry.dokumentasi) {
+          const docUrls = entry.dokumentasi.map((d: string) => extractImageUrl(d)).filter((u: string) => u);
+          for (const docUrl of docUrls) await fetchDocPhoto(docUrl);
+        }
+      }
+    }
+
+    // Build rows - Tester first
+    if (testerEntry) {
+      const testerDocUrls = (testerEntry.dokumentasi || []).map((d: string) => extractImageUrl(d)).filter((u: string) => u);
       rows.push([
         'T',
         String(testerEntry.namaProduk || '-').replace(/,\s*/g, '\n'),
@@ -163,16 +226,17 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
         String(testerEntry.metodePemusnahan || '-').replace(/,\s*/g, '\n'),
         String(testerEntry.alasanPemusnahan || '-').replace(/,\s*/g, '\n'),
         parseJamValue(testerEntry.jamTanggalPemusnahan || '-'),
-        '', ''
+        '', '', testerDocUrls.length > 0 ? '' : '-'
       ]);
-      rowEntries.push({ entry: testerEntry, isTester: true });
+      rowEntries.push({ entry: testerEntry, docUrls: testerDocUrls, isTester: true });
     }
 
     // Station entries
     stationOrder.forEach((station, idx) => {
       const entry = shiftData.find((e: any) => e.station?.toUpperCase() === station);
       if (entry) {
-        rowEntries.push({ entry });
+        const docUrls = (entry.dokumentasi || []).map((d: string) => extractImageUrl(d)).filter((u: string) => u);
+        rowEntries.push({ entry, docUrls });
         rows.push([
           (idx + 1).toString(),
           String(entry.namaProduk || '-').replace(/,\s*/g, '\n'),
@@ -182,13 +246,15 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
           String(entry.metodePemusnahan || '-').replace(/,\s*/g, '\n'),
           String(entry.alasanPemusnahan || '-').replace(/,\s*/g, '\n'),
           parseJamValue(entry.jamTanggalPemusnahan || '-'),
-          '', ''
+          '', '', docUrls.length > 0 ? '' : '-'
         ]);
       } else {
-        rowEntries.push({ entry: null });
-        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-']);
+        rowEntries.push({ entry: null, docUrls: [] });
+        rows.push([(idx + 1).toString(), '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']);
       }
     });
+
+    const hasAnyDocPhotos = rowEntries.some(re => re.docUrls.length > 0);
 
     autoTable(doc, {
       head: headers, body: rows, startY,
@@ -196,51 +262,143 @@ async function generateWastePdf(date: string): Promise<{ blob: Blob; fileName: s
       styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, minCellHeight: 8, valign: 'middle' as const },
       headStyles: { fillColor: [80, 80, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, halign: 'center' as const, valign: 'middle' as const },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' as const },
-        1: { cellWidth: 50 }, 2: { cellWidth: 30 },
-        3: { cellWidth: 18, halign: 'center' as const }, 4: { cellWidth: 20, halign: 'center' as const },
-        5: { cellWidth: 28 }, 6: { cellWidth: 42 },
-        7: { cellWidth: 22 }, 8: { cellWidth: 28, halign: 'center' as const },
-        9: { cellWidth: 28, halign: 'center' as const },
+        0: { cellWidth: 10, halign: 'center' as const, valign: 'middle' as const },
+        1: { cellWidth: hasAnyDocPhotos ? 44 : 48 }, 2: { cellWidth: 26 },
+        3: { cellWidth: 16, halign: 'center' as const }, 4: { cellWidth: 18, halign: 'center' as const },
+        5: { cellWidth: 23 }, 6: { cellWidth: hasAnyDocPhotos ? 38 : 40 },
+        7: { cellWidth: 20 }, 8: { cellWidth: 26, halign: 'center' as const },
+        9: { cellWidth: 26, halign: 'center' as const }, 10: { cellWidth: hasAnyDocPhotos ? 30 : 24, halign: 'center' as const },
       },
       tableWidth: pageWidth - 2 * margin, theme: 'grid' as const,
-      didDrawCell: async (data: any) => {
+      didParseCell: (data: any) => {
+        if (data.section !== 'body') return;
+        const rowIdx = data.row.index;
+        const rowEntry = rowEntries[rowIdx];
+        if (rowEntry?.docUrls?.length > 0) {
+          const photoRows = Math.ceil(rowEntry.docUrls.length / 2);
+          const photoHeight = photoRows * 14 + (photoRows - 1) * 1 + 3;
+          data.cell.styles.minCellHeight = Math.max(data.cell.styles.minCellHeight, photoHeight);
+        }
+        if (rowEntry?.isTester) {
+          const kodeProduk = String(rowEntry.entry?.kodeProduk || '');
+          if (kodeProduk.includes('AMAN')) {
+            data.cell.styles.fillColor = [220, 240, 220];
+          } else {
+            data.cell.styles.fillColor = [255, 237, 204];
+          }
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      // SYNCHRONOUS didDrawCell — images already pre-fetched into cache
+      didDrawCell: (data: any) => {
         if (data.section !== 'body') return;
         const rowIdx = data.row.index;
         const colIdx = data.column.index;
         const rowEntry = rowEntries[rowIdx];
         if (!rowEntry?.entry) return;
+        const cellX = data.cell.x, cellY = data.cell.y, cellW = data.cell.width, cellH = data.cell.height;
 
-        // QC signature (col 8) and Manager signature (col 9)
-        if (colIdx === 8 || colIdx === 9) {
-          const url = colIdx === 8
-            ? extractImageUrl(rowEntry.entry.parafQC)
-            : extractImageUrl(rowEntry.entry.parafManager);
-          if (url) {
-            const sigImg = await fetchSigImage(url);
-            if (sigImg) {
-              try {
-                const imgSize = Math.min(data.cell.width - 2, data.cell.height - 2, 12);
-                const x = data.cell.x + (data.cell.width - imgSize) / 2;
-                const y = data.cell.y + (data.cell.height - imgSize) / 2;
-                doc.addImage(sigImg, 'PNG', x, y, imgSize, imgSize);
-              } catch {}
+        // QC signature (col 8)
+        if (colIdx === 8) {
+          const qcUrl = extractImageUrl(rowEntry.entry.parafQC);
+          if (qcUrl && sigCache[qcUrl]) {
+            try {
+              const imgH = Math.min(cellH - 2, 14), imgW = Math.min(cellW - 2, imgH * 2);
+              doc.addImage(sigCache[qcUrl], 'PNG', cellX + (cellW - imgW) / 2, cellY + (cellH - imgH) / 2, imgW, imgH);
+            } catch {}
+          }
+        }
+        // Manager signature (col 9)
+        if (colIdx === 9) {
+          const mgrUrl = extractImageUrl(rowEntry.entry.parafManager);
+          if (mgrUrl && sigCache[mgrUrl]) {
+            try {
+              const imgH = Math.min(cellH - 2, 14), imgW = Math.min(cellW - 2, imgH * 2);
+              doc.addImage(sigCache[mgrUrl], 'PNG', cellX + (cellW - imgW) / 2, cellY + (cellH - imgH) / 2, imgW, imgH);
+            } catch {}
+          }
+        }
+        // Documentation photos (col 10)
+        if (colIdx === 10) {
+          const docUrls = rowEntry.docUrls || [];
+          if (docUrls.length > 0) {
+            const padding = 1.5, availW = cellW - (padding * 2), gap = 1, photosPerRow = 2;
+            const imgSize = Math.min(13, (availW - gap) / photosPerRow);
+            const pRows = Math.ceil(docUrls.length / photosPerRow);
+            const totalH = pRows * imgSize + (pRows - 1) * gap;
+            let startDrawY = cellY + (cellH - totalH) / 2;
+            for (let row = 0; row < pRows; row++) {
+              const startIdx = row * photosPerRow;
+              const rowPhotos = docUrls.slice(startIdx, startIdx + photosPerRow);
+              const rowTotalW = rowPhotos.length * imgSize + (rowPhotos.length - 1) * gap;
+              let drawX = cellX + (cellW - rowTotalW) / 2;
+              const drawY = startDrawY + row * (imgSize + gap);
+              for (const docUrl of rowPhotos) {
+                if (docUrl && docPhotoCache[docUrl]) {
+                  try { doc.addImage(docPhotoCache[docUrl], 'JPEG', drawX, drawY, imgSize, imgSize); } catch {}
+                }
+                drawX += imgSize + gap;
+              }
             }
           }
         }
       },
     });
 
-    startY = (doc as any).lastAutoTable?.finalY + 5 || startY + 40;
+    startY = (doc as any).lastAutoTable.finalY + 3;
+    if (startY > pageHeight - 30 && shiftIdx < shifts.length - 1) {
+      doc.addPage();
+      startY = 15;
+    }
   }
 
-  // Footer
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'italic');
-  doc.text(`Generated by AWAS AI · ${new Date().toLocaleString('id-ID')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
+  // Footer signatures
+  if (startY > pageHeight - 45) { doc.addPage(); startY = 15; }
+  startY += 8;
+
+  const displayPelapor = pelaporName || 'QC';
+  let qcSigImg: string | null = null;
+  if (pelaporSigUrl) {
+    try {
+      const proxyRes = await apiFetch(`/api/proxy-image?url=${encodeURIComponent(pelaporSigUrl)}`);
+      if (proxyRes.ok) {
+        const data = await proxyRes.json();
+        if (data.success && data.dataUrl) qcSigImg = data.dataUrl;
+      }
+    } catch {}
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Diketahui Oleh :', margin, startY);
+  doc.line(margin, startY + 15, margin + 50, startY + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.text('AM/RM', margin + 12, startY + 20);
+
+  const rightX = pageWidth - margin - 60;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Dilaporkan oleh : QC', rightX, startY);
+  if (qcSigImg) doc.addImage(qcSigImg, 'JPEG', rightX + 10, startY + 2, 30, 10);
+  doc.line(rightX, startY + 15, rightX + 55, startY + 15);
+  doc.setFont('helvetica', 'normal');
+  doc.text(displayPelapor, rightX + 5, startY + 20);
+
+  // Disclaimer footer
+  const totalPages = doc.getNumberOfPages();
+  doc.setPage(totalPages);
+  const bottomY = pageHeight - 5;
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(130, 130, 130);
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.line(margin + 30, bottomY - 3.5, pageWidth - margin - 30, bottomY - 3.5);
+  doc.text("Data waste ini bersifat Internal & Rahasia serta terjaga keamanannya di database QC.", pageWidth / 2, bottomY, { align: "center" });
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0);
 
   const blob = doc.output('blob');
-  const fileName = `waste-report-${date}.pdf`;
+  const fileName = `BA_WASTE_${date.replace(/-/g, '')}.pdf`;
   return { blob, fileName };
 }
 
@@ -251,10 +409,28 @@ export default function AiAssistant() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
+  const [selectedPelapor, setSelectedPelapor] = useState<Record<string, string>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // ==================== FETCH SIGNATURES ====================
+
+  useEffect(() => {
+    async function fetchSigs() {
+      try {
+        const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
+        const res = await apiFetch(`/api/signatures?role=qc&tenant_id=${encodeURIComponent(tenantId)}`);
+        const data = await res.json();
+        if (data.success && data.signatures) setPelaporSigUrls(data.signatures);
+      } catch (e) {
+        console.error("Failed to load pelapor signatures:", e);
+      }
+    }
+    fetchSigs();
+  }, []);
 
   // ==================== SCROLL ====================
 
@@ -278,6 +454,9 @@ export default function AiAssistant() {
   // ==================== PDF GENERATION ====================
 
   const handlePdfGenerate = async (msgId: string, date: string) => {
+    const pelapor = selectedPelapor[msgId];
+    if (!pelapor) return;
+
     setMessages((prev) =>
       prev.map((m) =>
         m.id === msgId ? { ...m, pdfState: "loading" as const } : m
@@ -285,7 +464,8 @@ export default function AiAssistant() {
     );
 
     try {
-      const { blob, fileName } = await generateWastePdf(date);
+      const sigUrl = pelaporSigUrls[pelapor] || undefined;
+      const { blob, fileName } = await generateWastePdf(date, pelapor, sigUrl);
       const blobUrl = URL.createObjectURL(blob);
 
       setMessages((prev) =>
@@ -295,6 +475,15 @@ export default function AiAssistant() {
             : m
         )
       );
+
+      // Also backup to R2
+      try {
+        const formData = new FormData();
+        formData.append('pdfFile', blob, fileName);
+        formData.append('fileName', fileName);
+        formData.append('mode', 'upload-pdf');
+        await apiFetch('/api/auto-submit', { method: 'POST', body: formData });
+      } catch {}
     } catch (err: any) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -371,11 +560,6 @@ export default function AiAssistant() {
       };
 
       setMessages((prev) => [...prev, aiMsg]);
-
-      // Auto-start PDF generation
-      if (pdfDate) {
-        setTimeout(() => handlePdfGenerate(aiMsg.id, pdfDate!), 300);
-      }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: `e_${Date.now()}`,
@@ -572,19 +756,83 @@ export default function AiAssistant() {
         {/* Card body */}
         <div className="px-4 py-3">
           {msg.pdfState === "idle" && (
-            <button
-              onClick={() => handlePdfGenerate(msg.id, msg.pdfDate!)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
-              bg-gradient-to-r from-[#4FD1FF]/15 to-[#9F7AEA]/10
-              border border-[rgba(79,209,255,0.15)] text-xs font-medium text-[#4FD1FF]
-              shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
-              hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(79,209,255,0.1)]
-              active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]
-              transition-all duration-200"
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              Generate PDF
-            </button>
+            <div className="space-y-3">
+              {/* Pelapor selector */}
+              <div>
+                <p className="text-[10px] text-[#9CA3AF] mb-2 flex items-center gap-1">
+                  <User className="w-3 h-3" /> Pilih pelapor (TTD)
+                </p>
+                {Object.keys(pelaporSigUrls).length === 0 ? (
+                  <p className="text-[10px] text-amber-300/70 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg px-3 py-2">
+                    Belum ada data QC. Tambah di Settings → QC & Manajer
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.entries(pelaporSigUrls).map(([name, sigUrl]) => {
+                      const isActive = selectedPelapor[msg.id] === name;
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => setSelectedPelapor(prev => ({ ...prev, [msg.id]: name }))}
+                          className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-all duration-200 ${
+                            isActive
+                              ? "border-[#9F7AEA]/40 bg-[#9F7AEA]/[0.1] shadow-[0_0_8px_rgba(159,122,234,0.08)]"
+                              : "border-[rgba(79,209,255,0.06)] bg-[#14161A]/40 hover:border-[#9F7AEA]/15"
+                          }`}
+                        >
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${
+                            isActive ? "bg-[#9F7AEA]/15 border border-[#9F7AEA]/20" : "bg-[#23262F] border border-[rgba(79,209,255,0.06)]"
+                          }`}>
+                            <span className={`text-[10px] font-bold ${isActive ? "text-[#9F7AEA]" : "text-[#9CA3AF]"}`}>
+                              {name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[10px] font-semibold truncate ${isActive ? "text-[#9F7AEA]" : "text-[#E5E7EB]"}`}>{name}</p>
+                            {sigUrl && (
+                              <p className="text-[8px] text-emerald-400/70 flex items-center gap-0.5">
+                                <CheckCircle className="w-2 h-2" /> TTD ✓
+                              </p>
+                            )}
+                          </div>
+                          {isActive && <CheckCircle className="w-3 h-3 text-[#9F7AEA] flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Signature preview */}
+              {selectedPelapor[msg.id] && pelaporSigUrls[selectedPelapor[msg.id]] && (
+                <div className="flex items-center gap-2 bg-[#14161A]/60 rounded-lg px-3 py-2 border border-[rgba(79,209,255,0.05)]">
+                  <img
+                    src={pelaporSigUrls[selectedPelapor[msg.id]]}
+                    alt={`TTD ${selectedPelapor[msg.id]}`}
+                    className="h-8 rounded bg-white/5 p-0.5"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <p className="text-[10px] text-emerald-400 font-medium">{selectedPelapor[msg.id]}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => handlePdfGenerate(msg.id, msg.pdfDate!)}
+                disabled={!selectedPelapor[msg.id]}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200
+                ${selectedPelapor[msg.id]
+                  ? `bg-gradient-to-r from-[#4FD1FF]/15 to-[#9F7AEA]/10
+                     border border-[rgba(79,209,255,0.15)] text-[#4FD1FF]
+                     shadow-[3px_3px_8px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.02)]
+                     hover:-translate-y-0.5 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),0_0_12px_rgba(79,209,255,0.1)]
+                     active:translate-y-0 active:scale-[0.98] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]`
+                  : `bg-[#23262F]/50 border border-[rgba(255,255,255,0.04)] text-[#9CA3AF]/40 cursor-not-allowed`
+                }`}
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                {selectedPelapor[msg.id] ? "Generate PDF" : "Pilih pelapor dulu ↑"}
+              </button>
+            </div>
           )}
 
           {msg.pdfState === "loading" && (
