@@ -908,8 +908,9 @@ export default function AiAssistant() {
       <div
         ref={chatContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-5 scroll-smooth"
+        className="flex-1 overflow-y-auto px-4 py-3 scroll-smooth"
       >
+        <div className="max-w-3xl mx-auto w-full space-y-5 min-h-full">
         {/* Empty state */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-16">
@@ -917,7 +918,7 @@ export default function AiAssistant() {
               Halo, {localStorage.getItem('waste_app_qc_name') || 'there'} 👋
             </h2>
 
-            <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 w-full max-w-sm lg:max-w-2xl">
               {[
                 "💡 Tips mengurangi waste di kitchen",
                 "📊 Cara analisis data waste harian",
@@ -966,11 +967,11 @@ export default function AiAssistant() {
               className={`text-[14px] leading-[1.6]
               ${
                 msg.role === "user"
-                  ? `max-w-[75%] rounded-2xl rounded-br-sm px-3.5 py-2
+                  ? `max-w-[75%] lg:max-w-[60%] rounded-2xl rounded-br-sm px-3.5 py-2
                      bg-gradient-to-r from-[#7C3AED] to-[#6366F1] text-white`
                   : msg.error
-                  ? `max-w-[85%] text-red-300`
-                  : `max-w-[85%] text-[#ddd]`
+                  ? `max-w-[85%] lg:max-w-[75%] text-red-300`
+                  : `max-w-[85%] lg:max-w-[75%] text-[#ddd]`
               }`}
             >
               <div className="break-words">
@@ -1014,6 +1015,7 @@ export default function AiAssistant() {
         )}
 
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Scroll to bottom */}
@@ -1031,6 +1033,7 @@ export default function AiAssistant() {
 
       {/* ===== INPUT AREA ===== */}
       <div className="flex-shrink-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-4">
+        <div className="max-w-3xl mx-auto w-full">
         <div
           className="relative flex items-end rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300 min-h-[48px]"
@@ -1073,6 +1076,7 @@ export default function AiAssistant() {
         <p className="text-[10px] text-[#444] text-center mt-2.5">
           AWAS AI · Selalu verifikasi info penting
         </p>
+        </div>
       </div>
     </div>
   );
