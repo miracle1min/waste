@@ -914,7 +914,7 @@ export default function AiAssistant() {
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-16">
             <h2 className="text-3xl font-bold text-white mb-10">
-              How can I help?
+              Halo, {localStorage.getItem('waste_app_qc_name') || 'there'} 👋
             </h2>
 
             <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm">
