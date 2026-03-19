@@ -16,9 +16,21 @@ import {
   Clock,
   MessageSquare,
   X,
+  Image,
+  Mic,
+  FileText,
+  Paperclip,
 } from "lucide-react";
 
 // ==================== TYPES ====================
+
+interface Attachment {
+  type: 'image' | 'audio' | 'text';
+  mimeType: string;
+  data: string; // base64 for image/audio, raw text for text files
+  name: string;
+  previewUrl?: string; // blob URL for image preview
+}
 
 interface ChatMessage {
   id: string;
@@ -26,6 +38,7 @@ interface ChatMessage {
   text: string;
   timestamp: Date;
   error?: boolean;
+  attachments?: Attachment[];
   pdfDate?: string; // If set, this message has a PDF to generate
   pdfState?: "idle" | "loading" | "done" | "error";
   pdfBlobUrl?: string;
@@ -48,6 +61,7 @@ interface ChatSession {
     timestamp: string;
     error?: boolean;
     pdfDate?: string;
+    attachmentMeta?: Array<{ type: string; name: string }>;
   }>;
   createdAt: string;
   updatedAt: string;
@@ -74,6 +88,7 @@ function serializeMessages(messages: ChatMessage[]): ChatSession['messages'] {
     timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp as any,
     error: m.error,
     pdfDate: m.pdfDate,
+    attachmentMeta: m.attachments?.map(a => ({ type: a.type, name: a.name })),
   }));
 }
 
@@ -82,6 +97,12 @@ function deserializeMessages(msgs: ChatSession['messages']): ChatMessage[] {
     ...m,
     timestamp: new Date(m.timestamp),
     pdfState: m.pdfDate ? 'idle' as const : undefined,
+    attachments: m.attachmentMeta?.map(meta => ({
+      type: meta.type as Attachment['type'],
+      mimeType: '',
+      data: '',
+      name: meta.name,
+    })),
   }));
 }
 
@@ -490,6 +511,9 @@ export default function AiAssistant() {
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -621,6 +645,86 @@ export default function AiAssistant() {
     setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 100);
   }, []);
 
+  // ==================== FILE UPLOAD HANDLERS ====================
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newAttachments: Attachment[] = [];
+
+    for (const file of Array.from(files)) {
+      // Max 10MB per file
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File "${file.name}" terlalu besar (maks 10MB)`);
+        continue;
+      }
+
+      if (file.type.startsWith('image/')) {
+        const base64 = await fileToBase64(file);
+        const previewUrl = URL.createObjectURL(file);
+        newAttachments.push({
+          type: 'image',
+          mimeType: file.type,
+          data: base64,
+          name: file.name,
+          previewUrl,
+        });
+      } else if (file.type.startsWith('audio/')) {
+        const base64 = await fileToBase64(file);
+        newAttachments.push({
+          type: 'audio',
+          mimeType: file.type,
+          data: base64,
+          name: file.name,
+        });
+      } else if (
+        file.type.startsWith('text/') ||
+        file.name.endsWith('.txt') ||
+        file.name.endsWith('.csv') ||
+        file.name.endsWith('.json') ||
+        file.name.endsWith('.md') ||
+        file.name.endsWith('.log')
+      ) {
+        const text = await file.text();
+        newAttachments.push({
+          type: 'text',
+          mimeType: file.type || 'text/plain',
+          data: text,
+          name: file.name,
+        });
+      } else {
+        alert(`Format file "${file.name}" tidak didukung. Gunakan gambar, audio, atau teks.`);
+      }
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => {
+      const att = prev[index];
+      if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data:xxx;base64, prefix
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // ==================== PDF GENERATION ====================
 
   const handlePdfGenerate = async (msgId: string, date: string) => {
@@ -676,13 +780,17 @@ export default function AiAssistant() {
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || isLoading) return;
+    if ((!text && attachments.length === 0) || isLoading) return;
+
+    const currentAttachments = [...attachments];
+    setAttachments([]);
 
     const userMsg: ChatMessage = {
       id: `u_${Date.now()}`,
       role: "user",
       text,
       timestamp: new Date(),
+      attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
     };
 
     const newMessages = [...messages, userMsg];
@@ -698,12 +806,27 @@ export default function AiAssistant() {
       const history = messages.map((m) => ({
         role: m.role,
         text: m.text,
+        attachments: m.attachments?.map(a => ({
+          type: a.type,
+          mimeType: a.mimeType,
+          data: a.data,
+          name: a.name,
+        })),
       }));
 
       const response = await apiFetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({
+          message: text,
+          history: history,
+          attachments: currentAttachments.length > 0 ? currentAttachments.map(a => ({
+            type: a.type,
+            mimeType: a.mimeType,
+            data: a.data,
+            name: a.name,
+          })) : undefined,
+        }),
       });
 
       const data = await response.json();
@@ -1222,6 +1345,33 @@ export default function AiAssistant() {
               }`}
             >
               <div className="break-words">
+                {/* Attachment previews in message */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className={`flex flex-wrap gap-1.5 ${msg.text ? 'mb-2' : ''}`}>
+                    {msg.attachments.map((att, i) => (
+                      <div key={i}>
+                        {att.type === 'image' && att.previewUrl ? (
+                          <img src={att.previewUrl} alt={att.name} className="max-w-[200px] max-h-[200px] rounded-lg object-cover" />
+                        ) : att.type === 'image' && !att.previewUrl ? (
+                          <div className="flex items-center gap-1.5 text-xs opacity-70">
+                            <Image className="w-3.5 h-3.5" />
+                            <span>{att.name}</span>
+                          </div>
+                        ) : att.type === 'audio' ? (
+                          <div className="flex items-center gap-1.5 text-xs opacity-70">
+                            <Mic className="w-3.5 h-3.5" />
+                            <span>{att.name}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-xs opacity-70">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{att.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {msg.role === "model" ? renderMarkdown(msg.text) : (
                   <p className="whitespace-pre-wrap">{msg.text}</p>
                 )}
@@ -1281,12 +1431,52 @@ export default function AiAssistant() {
       {/* ===== INPUT AREA ===== */}
       <div className="flex-shrink-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-4">
         <div className="max-w-3xl mx-auto w-full">
+        {/* Attachment previews */}
+        {attachments.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {attachments.map((att, i) => (
+              <div key={i} className="relative group flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-3 py-2">
+                {att.type === 'image' && att.previewUrl ? (
+                  <img src={att.previewUrl} alt={att.name} className="w-10 h-10 rounded-lg object-cover" />
+                ) : att.type === 'audio' ? (
+                  <div className="w-10 h-10 rounded-lg bg-[#7C3AED]/20 flex items-center justify-center">
+                    <Mic className="w-4 h-4 text-[#a78bfa]" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-[#6366F1]/20 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-[#818cf8]" />
+                  </div>
+                )}
+                <span className="text-xs text-[#999] max-w-[100px] truncate">{att.name}</span>
+                <button
+                  onClick={() => removeAttachment(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#333] border border-[#444]
+                  flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div
           className="relative flex items-end rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300 min-h-[48px]"
         >
-          <button className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] flex items-center justify-center
-            text-[#666] hover:text-white transition-colors duration-200">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,audio/*,.txt,.csv,.json,.md,.log,text/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] flex items-center justify-center
+            text-[#666] hover:text-white transition-colors duration-200"
+            title="Upload gambar, audio, atau teks"
+          >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
           <textarea
@@ -1303,11 +1493,11 @@ export default function AiAssistant() {
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && attachments.length === 0) || isLoading}
             className={`flex-shrink-0 w-9 h-9 m-1 mb-[5px] rounded-xl flex items-center justify-center
             transition-all duration-200
             ${
-              input.trim() && !isLoading
+              (input.trim() || attachments.length > 0) && !isLoading
                 ? `bg-gradient-to-br from-[#7C3AED] to-[#6366F1] text-white
                    hover:opacity-90 active:scale-95`
                 : `text-[#555] cursor-not-allowed`

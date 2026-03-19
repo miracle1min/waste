@@ -427,7 +427,7 @@ ${dataContext}`;
 
 interface GeminiMessage {
   role: 'user' | 'model';
-  parts: { text: string }[];
+  parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -456,12 +456,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Parse body
-  const { message, history } = req.body || {};
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+  const { message, history, attachments } = req.body || {};
+  if ((!message || typeof message !== 'string' || message.trim().length === 0) && (!Array.isArray(attachments) || attachments.length === 0)) {
     return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
   }
 
-  if (message.length > 4000) {
+  if (message && message.length > 4000) {
     return res.status(400).json({ error: 'Pesan terlalu panjang (max 4000 karakter).' });
   }
 
@@ -480,19 +480,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const recentHistory = history.slice(-20);
       for (const msg of recentHistory) {
         if (msg.role === 'user' || msg.role === 'model') {
-          contents.push({
-            role: msg.role,
-            parts: [{ text: msg.text || '' }],
-          });
+          const parts: GeminiMessage['parts'] = [];
+          if (msg.text) parts.push({ text: msg.text });
+          // History attachments (images/audio passed as inlineData)
+          if (Array.isArray(msg.attachments)) {
+            for (const att of msg.attachments) {
+              if (att.type === 'text') {
+                parts.push({ text: `[File: ${att.name}]\n${att.data}` });
+              } else {
+                parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
+              }
+            }
+          }
+          if (parts.length === 0) parts.push({ text: '' });
+          contents.push({ role: msg.role, parts });
         }
       }
     }
 
     // Add current user message
-    contents.push({
-      role: 'user',
-      parts: [{ text: message.trim() }],
-    });
+    const userParts: GeminiMessage['parts'] = [];
+
+    // Add attachments first
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      for (const att of attachments) {
+        if (att.type === 'text') {
+          // Text files: add as text part
+          userParts.push({ text: `[File: ${att.name}]\n${att.data}` });
+        } else {
+          // Images and audio: add as inlineData
+          userParts.push({
+            inlineData: {
+              mimeType: att.mimeType,
+              data: att.data, // base64
+            },
+          });
+        }
+      }
+    }
+
+    // Add user text message
+    if (message && message.trim()) {
+      userParts.push({ text: message.trim() });
+    }
+
+    if (userParts.length === 0) {
+      return res.status(400).json({ error: 'No message or attachments provided' });
+    }
+
+    contents.push({ role: 'user', parts: userParts });
 
     // Call Gemini API
     const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
