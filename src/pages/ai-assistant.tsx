@@ -13,6 +13,9 @@ import {
   Download,
   CheckCircle,
   User,
+  Clock,
+  MessageSquare,
+  X,
 } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -28,6 +31,75 @@ interface ChatMessage {
   pdfBlobUrl?: string;
   pdfFileName?: string;
   pdfError?: string;
+}
+
+// ==================== CHAT HISTORY HELPERS ====================
+
+const HISTORY_KEY = 'waste_ai_chat_history';
+const MAX_SESSIONS = 50;
+
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: Array<{
+    id: string;
+    role: 'user' | 'model';
+    text: string;
+    timestamp: string;
+    error?: boolean;
+    pdfDate?: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function loadSessions(): ChatSession[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveSessions(sessions: ChatSession[]) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS)));
+  } catch {}
+}
+
+function serializeMessages(messages: ChatMessage[]): ChatSession['messages'] {
+  return messages.map(m => ({
+    id: m.id,
+    role: m.role,
+    text: m.text,
+    timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp as any,
+    error: m.error,
+    pdfDate: m.pdfDate,
+  }));
+}
+
+function deserializeMessages(msgs: ChatSession['messages']): ChatMessage[] {
+  return msgs.map(m => ({
+    ...m,
+    timestamp: new Date(m.timestamp),
+    pdfState: m.pdfDate ? 'idle' as const : undefined,
+  }));
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return 'Baru saja';
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  if (diffDay === 1) return 'Kemarin';
+  if (diffDay < 7) return `${diffDay} hari lalu`;
+
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // ==================== PDF HELPERS ====================
@@ -413,9 +485,106 @@ export default function AiAssistant() {
   const [pelaporSigUrls, setPelaporSigUrls] = useState<Record<string, string>>({});
   const [selectedPelapor, setSelectedPelapor] = useState<Record<string, string>>({});
 
+  // Chat history state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const historyPanelRef = useRef<HTMLDivElement>(null);
+
+  // ==================== CHAT HISTORY ====================
+
+  // Load sessions on mount
+  useEffect(() => {
+    const loaded = loadSessions();
+    setSessions(loaded);
+    // Load most recent session if exists
+    if (loaded.length > 0) {
+      const latest = loaded[0];
+      setCurrentSessionId(latest.id);
+      setMessages(deserializeMessages(latest.messages));
+    }
+  }, []);
+
+  const saveCurrentSession = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length === 0) return;
+
+    const firstUserMsg = msgs.find(m => m.role === 'user');
+    const title = firstUserMsg
+      ? (firstUserMsg.text.length > 40 ? firstUserMsg.text.slice(0, 40) + '...' : firstUserMsg.text)
+      : 'Chat baru';
+
+    setSessions(prev => {
+      const sessionId = currentSessionId || `chat_${Date.now()}`;
+      if (!currentSessionId) setCurrentSessionId(sessionId);
+
+      const session: ChatSession = {
+        id: sessionId,
+        title,
+        messages: serializeMessages(msgs),
+        createdAt: prev.find(s => s.id === sessionId)?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const filtered = prev.filter(s => s.id !== sessionId);
+      const updated = [session, ...filtered].slice(0, MAX_SESSIONS);
+      saveSessions(updated);
+      return updated;
+    });
+  }, [currentSessionId]);
+
+  const startNewChat = useCallback(() => {
+    // Save current if has messages
+    if (messages.length > 0) {
+      saveCurrentSession(messages);
+    }
+    // Revoke blob URLs
+    messages.forEach(m => { if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl); });
+    setMessages([]);
+    setCurrentSessionId(null);
+    setShowHistory(false);
+    inputRef.current?.focus();
+  }, [messages, saveCurrentSession]);
+
+  const loadSession = useCallback((session: ChatSession) => {
+    // Save current first
+    if (messages.length > 0 && currentSessionId) {
+      saveCurrentSession(messages);
+    }
+    messages.forEach(m => { if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl); });
+    setMessages(deserializeMessages(session.messages));
+    setCurrentSessionId(session.id);
+    setShowHistory(false);
+  }, [messages, currentSessionId, saveCurrentSession]);
+
+  const deleteSession = useCallback((e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    setSessions(prev => {
+      const updated = prev.filter(s => s.id !== sessionId);
+      saveSessions(updated);
+      return updated;
+    });
+    if (currentSessionId === sessionId) {
+      messages.forEach(m => { if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl); });
+      setMessages([]);
+      setCurrentSessionId(null);
+    }
+  }, [currentSessionId, messages]);
+
+  // Close history panel when clicking outside
+  useEffect(() => {
+    if (!showHistory) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (historyPanelRef.current && !historyPanelRef.current.contains(e.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showHistory]);
 
   // ==================== FETCH SIGNATURES ====================
 
@@ -516,7 +685,8 @@ export default function AiAssistant() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setIsLoading(true);
 
@@ -560,7 +730,11 @@ export default function AiAssistant() {
         pdfState: pdfDate ? "idle" : undefined,
       };
 
-      setMessages((prev) => [...prev, aiMsg]);
+      const finalMessages = [...newMessages, aiMsg];
+      setMessages(finalMessages);
+
+      // Auto-save to history after AI responds
+      saveCurrentSession(finalMessages);
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: `e_${Date.now()}`,
@@ -569,7 +743,9 @@ export default function AiAssistant() {
         timestamp: new Date(),
         error: true,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      const finalMessages = [...newMessages, errorMsg];
+      setMessages(finalMessages);
+      saveCurrentSession(finalMessages);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -581,14 +757,6 @@ export default function AiAssistant() {
       e.preventDefault();
       sendMessage();
     }
-  };
-
-  const clearChat = () => {
-    // Revoke blob URLs
-    messages.forEach((m) => {
-      if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl);
-    });
-    setMessages([]);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -881,27 +1049,106 @@ export default function AiAssistant() {
   // ==================== RENDER ====================
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-black">
+    <div className="fixed inset-0 lg:left-[240px] z-30 flex flex-col bg-black">
       {/* ===== HEADER ===== */}
-      <div className="flex-shrink-0 z-20 bg-black px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="flex-shrink-0 z-20 bg-black px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] relative">
         <div className="flex items-center justify-between max-w-3xl mx-auto w-full">
-          <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1">
-            AWAS AI <ChevronDown className="w-3.5 h-3.5 text-white/50" />
-          </h1>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-base font-bold text-white tracking-tight flex items-center gap-1 hover:opacity-80 transition-opacity"
+          >
+            AWAS AI <ChevronDown className={`w-3.5 h-3.5 text-white/50 transition-transform duration-200 ${showHistory ? 'rotate-180' : ''}`} />
+          </button>
 
           <div className="flex items-center gap-2">
-            {messages.length > 0 && (
-              <button
-                onClick={clearChat}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#888]
-                hover:text-red-400 transition-colors duration-200"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Hapus</span>
-              </button>
-            )}
+            <button
+              onClick={startNewChat}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#888]
+              hover:text-white transition-colors duration-200"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat Baru</span>
+            </button>
           </div>
         </div>
+
+        {/* ===== HISTORY PANEL ===== */}
+        {showHistory && (
+          <div
+            ref={historyPanelRef}
+            className="absolute top-full left-0 right-0 z-50 mx-4 max-w-3xl lg:mx-auto bg-[#111] border border-[#222] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
+          >
+            {/* History header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a]">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-[#666]" />
+                <span className="text-xs font-semibold text-[#999]">Riwayat Chat</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startNewChat}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium
+                  bg-[#7C3AED]/10 text-[#a78bfa] border border-[#7C3AED]/20
+                  hover:bg-[#7C3AED]/20 transition-all duration-200"
+                >
+                  <Plus className="w-3 h-3" />
+                  Chat Baru
+                </button>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="p-1 rounded-lg text-[#666] hover:text-white hover:bg-[#222] transition-all duration-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* History list */}
+            <div className="max-h-[60vh] overflow-y-auto">
+              {sessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <MessageSquare className="w-8 h-8 text-[#333] mb-3" />
+                  <p className="text-xs text-[#555]">Belum ada riwayat chat</p>
+                </div>
+              ) : (
+                <div className="py-1">
+                  {sessions.map((session) => {
+                    const isActive = session.id === currentSessionId;
+                    return (
+                      <button
+                        key={session.id}
+                        onClick={() => loadSession(session)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-150 group
+                        ${isActive
+                          ? 'bg-[#7C3AED]/8 border-l-2 border-[#7C3AED]'
+                          : 'hover:bg-[#1a1a1a] border-l-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[13px] font-medium truncate ${isActive ? 'text-[#a78bfa]' : 'text-[#ccc]'}`}>
+                            {session.title}
+                          </p>
+                          <p className="text-[10px] text-[#555] mt-0.5 flex items-center gap-1">
+                            <span>{session.messages.length} pesan</span>
+                            <span>·</span>
+                            <span>{formatRelativeTime(session.updatedAt)}</span>
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => deleteSession(e, session.id)}
+                          className="flex-shrink-0 p-1.5 rounded-lg text-[#444] opacity-0 group-hover:opacity-100
+                          hover:text-red-400 hover:bg-red-400/10 transition-all duration-200"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== MESSAGES ===== */}
