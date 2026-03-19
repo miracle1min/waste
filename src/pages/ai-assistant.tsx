@@ -881,10 +881,10 @@ export default function AiAssistant() {
   // ==================== RENDER ====================
 
   return (
-    <div className="flex flex-col h-dvh max-w-3xl mx-auto relative bg-black">
+    <div className="fixed inset-0 z-30 flex flex-col bg-black">
       {/* ===== HEADER ===== */}
-      <div className="sticky top-0 z-20 bg-black px-4 py-3">
-        <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 z-20 bg-black px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="flex items-center justify-between max-w-3xl mx-auto w-full">
           <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1">
             AWAS AI <ChevronDown className="w-3.5 h-3.5 text-white/50" />
           </h1>
@@ -1042,7 +1042,7 @@ export default function AiAssistant() {
       )}
 
       {/* ===== INPUT AREA ===== */}
-      <div className="flex-shrink-0 px-4 pt-2 pb-24 lg:pb-4">
+      <div className="flex-shrink-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-4">
         <div
           className="relative flex items-end rounded-full bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300"
