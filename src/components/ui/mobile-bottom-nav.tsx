@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, BarChart3, FileDown, User } from "lucide-react";
+import { Zap, BarChart3, FileDown, User, Sparkles } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -11,6 +11,7 @@ const navItems: NavItem[] = [
   { label: "Auto Waste", path: "/", icon: Zap },
   { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
   { label: "PDF", path: "/pdf", icon: FileDown },
+  { label: "AI", path: "/ai", icon: Sparkles },
   { label: "Profil", path: "/profile", icon: User },
 ];
 

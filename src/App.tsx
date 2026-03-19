@@ -20,6 +20,7 @@ const Dashboard = React.lazy(() => import("@/pages/dashboard"));
 const AdminPanel = React.lazy(() => import("@/pages/admin-panel"));
 const PdfDownload = React.lazy(() => import("@/pages/pdf-download"));
 const Profile = React.lazy(() => import("@/pages/profile"));
+const AiAssistant = React.lazy(() => import("@/pages/ai-assistant"));
 
 function UserRouter() {
   return (
@@ -30,6 +31,7 @@ function UserRouter() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/pdf" component={PdfDownload} />
         <Route path="/profile" component={Profile} />
+        <Route path="/ai" component={AiAssistant} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
