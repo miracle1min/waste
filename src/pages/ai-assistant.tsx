@@ -946,40 +946,31 @@ export default function AiAssistant() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-start gap-2.5 ${
+            className={`flex gap-2 ${
               msg.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
             {/* AI Avatar */}
             {msg.role === "model" && (
-              <div
-                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5
-                ${
-                  msg.error
-                    ? "bg-red-500/10"
-                    : "bg-transparent"
-                }`}
-              >
+              <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-1">
                 {msg.error ? (
-                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <AlertCircle className="w-3.5 h-3.5 text-red-400" />
                 ) : (
-                  <Sparkles className="w-4 h-4 text-[#aaa]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#888]" />
                 )}
               </div>
             )}
 
             {/* Message bubble */}
             <div
-              className={`text-sm leading-relaxed
+              className={`text-[14px] leading-[1.6]
               ${
                 msg.role === "user"
-                  ? `max-w-[78%] rounded-3xl px-4 py-2.5
+                  ? `max-w-[75%] rounded-2xl rounded-br-sm px-3.5 py-2
                      bg-gradient-to-r from-[#7C3AED] to-[#6366F1] text-white`
                   : msg.error
-                  ? `max-w-[88%] rounded-3xl px-4 py-3
-                     bg-transparent text-red-300`
-                  : `max-w-[88%] rounded-3xl px-1 py-1
-                     bg-transparent text-[#ddd]`
+                  ? `max-w-[85%] text-red-300`
+                  : `max-w-[85%] text-[#ddd]`
               }`}
             >
               <div className="break-words">
@@ -992,7 +983,7 @@ export default function AiAssistant() {
               {msg.pdfDate && renderPdfCard(msg)}
 
               <div
-                className={`text-[10px] mt-1.5 ${
+                className={`text-[10px] mt-1 ${
                   msg.role === "user"
                     ? "text-white/30 text-right"
                     : "text-[#555]"
@@ -1006,14 +997,11 @@ export default function AiAssistant() {
 
         {/* Typing indicator */}
         {isLoading && (
-          <div className="flex items-start gap-2.5 justify-start">
-            <div
-              className="flex-shrink-0 w-7 h-7 rounded-full
-              flex items-center justify-center mt-0.5"
-            >
-              <Sparkles className="w-4 h-4 text-[#aaa] animate-pulse" />
+          <div className="flex gap-2 justify-start">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#888] animate-pulse" />
             </div>
-            <div className="rounded-3xl px-4 py-3">
+            <div className="py-2">
               <div className="flex items-center gap-1.5">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#555] animate-bounce [animation-delay:0ms]" />
@@ -1044,47 +1032,43 @@ export default function AiAssistant() {
       {/* ===== INPUT AREA ===== */}
       <div className="flex-shrink-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-4">
         <div
-          className="relative flex items-end rounded-full bg-[#1A1A1A] border border-[#2A2A2A]
-          focus-within:border-[#444] transition-all duration-300"
+          className="relative flex items-end rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]
+          focus-within:border-[#444] transition-all duration-300 min-h-[48px]"
         >
-          <div className="flex-shrink-0 pl-3 pb-2.5">
-            <button className="w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center
-              text-[#888] hover:text-white hover:bg-[#333] transition-colors duration-200">
-              <Plus className="w-4 h-4 stroke-[2]" />
-            </button>
-          </div>
+          <button className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] rounded-xl bg-[#2A2A2A] flex items-center justify-center
+            text-[#666] hover:text-white hover:bg-[#333] transition-colors duration-200">
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+          </button>
           <textarea
             ref={inputRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="How can I help you today?"
+            placeholder="Ketik pesan..."
             rows={1}
             disabled={isLoading}
-            className="w-full bg-transparent text-sm text-white placeholder-[#666]
-            resize-none outline-none px-3 py-3.5 max-h-[140px] leading-relaxed
+            className="flex-1 bg-transparent text-[14px] text-white placeholder-[#555]
+            resize-none outline-none py-3 pr-1 max-h-[120px] leading-[1.5]
             disabled:opacity-50"
           />
-          <div className="flex-shrink-0 pr-2 pb-2.5">
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              className={`w-9 h-9 rounded-full flex items-center justify-center
-              transition-all duration-200
-              ${
-                input.trim() && !isLoading
-                  ? `bg-gradient-to-br from-[#7C3AED] to-[#6366F1] text-white
-                     hover:opacity-90 active:scale-95`
-                  : `bg-[#2A2A2A] text-[#555] cursor-not-allowed`
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-              )}
-            </button>
-          </div>
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || isLoading}
+            className={`flex-shrink-0 w-9 h-9 m-1 mb-[5px] rounded-xl flex items-center justify-center
+            transition-all duration-200
+            ${
+              input.trim() && !isLoading
+                ? `bg-gradient-to-br from-[#7C3AED] to-[#6366F1] text-white
+                   hover:opacity-90 active:scale-95`
+                : `bg-[#2A2A2A] text-[#555] cursor-not-allowed`
+            }`}
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+            )}
+          </button>
         </div>
         <p className="text-[10px] text-[#444] text-center mt-2.5">
           AWAS AI · Selalu verifikasi info penting
