@@ -482,13 +482,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (msg.role === 'user' || msg.role === 'model') {
           const parts: GeminiMessage['parts'] = [];
           if (msg.text) parts.push({ text: msg.text });
-          // History attachments (images/audio passed as inlineData)
+          // History attachments - only metadata (no base64 to save bandwidth)
           if (Array.isArray(msg.attachments)) {
             for (const att of msg.attachments) {
-              if (att.type === 'text') {
-                parts.push({ text: `[File: ${att.name}]\n${att.data}` });
+              if (att.data && att.mimeType) {
+                // Has actual data (shouldn't happen with new frontend, but handle gracefully)
+                if (att.type === 'text') {
+                  parts.push({ text: `[File: ${att.name}]\n${att.data}` });
+                } else {
+                  parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
+                }
               } else {
-                parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
+                // Metadata only - just mention the file was shared
+                parts.push({ text: `[User shared ${att.type || 'file'}: ${att.name}]` });
               }
             }
           }

@@ -671,9 +671,9 @@ export default function AiAssistant() {
     const newAttachments: Attachment[] = [];
 
     for (const file of Array.from(files)) {
-      // Max 10MB per file
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`File "${file.name}" terlalu besar (maks 10MB)`);
+      // Max 3MB per file (Vercel serverless body limit is 4.5MB, base64 adds ~33%)
+      if (file.size > 3 * 1024 * 1024) {
+        alert(`File "${file.name}" terlalu besar (maks 3MB)`);
         continue;
       }
 
@@ -840,14 +840,15 @@ export default function AiAssistant() {
     }
 
     try {
+      // Strip base64 data from history to avoid huge payloads
+      // Only send metadata so AI knows what was shared before
       const history = messages.map((m) => ({
         role: m.role,
         text: m.text,
         attachments: m.attachments?.map(a => ({
           type: a.type,
-          mimeType: a.mimeType,
-          data: a.data,
           name: a.name,
+          // Don't send data/mimeType in history - saves bandwidth
         })),
       }));
 
