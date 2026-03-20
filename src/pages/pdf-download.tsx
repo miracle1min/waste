@@ -672,7 +672,7 @@ export default function PdfDownload() {
  const selectedMonthLabel = monthOptions.find(m => m.key === selectedMonth)?.label || "";
 
  return (
-   <div className="min-h-screen bg-[#14161A] text-white flex flex-col">
+   <div className="flex-1 bg-[#14161A] text-white flex flex-col">
      {/* ═══════ DESKTOP HEADER ═══════ */}
      <div className="hidden lg:flex items-center gap-4 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/80 backdrop-blur-sm">
        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20 border border-[#4FD1FF]/15 flex items-center justify-center">

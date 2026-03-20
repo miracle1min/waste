@@ -306,7 +306,7 @@ export default function Dashboard() {
   }, [data]);
 
   return (
-    <div className="min-h-screen bg-[#1A1C22] text-white flex flex-col">
+    <div className="flex-1 bg-[#1A1C22] text-white flex flex-col">
       {/* ═══════ DESKTOP HEADER ═══════ */}
       <div className="hidden lg:flex items-center gap-3 px-6 py-3.5 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/80 backdrop-blur-sm">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20 border border-[#4FD1FF]/15 flex items-center justify-center">

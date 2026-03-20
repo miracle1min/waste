@@ -622,7 +622,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
   // ========================
 
   return (
-    <div className="min-h-screen bg-[#1A1C22] flex flex-col">
+    <div className="flex-1 bg-[#1A1C22] flex flex-col">
       {/* Desktop page title */}
       <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]">
         <Zap className="w-6 h-6 text-[#4FD1FF]" />
