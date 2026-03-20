@@ -748,7 +748,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
         </div>
       )}
 
-      <main className="flex-1 w-full px-4 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
+      <main className="flex-1 w-full px-5 sm:px-6 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
         {/* User Identity Badge */}
         <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#9CA3AF] font-mono">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">

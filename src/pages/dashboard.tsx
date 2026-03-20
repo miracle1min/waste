@@ -436,7 +436,7 @@ export default function Dashboard() {
       </header>
 
       {/* ═══════ MAIN CONTENT ═══════ */}
-      <main className="flex-1 w-full px-4 sm:px-5 lg:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5 desktop-container">
+      <main className="flex-1 w-full px-5 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-5 overflow-x-hidden desktop-container">
         {loading && <DashboardSkeleton />}
 
         {error && !loading && (
