@@ -25,7 +25,7 @@ import {
 // ==================== TYPES ====================
 
 interface Attachment {
-  type: 'image' | 'audio' | 'text';
+  type: 'image' | 'audio' | 'text' | 'document';
   mimeType: string;
   data: string; // base64 for image/audio, raw text for text files
   name: string;
@@ -696,12 +696,28 @@ export default function AiAssistant() {
           name: file.name,
         });
       } else if (
+        file.type === 'application/pdf' ||
+        file.type === 'application/msword' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.type === 'application/vnd.ms-excel' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.name.match(/\.(pdf|doc|docx|xls|xlsx)$/i)
+      ) {
+        // Binary documents - send as base64 inline data
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+        newAttachments.push({
+          type: 'document',
+          mimeType: file.type || 'application/octet-stream',
+          data: base64,
+          name: file.name,
+        });
+      } else if (
         file.type.startsWith('text/') ||
-        file.name.endsWith('.txt') ||
-        file.name.endsWith('.csv') ||
-        file.name.endsWith('.json') ||
-        file.name.endsWith('.md') ||
-        file.name.endsWith('.log')
+        file.name.match(/\.(txt|csv|json|md|log)$/i)
       ) {
         const text = await file.text();
         newAttachments.push({
@@ -711,7 +727,7 @@ export default function AiAssistant() {
           name: file.name,
         });
       } else {
-        alert(`Format file "${file.name}" tidak didukung. Gunakan gambar, audio, atau teks.`);
+        alert(`Format file "${file.name}" tidak didukung. Gunakan gambar, audio, dokumen, atau teks.`);
       }
     }
 
