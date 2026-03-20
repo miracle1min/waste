@@ -512,7 +512,12 @@ export default function AiAssistant() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -610,6 +615,18 @@ export default function AiAssistant() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showHistory]);
 
+  // Close attach menu when clicking outside
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAttachMenu]);
+
   // ==================== FETCH SIGNATURES ====================
 
   useEffect(() => {
@@ -700,8 +717,12 @@ export default function AiAssistant() {
 
     setAttachments(prev => [...prev, ...newAttachments]);
 
-    // Reset input so same file can be re-selected
+    // Reset inputs so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (audioInputRef.current) audioInputRef.current.value = '';
+    if (docInputRef.current) docInputRef.current.value = '';
+    setShowAttachMenu(false);
   };
 
   const removeAttachment = (index: number) => {
@@ -1463,22 +1484,51 @@ export default function AiAssistant() {
           className="relative flex items-end rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]
           focus-within:border-[#444] transition-all duration-300 min-h-[48px]"
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,audio/*,.txt,.csv,.json,.md,.log,text/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-shrink-0 w-9 h-9 m-1 mb-[5px] flex items-center justify-center
-            text-[#666] hover:text-white transition-colors duration-200"
-            title="Upload gambar, audio, atau teks"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
+          {/* Hidden file inputs per category */}
+          <input ref={imageInputRef} type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
+          <input ref={audioInputRef} type="file" multiple accept="audio/*" onChange={handleFileSelect} className="hidden" />
+          <input ref={docInputRef} type="file" multiple accept=".txt,.csv,.json,.md,.log,.pdf,.doc,.docx,.xls,.xlsx,text/*,application/pdf" onChange={handleFileSelect} className="hidden" />
+
+          {/* Plus button with category menu */}
+          <div className="relative flex-shrink-0" ref={attachMenuRef}>
+            <button
+              onClick={() => setShowAttachMenu(!showAttachMenu)}
+              className={`w-9 h-9 m-1 mb-[5px] flex items-center justify-center
+              transition-all duration-200 ${showAttachMenu ? 'text-white rotate-45' : 'text-[#666] hover:text-white'}`}
+              title="Lampirkan file"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5] transition-transform duration-200" />
+            </button>
+
+            {/* Category popup menu */}
+            {showAttachMenu && (
+              <div className="absolute bottom-full left-0 mb-2 w-48 bg-[#1A1A1A] border border-[#333] rounded-xl
+                shadow-xl shadow-black/40 overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-50">
+                <button
+                  onClick={() => { imageInputRef.current?.click(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-[#252525] hover:text-white transition-colors"
+                >
+                  <Image className="w-4 h-4 text-purple-400" />
+                  <span>Gambar</span>
+                </button>
+                <button
+                  onClick={() => { audioInputRef.current?.click(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-[#252525] hover:text-white transition-colors"
+                >
+                  <Mic className="w-4 h-4 text-green-400" />
+                  <span>Audio</span>
+                </button>
+                <div className="border-t border-[#2A2A2A]" />
+                <button
+                  onClick={() => { docInputRef.current?.click(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-[#252525] hover:text-white transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  <span>File / Dokumen</span>
+                </button>
+              </div>
+            )}
+          </div>
           <textarea
             ref={inputRef}
             value={input}
