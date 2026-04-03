@@ -641,7 +641,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
       </div>
 
       {/* Header - Mobile only */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
         <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-[#4FD1FF]" />
@@ -668,7 +668,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
 
       {/* ========== GLOBAL PROGRESS OVERLAY ========== */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-[100] bg-[#1A1C22]/95 backdrop-blur-sm flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] bg-[#1A1C22] flex items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
             {/* Animated icon */}
             <div className="flex justify-center">

@@ -49,7 +49,7 @@ export default function Settings() {
  return (
  <div className="min-h-screen bg-[#1A1C22] text-[#E5E7EB]">
  {/* Header */}
- <div className="sticky top-0 z-50 border-b border-[#4FD1FF]/10 bg-[hsl(220,45%,8%)]/95 backdrop-blur-md">
+ <div className="sticky top-0 z-50 border-b border-[#4FD1FF]/10 bg-[hsl(220,45%,8%)]/95 ">
  <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 sm:gap-4">
  <div className="min-w-0">
  <h1 className="text-base sm:text-lg font-bold font-sans text-transparent bg-clip-text bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] truncate">

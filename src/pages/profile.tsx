@@ -16,7 +16,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1A1C22] via-[#1A1C22] to-[#1A1C22]/95 pb-24 lg:pb-8">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-40 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
         <div className="px-4 py-3 flex items-center gap-3">
           <User className="w-5 h-5 text-[#4FD1FF]" />
           <h1 className="text-sm font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Profil</h1>

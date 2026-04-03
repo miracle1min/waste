@@ -72,7 +72,7 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-[#1A1C22] text-[#E5E7EB]">
       {/* ====== Mobile overlay ====== */}
-      {sidebarOpen && <div className="fixed inset-0 bg-[#1A1C22]/80 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-[#1E2028] z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <div className="flex">
         {/* ====== Sidebar (desktop + mobile drawer) ====== */}
@@ -148,7 +148,7 @@ export default function AdminPanel() {
         {/* ====== Main Content ====== */}
         <div className="flex-1 min-w-0 flex flex-col min-h-screen">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/90 backdrop-blur-xl">
+          <header className="sticky top-0 z-30 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]">
             <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
               <div className="flex items-center gap-3">
                 <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-1 rounded-xl border border-[rgba(79,209,255,0.08)] hover:border-[#4FD1FF]/20 hover:bg-[#4FD1FF]/8 transition-all">
@@ -191,7 +191,7 @@ export default function AdminPanel() {
           </main>
 
           {/* ====== Mobile Bottom Nav ====== */}
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-xl safe-area-bottom">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-[rgba(79,209,255,0.08)] bg-[#1A1C22] safe-area-bottom">
             <div className="flex items-stretch">
               {MOBILE_NAV.map((item) => {
                 const Icon = item.icon;
@@ -224,7 +224,7 @@ export default function AdminPanel() {
                 </button>
                 {/* More popup */}
                 {moreOpen && (
-                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F]/95 backdrop-blur-xl shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] overflow-hidden">
+                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-[rgba(79,209,255,0.08)] bg-[#23262F] shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] overflow-hidden">
                     {MORE_NAV.map((item) => {
                       const Icon = item.icon;
                       const isActive = activePage === item.key;

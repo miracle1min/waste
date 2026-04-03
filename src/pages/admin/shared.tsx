@@ -30,7 +30,7 @@ export function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`rounded-2xl border border-[#4FD1FF]/10 bg-[#1A1C22]/40 backdrop-blur-sm overflow-hidden transition-all ${className}`}>
+    <div className={`rounded-2xl border border-[#4FD1FF]/10 bg-[#1E2028] overflow-hidden transition-all ${className}`}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3.5 sm:px-5 sm:py-4 hover:bg-[#4FD1FF]/[0.02] transition-colors"
@@ -114,7 +114,7 @@ export function Card({ children, className = "", hover = false, onClick }: { chi
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border border-[#4FD1FF]/10 bg-[#1A1C22]/40 backdrop-blur-sm transition-all duration-200 ${
+      className={`rounded-2xl border border-[#4FD1FF]/10 bg-[#1E2028] transition-all duration-200 ${
         hover ? "hover:border-[#4FD1FF]/20 hover:shadow-[0_4px_16px_rgba(79,209,255,0.06)] hover:translate-y-[-1px] cursor-pointer" : ""
       } ${onClick ? "cursor-pointer" : ""} ${className}`}
     >

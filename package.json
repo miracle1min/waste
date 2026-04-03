@@ -60,7 +60,6 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.54.2",
-    "react-icons": "^5.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0",
@@ -79,6 +78,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.3",
-    "vite": "^5.4.14"
+    "vite": "^5.4.14",
+    "terser": "^5.37.0"
   }
 }

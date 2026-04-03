@@ -6,7 +6,7 @@ export function UpdateBanner() {
   if (!updateAvailable) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 animate-in fade-in duration-300">
       <div className="mx-4 max-w-sm w-full rounded-[20px] bg-[#23262F] border border-[rgba(79,209,255,0.15)] shadow-[6px_6px_12px_rgba(0,0,0,0.45),_-2px_-2px_8px_rgba(255,255,255,0.04)] p-6 text-center space-y-5">
         {/* Animated icon */}
         <div className="relative mx-auto w-20 h-20">

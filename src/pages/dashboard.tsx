@@ -188,7 +188,7 @@ function Section({ title, icon, children, defaultOpen = true, badge, action }: {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#1A1C22]/95 backdrop-blur-xl border border-[rgba(79,209,255,0.15)] rounded-xl px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+    <div className="bg-[#1A1C22] border border-[rgba(79,209,255,0.15)] rounded-xl px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
       <p className="text-[11px] font-semibold text-[#4FD1FF] mb-1.5">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-[11px]">
@@ -308,7 +308,7 @@ export default function Dashboard() {
   return (
     <div className="flex-1 bg-[#1A1C22] text-white flex flex-col">
       {/* ═══════ DESKTOP HEADER ═══════ */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-3.5 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/80 backdrop-blur-sm">
+      <div className="hidden lg:flex items-center gap-3 px-6 py-3.5 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20 border border-[#4FD1FF]/15 flex items-center justify-center">
           <LayoutDashboard className="w-4 h-4 text-[#4FD1FF]" />
         </div>
@@ -346,7 +346,7 @@ export default function Dashboard() {
       </div>
 
       {/* ═══════ MOBILE HEADER ═══════ */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
         <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
             <img src={wasteLogo} alt="AWAS" className="w-7 h-7 rounded-md" />

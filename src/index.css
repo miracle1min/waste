@@ -129,46 +129,9 @@ body {
   /* Glass tokens */
   --glass-bg: rgba(35, 38, 47, 0.85);
   --glass-border: rgba(79, 209, 255, 0.1);
-  --glass-blur: blur(16px);
+  --glass-blur: blur(8px);
 }
 
-.dark {
-  --background: 228 14% 12%;
-  --foreground: 216 12% 90%;
-  --muted: 225 12% 18%;
-  --muted-foreground: 218 10% 50%;
-  --popover: 226 14% 15%;
-  --popover-foreground: 216 12% 90%;
-  --card: 226 13% 16%;
-  --card-foreground: 216 12% 90%;
-  --border: 197 100% 65% / 0.08;
-  --input: 226 12% 14%;
-  --primary: 195 100% 66%;
-  --primary-foreground: 228 14% 12%;
-  --secondary: 263 68% 70%;
-  --secondary-foreground: 216 12% 90%;
-  --accent: 226 12% 19%;
-  --accent-foreground: 216 12% 90%;
-  --success: 142 69% 58%;
-  --success-foreground: 0 0% 100%;
-  --warning: 43 96% 56%;
-  --warning-foreground: 32 95% 44%;
-  --info: 195 100% 66%;
-  --info-foreground: 228 14% 12%;
-  --destructive: 0 86% 71%;
-  --destructive-foreground: 0 0% 98%;
-  --ring: 195 100% 66%;
-  --radius: 0.75rem;
-
-  --clay-shadow-sm: 4px 4px 8px rgba(0,0,0,0.4), -2px -2px 6px rgba(255,255,255,0.03);
-  --clay-shadow-md: 6px 6px 12px rgba(0,0,0,0.45), -3px -3px 8px rgba(255,255,255,0.04);
-  --clay-shadow-lg: 8px 8px 20px rgba(0,0,0,0.5), -4px -4px 12px rgba(255,255,255,0.05);
-  --clay-shadow-inset: inset 3px 3px 6px rgba(0,0,0,0.4), inset -2px -2px 4px rgba(255,255,255,0.03);
-
-  --glass-bg: rgba(35, 38, 47, 0.85);
-  --glass-border: rgba(79, 209, 255, 0.1);
-  --glass-blur: blur(16px);
-}
 
 /* ─── Neo Claymorphism Utility Classes ─── */
 @layer utilities {

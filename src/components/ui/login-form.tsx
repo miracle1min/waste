@@ -28,34 +28,10 @@ interface TenantOption {
 /* ── Soft Gradient Background ── */
 function CyberBackground() {
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden">
-      {/* Large blue orb */}
-      <div
-        className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full opacity-[0.05]"
-        style={{
-          background: "radial-gradient(circle, #4FD1FF 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "floatOrb1 12s ease-in-out infinite",
-        }}
-      />
-      {/* Purple orb */}
-      <div
-        className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.03]"
-        style={{
-          background: "radial-gradient(circle, #9F7AEA 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "floatOrb2 15s ease-in-out infinite",
-        }}
-      />
-      {/* Small accent orb */}
-      <div
-        className="absolute top-2/3 left-1/5 w-[250px] h-[250px] rounded-full opacity-[0.04]"
-        style={{
-          background: "radial-gradient(circle, #4FD1FF 0%, transparent 70%)",
-          filter: "blur(60px)",
-          animation: "floatOrb3 10s ease-in-out infinite",
-        }}
-      />
+    <div className="fixed inset-0 z-0 bg-gradient-to-br from-[#1A1C22] via-[#1E2028] to-[#1A1C22]">
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: 'radial-gradient(circle at 30% 40%, #4FD1FF, transparent 50%), radial-gradient(circle at 70% 60%, #9F7AEA, transparent 50%)',
+      }} />
     </div>
   );
 }
@@ -70,36 +46,9 @@ function GlitchText({ text, className = "" }: { text: string; className?: string
 }
 
 /* ── Typewriter ── */
-function TypewriterText({ texts, speed = 80 }: { texts: string[]; speed?: number }) {
-  const [displayText, setDisplayText] = useState("");
-  const [textIndex, setTextIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const current = texts[textIndex];
-    const timeout = setTimeout(() => {
-      if (!isDeleting && charIndex < current.length) {
-        setDisplayText(current.slice(0, charIndex + 1));
-        setCharIndex((c) => c + 1);
-      } else if (!isDeleting && charIndex === current.length) {
-        setTimeout(() => setIsDeleting(true), 2000);
-      } else if (isDeleting && displayText.length > 0) {
-        setDisplayText((t) => t.slice(0, -1));
-      } else if (isDeleting && displayText.length === 0) {
-        setIsDeleting(false);
-        setCharIndex(0);
-        setTextIndex((i) => (i + 1) % texts.length);
-      }
-    }, isDeleting ? speed / 2 : speed);
-    return () => clearTimeout(timeout);
-  }, [charIndex, isDeleting, displayText, textIndex, texts, speed]);
-
+function TypewriterText({ texts }: { texts: string[]; speed?: number }) {
   return (
-    <span className="text-[#4FD1FF]/60 text-sm">
-      {displayText}
-      <span className="animate-pulse text-[#4FD1FF]">▊</span>
-    </span>
+    <span className="text-[#4FD1FF]/60 text-sm">{texts[0]}</span>
   );
 }
 
@@ -268,7 +217,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   <div className="h-20 w-20 rounded-full flex items-center justify-center bg-[#F59E0B]/10 shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)]">
                     <Clock className="h-10 w-10 text-[#F59E0B]" />
                   </div>
-                  <div className="absolute inset-0 rounded-full border-2 border-[#F59E0B]/20 animate-ping" />
                 </div>
               </div>
 
@@ -403,7 +351,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   <div className="h-20 w-20 rounded-full flex items-center justify-center bg-[#4ADE80]/10 shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)]">
                     <CheckCircle2 className="h-10 w-10 text-[#4ADE80]" />
                   </div>
-                  <div className="absolute inset-0 rounded-full border-2 border-[#4ADE80]/20 animate-ping" />
                 </div>
               </div>
 
@@ -687,23 +634,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           </span>
         </div>
       </div>
-
-      <style>{`
-        @keyframes floatOrb1 {
-          0%, 100% { transform: translate(0, 0); }
-          33% { transform: translate(30px, -20px); }
-          66% { transform: translate(-20px, 15px); }
-        }
-        @keyframes floatOrb2 {
-          0%, 100% { transform: translate(0, 0); }
-          33% { transform: translate(-25px, 20px); }
-          66% { transform: translate(15px, -25px); }
-        }
-        @keyframes floatOrb3 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(20px, -15px); }
-        }
-      `}</style>
     </div>
   );
 }

@@ -57,6 +57,16 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     target: "es2020",
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        passes: 2,
+      },
+    },
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 600,
     cssCodeSplit: true,
     modulePreload: {
       // Only preload direct imports, skip heavy vendor chunks
