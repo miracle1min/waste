@@ -320,6 +320,11 @@ body {
     background-color: hsl(var(--warning) / 0.1);
   }
 
+  /* Mobile container utility */
+  .mobile-container {
+    @apply px-4 sm:px-6;
+  }
+
   /* Simple animations (subtle) */
   .animate-slide-in {
     animation: slide-in 0.25s ease-out;

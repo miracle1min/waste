@@ -161,7 +161,7 @@ function Section({ title, icon, children, defaultOpen = true, badge, action }: {
     <div className="bg-gradient-to-br from-[#23262F] to-[#1F2128] border border-[rgba(79,209,255,0.06)] rounded-2xl overflow-hidden shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] transition-all duration-300">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-[rgba(79,209,255,0.02)] transition-colors group"
+        className="w-full flex items-center justify-between px-3 sm:px-5 py-3 hover:bg-[rgba(79,209,255,0.02)] transition-colors group"
       >
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#4FD1FF]/8 border border-[#4FD1FF]/10 flex items-center justify-center text-[#4FD1FF] group-hover:bg-[#4FD1FF]/12 transition-colors">
@@ -176,7 +176,7 @@ function Section({ title, icon, children, defaultOpen = true, badge, action }: {
         </div>
       </button>
       <div className={`transition-all duration-300 ease-in-out ${open ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"}`}>
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+        <div className="px-3 sm:px-5 pb-4 sm:pb-5">
           {children}
         </div>
       </div>
@@ -436,7 +436,7 @@ export default function Dashboard() {
       </header>
 
       {/* ═══════ MAIN CONTENT ═══════ */}
-      <main className="flex-1 w-full px-5 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-5 overflow-x-hidden desktop-container">
+      <main className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-5 overflow-x-hidden desktop-container">
         {loading && <DashboardSkeleton />}
 
         {error && !loading && (

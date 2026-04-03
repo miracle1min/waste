@@ -26,10 +26,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-[240px] min-h-screen flex flex-col bg-[#1A1C22]">
+      <div className="flex-1 lg:ml-[240px] min-h-screen flex flex-col bg-[#1A1C22] overflow-x-hidden">
         {children}
         {/* Spacer for mobile bottom nav */}
-        <div className="h-20 lg:hidden" />
+        <div className="h-[72px] lg:hidden" />
       </div>
 
       {/* Bottom nav - mobile only */}

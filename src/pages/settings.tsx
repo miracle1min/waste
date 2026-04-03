@@ -87,7 +87,7 @@ export default function Settings() {
  </div>
 
  {/* Tab Content */}
- <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+ <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6 pb-20 lg:pb-6">
  {activeTab === "tenants" && <TenantsTab />}
  {activeTab === "users" && <UsersTab />}
  {activeTab === "configs" && <ConfigsTab />}

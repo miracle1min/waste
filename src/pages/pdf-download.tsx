@@ -715,7 +715,7 @@ export default function PdfDownload() {
        </div>
      </header>
 
-     <main className="flex-1 w-full max-w-3xl mx-auto px-5 sm:px-6 py-4 lg:py-6 space-y-4">
+     <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-4 lg:py-6 pb-20 lg:pb-6 space-y-4">
 
        {/* ═══════ HERO SUMMARY STRIP ═══════ */}
        <div className="bg-gradient-to-r from-[#1E2028] to-[#1A1C22] rounded-2xl border border-[rgba(79,209,255,0.08)] p-4 shadow-[4px_4px_12px_rgba(0,0,0,0.35),-2px_-2px_8px_rgba(255,255,255,0.02)]">
@@ -729,7 +729,7 @@ export default function PdfDownload() {
            </div>
          </div>
          {/* Quick stats */}
-         <div className="grid grid-cols-3 gap-2">
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
            <div className="bg-[#14161A]/60 rounded-xl px-3 py-2.5 border border-[rgba(79,209,255,0.05)] text-center">
              <p className="text-lg font-bold text-[#4FD1FF] tabular-nums">{availableDates.length}</p>
              <p className="text-[9px] text-[#9CA3AF] uppercase tracking-wider mt-0.5">Total Hari</p>

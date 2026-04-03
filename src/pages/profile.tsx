@@ -14,7 +14,7 @@ export default function Profile() {
   const sessionStart = loginTime ? new Date(parseInt(loginTime)) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1A1C22] via-[#1A1C22] to-[#1A1C22]/95 pb-24 lg:pb-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#1A1C22] via-[#1A1C22] to-[#1A1C22]/95 pb-20 lg:pb-8">
       {/* Mobile header */}
       <header className="sticky top-0 z-40 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
         <div className="px-4 py-3 flex items-center gap-3">
@@ -23,7 +23,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto p-4 lg:p-8 space-y-5">
+      <div className="max-w-lg mx-auto px-4 py-5 lg:p-8 space-y-5">
         {/* Desktop title */}
         <div className="hidden lg:flex items-center gap-3 mb-4">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Profil</h2>

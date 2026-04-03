@@ -1467,7 +1467,7 @@ export default function AiAssistant() {
       )}
 
       {/* ===== INPUT AREA ===== */}
-      <div className="flex-shrink-0 px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-4">
+      <div className="flex-shrink-0 px-4 pt-2 pb-[calc(72px+env(safe-area-inset-bottom))] lg:pb-4">
         <div className="max-w-3xl mx-auto w-full">
         {/* Attachment previews */}
         {attachments.length > 0 && (

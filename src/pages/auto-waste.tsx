@@ -748,7 +748,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
         </div>
       )}
 
-      <main className="flex-1 w-full px-5 sm:px-6 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
+      <main className="flex-1 w-full px-4 sm:px-6 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
         {/* User Identity Badge */}
         <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#9CA3AF] font-mono">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">
@@ -810,7 +810,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
                   {allStationsSelected ? "Semua Dipilih" : "Pilih Semua"}
                 </button>
               </div>
-              <div className="grid grid-cols-4 gap-2 lg:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:gap-3">
                 {VALID_STATIONS.map(st => (
                   <button
                     key={st}
@@ -956,7 +956,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
 
             {/* ---- Card 3: Shift & Jam ---- */}
             <div className={CLAY_CARD}>
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
                 <div className="space-y-1.5">
                   <label className={LABEL}>🕐 Shift</label>
                   <select
@@ -982,7 +982,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
 
             {/* ---- Card 4: QC & Manajer ---- */}
             <div className={CLAY_CARD}>
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
                 <div className="space-y-1.5">
                   <label className={LABEL}>🔍 QC</label>
                   <select
@@ -1170,7 +1170,7 @@ Contoh:
             </div>
 
             {/* Info cards */}
-            <div className="grid grid-cols-3 gap-2 lg:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-3">
               {[
                 { label: "Station", value: `${selectedStations.length}x`, color: "text-[#E5E7EB]" },
                 { label: "Shift", value: selectedShift, color: "text-[#E5E7EB]" },

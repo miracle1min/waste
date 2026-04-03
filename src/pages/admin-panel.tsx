@@ -76,7 +76,7 @@ export default function AdminPanel() {
 
       <div className="flex">
         {/* ====== Sidebar (desktop + mobile drawer) ====== */}
-        <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-[#1A1C22] border-r border-[rgba(79,209,255,0.08)] flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shrink-0`}>
+        <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-[#1A1C22] border-r border-[rgba(79,209,255,0.08)] flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} shrink-0`}>
           {/* Logo area */}
           <div className="p-5 border-b border-[rgba(79,209,255,0.08)]">
             <div className="flex items-center gap-3">
