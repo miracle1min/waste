@@ -64,7 +64,7 @@ export default function PersonnelPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Yakin mau hapus personil ini?")) return;
-    await api(`/api/settings?entity=personnel&id=${id}`, "DELETE");
+    await api(`/api/settings?entity=personnel&id=${id}&tenant_id=${selectedTenant}`, "DELETE");
     loadPersonnel(selectedTenant);
   };
 
