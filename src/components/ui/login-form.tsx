@@ -5,11 +5,10 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { AlertCircle, Lock, Loader2, User, CheckCircle2, Store, Clock, ShieldX, ArrowLeft } from "lucide-react";
+import { AlertCircle, Lock, Loader2, User, CheckCircle2, Clock, ShieldX, ArrowLeft } from "lucide-react";
 import logoUrl from "@assets/waste-logo_1753322218969.webp";
 
 const loginSchema = z.object({
-  tenant_id: z.string().optional(),
   username: z.string().min(1, "Username jangan kosong dong"),
   password: z.string().min(1, "Password jangan kosong"),
 });
@@ -20,10 +19,7 @@ interface LoginFormProps {
   onLogin: (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string, token?: string) => void;
 }
 
-interface TenantOption {
-  id: string;
-  name: string;
-}
+
 
 /* ── Soft Gradient Background ── */
 function CyberBackground() {
@@ -59,9 +55,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loginResult, setLoginResult] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
-  const [tenants, setTenants] = useState<TenantOption[]>([]);
-  const [loadingTenants, setLoadingTenants] = useState(true);
-  const [loadingMsg, setLoadingMsg] = useState("Menyambungkan ke server...");
   const [pendingState, setPendingState] = useState<{ email: string; name: string } | null>(null);
   const [rejectedState, setRejectedState] = useState<{ email: string } | null>(null);
 
@@ -121,44 +114,10 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     return () => clearTimeout(t);
   }, []);
 
-  // Fetch tenants list for dropdown — with cache & loading messages
-  useEffect(() => {
-    (async () => {
-      // Try cache first for instant display
-      try {
-        const cached = localStorage.getItem("waste_tenants_cache");
-        if (cached) {
-          const { tenants: cachedTenants, ts } = JSON.parse(cached);
-          if (Date.now() - ts < 5 * 60 * 1000) { // 5 min cache
-            setTenants(cachedTenants);
-            setLoadingTenants(false);
-          }
-        }
-      } catch {}
-
-      // Fetch fresh data
-      const msgTimer = setTimeout(() => setLoadingMsg("Membangunkan database..."), 2000);
-      const msgTimer2 = setTimeout(() => setLoadingMsg("Hampir selesai, tunggu ya..."), 5000);
-      try {
-        const res = await fetch("/api/auth/login");
-        const data = await res.json();
-        if (data.tenants) {
-          setTenants(data.tenants);
-          localStorage.setItem("waste_tenants_cache", JSON.stringify({ tenants: data.tenants, ts: Date.now() }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch tenants:", err);
-      } finally {
-        clearTimeout(msgTimer);
-        clearTimeout(msgTimer2);
-        setLoadingTenants(false);
-      }
-    })();
-  }, []);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { tenant_id: "", username: "", password: "" },
+    defaultValues: { username: "", password: "" },
   });
 
   const handleSubmit = async (data: LoginFormData) => {
@@ -172,7 +131,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         body: JSON.stringify({
           username: data.username,
           password: data.password,
-          tenant_id: data.tenant_id || undefined,
         }),
       });
 
@@ -451,62 +409,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                {/* Tenant / Store Selector */}
-                <FormField
-                  control={form.control}
-                  name="tenant_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <label htmlFor="tenant-select" className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase mb-1.5 ml-1">
-                        Pilih Resto
-                      </label>
-                      <FormControl>
-                        <div className="relative">
-                          <Store className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4FD1FF]/60" />
-                          {loadingTenants && tenants.length === 0 ? (
-                            <div className="w-full h-12 pl-11 pr-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] flex items-center gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#4FD1FF]" />
-                                  <span className="text-xs text-[#9CA3AF]">{loadingMsg}</span>
-                                </div>
-                                <div className="mt-1.5 h-1 w-full bg-[#2A2D37] rounded-full overflow-hidden">
-                                  <div className="h-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] rounded-full animate-pulse" style={{ width: '60%' }} />
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <select
-                                {...field}
-                                id="tenant-select"
-                                aria-label="Pilih Resto"
-                                disabled={loadingTenants}
-                                className="w-full h-12 pl-11 pr-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:outline-none hover:border-[#4FD1FF]/20 transition-all duration-200 appearance-none cursor-pointer"
-                              >
-                                <option value="" className="bg-[#23262F] text-[#9CA3AF]">
-                                  — Pilih Resto —
-                                </option>
-                                {tenants.map((t) => (
-                                  <option key={t.id} value={t.id} className="bg-[#23262F] text-[#E5E7EB]">
-                                    {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <svg className="h-4 w-4 text-[#4FD1FF]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-[#F87171] text-xs" />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="username"
@@ -586,10 +488,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             {/* Google Sign-In Button */}
             <button
               type="button"
-              disabled={loadingTenants}
               onClick={() => {
-                const selectedTenantId = form.getValues("tenant_id") || "";
-                window.location.href = `/api/auth/google?tenant_id=${encodeURIComponent(selectedTenantId)}`;
+                window.location.href = "/api/auth/google";
               }}
               className="w-full h-12 rounded-[12px] font-semibold text-sm tracking-wide bg-[#2A2D37] border border-[rgba(79,209,255,0.06)] text-[#E5E7EB] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] active:scale-[0.97] transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -603,10 +503,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 Masuk dengan Google
               </span>
             </button>
-
-            <div className="text-center">
-              <p className="text-[10px] text-[#9CA3AF]">Super Admin? Kosongin aja resto-nya</p>
-            </div>
 
             <div className="text-center min-h-[20px]">
               <TypewriterText
