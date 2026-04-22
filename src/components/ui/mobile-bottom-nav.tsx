@@ -8,8 +8,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Input", path: "/", icon: Zap },
-  { label: "Data", path: "/dashboard", icon: BarChart3 },
+  { label: "Auto Waste", path: "/", icon: Zap },
+  { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
   { label: "PDF", path: "/pdf", icon: FileDown },
   { label: "AI", path: "/ai", icon: Sparkles },
   { label: "Profil", path: "/profile", icon: User },
@@ -24,8 +24,8 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/90 backdrop-blur-xl safe-area-bottom max-h-[76px]">
-      <div className="flex items-center justify-around px-1.5 pt-2 pb-2">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[rgba(79,209,255,0.06)] bg-[#1A1C22] safe-area-bottom max-h-[72px]">
+      <div className="flex items-center justify-around px-1 pt-1.5 pb-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -38,14 +38,20 @@ export function MobileBottomNav() {
                 window.history.pushState({}, "", item.path);
                 window.dispatchEvent(new PopStateEvent("popstate"));
               }}
-              className={`flex min-w-[56px] flex-col items-center gap-1 rounded-2xl px-2 py-1.5 transition-all duration-200 ${
-                active ? "text-sky-700" : "text-slate-500 active:text-slate-700"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
+                active
+                  ? "text-[#4FD1FF]"
+                  : "text-[#9CA3AF] active:text-[#9CA3AF]"
               }`}
             >
-              <div className={`relative rounded-2xl p-1.5 transition-all duration-200 ${active ? "bg-sky-50" : ""}`}>
-                <Icon className={`w-5 h-5 transition-all ${active ? "text-sky-600" : ""}`} strokeWidth={active ? 2.4 : 1.8} />
+              <div className={`relative p-1 rounded-[12px] transition-all duration-300 ${
+                active ? "bg-[#23262F] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]" : ""
+              }`}>
+                <Icon className={`w-5 h-5 transition-all ${active ? "text-[#4FD1FF]" : ""}`} strokeWidth={active ? 2.5 : 1.8} />
               </div>
-              <span className={`text-[10px] font-medium ${active ? "text-sky-700" : ""}`}>
+              <span className={`text-[10px] font-medium transition-all ${
+                active ? "text-[#4FD1FF]" : ""
+              }`}>
                 {item.label}
               </span>
             </a>

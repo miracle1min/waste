@@ -28,9 +28,9 @@ interface LoginFormProps {
 /* ── Soft Gradient Background ── */
 function CyberBackground() {
   return (
-    <div className="fixed inset-0 z-0 bg-[#F8FAFC]">
-      <div className="absolute inset-0 opacity-100" style={{
-        backgroundImage: 'radial-gradient(circle at 20% 0%, rgba(14,165,233,0.12), transparent 30rem), linear-gradient(180deg, #f8fafc 0%, #eef5fb 100%)',
+    <div className="fixed inset-0 z-0 bg-gradient-to-br from-[#1A1C22] via-[#1E2028] to-[#1A1C22]">
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: 'radial-gradient(circle at 30% 40%, #4FD1FF, transparent 50%), radial-gradient(circle at 70% 60%, #9F7AEA, transparent 50%)',
       }} />
     </div>
   );
@@ -39,7 +39,7 @@ function CyberBackground() {
 /* ── Gradient Text (replaces GlitchText) ── */
 function GlitchText({ text, className = "" }: { text: string; className?: string }) {
   return (
-    <span className={`relative inline-block text-slate-950 ${className}`}>
+    <span className={`relative inline-block bg-gradient-to-r from-[#4FD1FF] via-[#7C9FFF] to-[#9F7AEA] bg-clip-text text-transparent ${className}`}>
       {text}
     </span>
   );
@@ -48,7 +48,7 @@ function GlitchText({ text, className = "" }: { text: string; className?: string
 /* ── Typewriter ── */
 function TypewriterText({ texts }: { texts: string[]; speed?: number }) {
   return (
-    <span className="text-slate-500 text-sm">{texts[0]}</span>
+    <span className="text-[#4FD1FF]/60 text-sm">{texts[0]}</span>
   );
 }
 
