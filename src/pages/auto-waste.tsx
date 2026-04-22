@@ -103,14 +103,14 @@ function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] }
 // ========================
 // REUSABLE CLAY STYLES
 // ========================
-const CLAY_CARD = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] p-4 lg:p-5";
-const CLAY_CARD_SM = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]";
-const CLAY_INPUT = "w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all";
-const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]`;
-const CLAY_BTN_PRIMARY = "w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:shadow-[8px_8px_16px_rgba(0,0,0,0.6),-4px_-4px_10px_rgba(255,255,255,0.05)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.05)] transition-all duration-200";
-const CLAY_BTN_OUTLINE = "border-[rgba(79,209,255,0.12)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] transition-all duration-200";
-const LABEL = "text-[10px] lg:text-xs text-[#9CA3AF] font-sans uppercase tracking-wide";
-const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
+const CLAY_CARD = "bg-white border border-slate-200/80 rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-4 lg:p-5";
+const CLAY_CARD_SM = "bg-white border border-slate-200/80 rounded-xl shadow-[0_6px_18px_rgba(15,23,42,0.05)]";
+const CLAY_INPUT = "w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm lg:text-base shadow-sm placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all";
+const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-white [&>option]:text-slate-900`;
+const CLAY_BTN_PRIMARY = "w-full bg-sky-500 hover:bg-sky-600 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[0_12px_24px_rgba(14,165,233,0.22)] hover:shadow-[0_16px_30px_rgba(14,165,233,0.26)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200";
+const CLAY_BTN_OUTLINE = "border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-sky-200 hover:text-sky-700 hover:bg-sky-50 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200";
+const LABEL = "text-[10px] lg:text-xs text-slate-500 font-sans uppercase tracking-wide";
+const LABEL_MD = "text-xs lg:text-sm font-medium text-slate-600";
 
 // ========================
 // MAIN COMPONENT

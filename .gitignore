@@ -6,3 +6,4 @@ dist
 public/version.json
 .env*.local
 .playwright-cli/
+output/

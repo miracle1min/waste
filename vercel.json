@@ -1,5 +1,6 @@
 {
   "framework": "vite",
+  "devCommand": "npm run dev:vercel",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
@@ -8,7 +9,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|attached_assets/|icons/|@vite/|@react-refresh|@id/|@fs/|src/|node_modules/|manifest.json|favicon.webp|logo-ppa.png|robots.txt|sitemap.xml|version.json|sw.js).*)",
       "destination": "/index.html"
     }
   ],

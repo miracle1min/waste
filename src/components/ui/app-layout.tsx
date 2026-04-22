@@ -15,7 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
+    <div className="min-h-screen flex bg-[#F8FAFC] text-[#0F172A]">
       {/* Sidebar - hidden on mobile, shown on desktop */}
       <DesktopSidebar
         qcName={qcName}
@@ -26,7 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-[240px] min-h-screen flex flex-col bg-[#1A1C22] overflow-x-hidden">
+      <div className="flex-1 lg:ml-[248px] min-h-screen flex flex-col bg-transparent overflow-x-hidden">
         {children}
         {/* Spacer for mobile bottom nav */}
         <div className="h-[72px] lg:hidden" />
