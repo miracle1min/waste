@@ -160,7 +160,6 @@ export default function AutoWaste() {
   });
   const [testerKendala, setTesterKendala] = useState('');
   const [testerSubmitStatus, setTesterSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([]);
 
   const testerAllChecked = Object.values(testerChecks).every(v => v);
   const testerResultText = testerAllChecked
@@ -352,23 +351,6 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
     if (testerEnabled && !retryStations) {
       setTesterSubmitStatus('submitting');
       try {
-        // Upload tester documentation photos first
-        const testerDocUrls: string[] = [];
-        for (let fi = 0; fi < testerDokumentasiFiles.length; fi++) {
-          const file = testerDokumentasiFiles[fi];
-          const photoForm = new FormData();
-          photoForm.append('mode', 'upload-photo');
-          photoForm.append('photo', file);
-          const photoRes = await apiFetch("/api/auto-submit", {
-            method: "POST",
-            body: photoForm,
-          }, { maxRetries: 3, timeout: 60000 });
-          const photoResult = await photoRes.json();
-          if (photoResult.success && photoResult.url) {
-            testerDocUrls.push(photoResult.url);
-          }
-        }
-
         const testerForm = new FormData();
         testerForm.append('mode', 'submit-tester');
         testerForm.append('storeName', storeName);
@@ -382,9 +364,6 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
         testerForm.append('testerKendala', testerKendala);
         testerForm.append('parafQCUrl', qcUrl);
         testerForm.append('parafManagerUrl', mgrUrl);
-        if (testerDocUrls.length > 0) {
-          testerForm.append('dokumentasiUrls', JSON.stringify(testerDocUrls));
-        }
 
         const testerRes = await apiFetch("/api/auto-submit", {
           method: "POST",
@@ -573,7 +552,7 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
         variant: "destructive",
       });
     }
-  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap, stationErrors, testerEnabled, testerChecks, testerAllChecked, testerKendala, testerSubmitStatus, testerDokumentasiFiles]);
+  }, [parsedItemsMap, signatureUrls, selectedDate, storeName, selectedStations, selectedShift, selectedQC, selectedManajer, jam, dokumentasiFilesMap, toast, submitStatusMap, stationErrors, testerEnabled, testerChecks, testerAllChecked, testerKendala, testerSubmitStatus]);
 
   // Retry only failed stations
   const handleRetryFailed = useCallback(() => {
@@ -608,7 +587,6 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
     setTesterChecks({ 'MIE GACOAN LV. 1': false, 'UDANG KEJU': false, 'UDANG RAMBUTAN': false, 'LUMPIA UDANG': false, 'ALL BIANG BAR': false });
     setTesterKendala('');
     setTesterSubmitStatus('idle');
-    setTesterDokumentasiFiles([]);
     setStep("config");
   }, []);
 
@@ -911,22 +889,6 @@ const [testerDokumentasiFiles, setTesterDokumentasiFiles] = useState<File[]>([])
                       />
                     </div>
                   )}
-
-                  {/* Tester Documentation Photos */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs lg:text-sm font-medium text-[#E5E7EB]">
-                      📸 Foto Dokumentasi Tester
-                    </label>
-                    <MultiFileUpload
-                      onFilesSelect={(files) => setTesterDokumentasiFiles(files)}
-                      maxFiles={10}
-                      accept="image/*"
-                      label="Foto Tester"
-                    />
-                    {testerDokumentasiFiles.length > 0 && (
-                      <p className="text-[10px] text-green-400 flex items-center gap-1">✅ {testerDokumentasiFiles.length} foto siap</p>
-                    )}
-                  </div>
 
                   {/* Result preview */}
                   <div className={`px-3 py-2 rounded-lg text-xs font-medium ${
@@ -1240,23 +1202,6 @@ Contoh:
                   }
                 </div>
 
-                {/* Tester documentation photos in preview */}
-                <div className="mt-3 space-y-2">
-                  <label className="text-xs lg:text-sm font-medium text-[#E5E7EB]">
-                    📸 Foto Dokumentasi Tester
-                  </label>
-                  <MultiFileUpload
-                    onFilesSelect={(files) => setTesterDokumentasiFiles(files)}
-                    maxFiles={10}
-                    accept="image/*"
-                    label="Foto Tester"
-                  />
-                  {testerDokumentasiFiles.length === 0 ? (
-                    <p className="text-[10px] text-[#9CA3AF] flex items-center gap-1">💡 Opsional — tambah foto dokumentasi tester</p>
-                  ) : (
-                    <p className="text-[10px] text-green-400 flex items-center gap-1">✅ {testerDokumentasiFiles.length} foto siap</p>
-                  )}
-                </div>
               </div>
             )}
 
