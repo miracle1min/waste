@@ -18,6 +18,9 @@ import { useToast } from "@/hooks/use-toast";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 // ==================== TYPES ====================
+type BreakdownUnit = { unit: string; items: Array<{ name: string; qty: number }>; totalQty: number };
+type StationBreakdown = Record<string, BreakdownUnit[]>;
+
 interface DashboardData {
   success: boolean;
   availableDates: string[];
@@ -45,8 +48,13 @@ interface DashboardData {
     station: string;
     shift: string;
   };
-  stationBreakdown?: Record<string, Array<{ unit: string; items: Array<{ name: string; qty: number }>; totalQty: number }>>;
-  periodBreakdown?: Record<string, Record<string, Array<{ unit: string; items: Array<{ name: string; qty: number }>; totalQty: number }>>>;
+  stationBreakdown?: StationBreakdown;
+  periodBreakdown?: {
+    daily?: StationBreakdown;
+    weekly?: StationBreakdown;
+    monthly?: StationBreakdown;
+    byDate?: Record<string, StationBreakdown>;
+  };
   qcNames?: string[];
 }
 

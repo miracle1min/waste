@@ -909,7 +909,7 @@ function DatabaseTab() {
  const [testResult, setTestResult] = useState<{ ok: boolean; message: string; tables?: string[] } | null>(null);
  const [seedResult, setSeedResult] = useState<{ ok: boolean; message: string; details?: any } | null>(null);
  const [switchResult, setSwitchResult] = useState<{ ok: boolean; message: string } | null>(null);
- const { token } = useAuth();
+ const token = localStorage.getItem("waste_app_token") || "";
 
  const headers = {
  "Content-Type": "application/json",

@@ -27,9 +27,9 @@ export default function ConfigsPage() {
     const existing = configs.find((c) => c.tenant_id === tid);
     if (existing) {
       setForm({
-        google_spreadsheet_id: existing.google_spreadsheet_id || "", google_sheets_credentials: existing.google_sheets_credentials || "",
+        google_spreadsheet_id: existing.google_spreadsheet_id || "", google_sheets_credentials: "",
         r2_account_id: existing.r2_account_id || "", r2_access_key_id: existing.r2_access_key_id || "",
-        r2_secret_access_key: existing.r2_secret_access_key || "", r2_bucket_name: existing.r2_bucket_name || "", r2_public_url: existing.r2_public_url || "",
+        r2_secret_access_key: "", r2_bucket_name: existing.r2_bucket_name || "", r2_public_url: existing.r2_public_url || "",
       });
     } else {
       setForm({ google_spreadsheet_id: "", google_sheets_credentials: "", r2_account_id: "", r2_access_key_id: "", r2_secret_access_key: "", r2_bucket_name: "", r2_public_url: "" });
@@ -39,7 +39,10 @@ export default function ConfigsPage() {
   const handleSave = async () => {
     if (!selectedTenant) return;
     setSaving(true);
-    await api("/api/settings?entity=configs", "POST", { tenant_id: selectedTenant, ...form });
+    const payload = Object.fromEntries(
+      Object.entries(form).filter(([, value]) => value !== "")
+    );
+    await api("/api/settings?entity=configs", "POST", { tenant_id: selectedTenant, ...payload });
     await load(); setSaving(false);
   };
 

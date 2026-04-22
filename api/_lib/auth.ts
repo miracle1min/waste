@@ -65,6 +65,7 @@ function base64urlDecode(input: string): string {
 export interface JwtPayload {
   userId: number;
   username: string;
+  displayName?: string;
   role: string;
   tenantId: string;
   iat: number;

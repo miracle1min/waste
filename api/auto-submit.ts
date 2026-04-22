@@ -45,10 +45,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!pdfFile) {
         return res.status(400).json({ success: false, message: 'No PDF file provided' });
       }
+      if (Array.isArray(pdfFile)) {
+        return res.status(400).json({ success: false, message: 'Only one PDF file is allowed' });
+      }
 
-      const buffer = await fileToBuffer(pdfFile);
-      const key = `${tenantId}/pdf-reports/${fileName}`;
-      const url = await uploadToR2(buffer, key, 'application/pdf');
+      const { buffer } = await fileToBuffer(pdfFile);
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const folder = `${tenantId}/pdf-reports`;
+      const tenantCreds = await resolveTenantCredentials(tenantId);
+      const url = await uploadToR2(buffer, safeFileName, 'application/pdf', folder, {
+        accountId: tenantCreds.r2AccountId,
+        accessKeyId: tenantCreds.r2AccessKeyId,
+        secretAccessKey: tenantCreds.r2SecretAccessKey,
+        bucketName: tenantCreds.r2BucketName,
+        publicUrl: tenantCreds.r2PublicUrl,
+      });
+      const key = `${folder}/${safeFileName}`;
 
       return res.json({ success: true, url, key, fileName });
     }

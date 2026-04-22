@@ -5,8 +5,29 @@ import { uploadToR2 } from "../../_lib/r2.js";
 import { resolveTenantCredentials } from "../../_lib/tenant-resolver.js";
 import { requireRole, handleAuthError } from "../../_lib/auth.js";
 
+const MASKED_SECRET = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+const MOJIBAKE_MASKED_SECRET = "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
+
+function normalizeMaskedSecrets(body: Record<string, any>): Record<string, any> {
+  const cleaned = { ...body };
+  for (const key of ["google_sheets_credentials", "r2_secret_access_key"]) {
+    if (cleaned[key] === MASKED_SECRET || cleaned[key] === MOJIBAKE_MASKED_SECRET) {
+      cleaned[key] = "";
+    }
+  }
+  return cleaned;
+}
+
 // BUG-005 fix: Mask sensitive fields in API responses
 function maskConfig(config: any): any {
+  const maskedConfig = {
+    ...config,
+    google_sheets_credentials: config.google_sheets_credentials ? MASKED_SECRET : "",
+    r2_secret_access_key: config.r2_secret_access_key ? MASKED_SECRET : "",
+    has_sheets_creds: !!config.google_sheets_credentials,
+    has_r2_secret: !!config.r2_secret_access_key,
+  };
+  return maskedConfig;
   return {
     ...config,
     google_sheets_credentials: config.google_sheets_credentials ? "••••••••" : "",
@@ -32,7 +53,7 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST" || req.method === "PUT") {
-      const body = req.body || {};
+      const body = normalizeMaskedSecrets(req.body || {});
 
       // Database management actions
       if (body.action === "db-test") {
@@ -127,7 +148,17 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
 
       // Normal upsert
       if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
-      const config = await upsertConfig(body);
+      const config = await upsertConfig({
+        tenant_id: body.tenant_id,
+        google_spreadsheet_id: body.google_spreadsheet_id,
+        google_sheets_credentials: body.google_sheets_credentials,
+        r2_account_id: body.r2_account_id,
+        r2_access_key_id: body.r2_access_key_id,
+        r2_secret_access_key: body.r2_secret_access_key,
+        r2_bucket_name: body.r2_bucket_name,
+        r2_public_url: body.r2_public_url,
+        extra_config: body.extra_config,
+      });
       return res.json({ success: true, config: maskConfig(config) });
     }
 

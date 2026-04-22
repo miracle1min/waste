@@ -28,7 +28,11 @@ export default function DatabasePage() {
     if (!confirm(`Seed database untuk ${tenant.name}? Ini akan bikin tabel users, personnel, tenant_configs di database tenant.`)) return;
     setSeeding(true); setSeedResult(null);
     try {
-      const result = await api("/api/settings?entity=configs", "POST", { action: "seed-tenant-db", tenant_id: selectedTenant });
+      const result = await api("/api/settings?entity=configs", "POST", {
+        action: "seed-tenant-db",
+        tenant_id: selectedTenant,
+        db_url: tenant.neon_database_url,
+      });
       setSeedResult(result);
     } catch (err: any) {
       setSeedResult({ ok: false, message: err.message });

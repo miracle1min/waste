@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { AlertCircle, Lock, Loader2, User, CheckCircle2, Clock, ShieldX, ArrowLeft } from "lucide-react";
@@ -14,6 +13,11 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+interface LoginTenant {
+  id: string;
+  name: string;
+}
 
 interface LoginFormProps {
   onLogin: (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string, token?: string) => void;
@@ -57,6 +61,9 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [mounted, setMounted] = useState(false);
   const [pendingState, setPendingState] = useState<{ email: string; name: string } | null>(null);
   const [rejectedState, setRejectedState] = useState<{ email: string } | null>(null);
+  const [tenants, setTenants] = useState<LoginTenant[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [tenantsLoading, setTenantsLoading] = useState(true);
 
   // Handle Google OAuth callback
   useEffect(() => {
@@ -75,7 +82,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         localStorage.setItem("waste_app_token", token);
       }
       window.history.replaceState({}, "", "/");
-      onLogin(username, role, tenant_id, tenant_name, "", token);
+      onLogin(display_name || username, role, tenant_id, tenant_name, "", token);
     } else if (googleAuth === "pending") {
       const email = params.get("email") || "";
       const name = params.get("name") || "";
@@ -90,6 +97,25 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       setError(message);
       window.history.replaceState({}, "", "/");
     }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/login")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!alive) return;
+        const list = Array.isArray(data.tenants) ? data.tenants : [];
+        setTenants(list);
+        if (list.length === 1) setSelectedTenantId(list[0].id);
+      })
+      .catch(() => {
+        if (alive) setError("Gagal ambil daftar resto. Coba refresh halaman.");
+      })
+      .finally(() => {
+        if (alive) setTenantsLoading(false);
+      });
+    return () => { alive = false; };
   }, []);
 
   // Show "just updated" info banner if force-refreshed by deploy
@@ -121,6 +147,10 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   });
 
   const handleSubmit = async (data: LoginFormData) => {
+    if (tenants.length > 0 && !selectedTenantId) {
+      setError("Pilih resto dulu sebelum login.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
 
@@ -131,6 +161,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         body: JSON.stringify({
           username: data.username,
           password: data.password,
+          tenant_id: selectedTenantId,
         }),
       });
 
@@ -147,6 +178,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       setError("Ga bisa konek ke server, cek internet lo");
     }
     setIsSubmitting(false);
+  };
+
+  const handleGoogleLogin = () => {
+    if (!selectedTenantId) {
+      setError("Pilih resto dulu sebelum login dengan Google.");
+      return;
+    }
+    window.location.href = `/api/auth/google?tenant_id=${encodeURIComponent(selectedTenantId)}`;
   };
 
   const handleConfirmLogin = () => {
@@ -409,6 +448,23 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <div>
+                  <div className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase mb-1.5 ml-1">
+                    Resto
+                  </div>
+                  <select
+                    value={selectedTenantId}
+                    onChange={(e) => setSelectedTenantId(e.target.value)}
+                    disabled={isSubmitting || tenantsLoading}
+                    className="w-full h-12 px-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.06)] rounded-[12px] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] text-sm text-[#E5E7EB] focus:ring-2 focus:ring-[#4FD1FF]/20 focus:border-[#4FD1FF]/30 focus:ring-offset-0 hover:border-[#4FD1FF]/20 transition-all duration-200"
+                  >
+                    <option value="">{tenantsLoading ? "Memuat resto..." : "Pilih resto..."}</option>
+                    {tenants.map((tenant) => (
+                      <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="username"
@@ -488,9 +544,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             {/* Google Sign-In Button */}
             <button
               type="button"
-              onClick={() => {
-                window.location.href = "/api/auth/google";
-              }}
+              onClick={handleGoogleLogin}
               className="w-full h-12 rounded-[12px] font-semibold text-sm tracking-wide bg-[#2A2D37] border border-[rgba(79,209,255,0.06)] text-[#E5E7EB] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] active:scale-[0.97] transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="flex items-center justify-center gap-3">

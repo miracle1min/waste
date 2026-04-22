@@ -240,7 +240,7 @@ async function generateWastePdf(
       const data = await proxyRes.json();
       if (data.success && data.dataUrl) {
         const resized = await new Promise<string>((resolve) => {
-          const img = new Image();
+          const img = new window.Image();
           img.crossOrigin = 'anonymous';
           img.onload = () => {
             const canvas = document.createElement('canvas');

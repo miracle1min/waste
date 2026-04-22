@@ -4,3 +4,5 @@ dist
 .env
 .env.local
 public/version.json
+.env*.local
+.playwright-cli/
