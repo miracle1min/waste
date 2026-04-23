@@ -5,12 +5,12 @@ import { requireAuth, requireRole, handleAuthError, getAuthorizedTenantId } from
 import { getActivityLogs } from './_lib/activity-logger.js';
 import { validate, dashboardQuerySchema } from './_lib/validators.js';
 
-// Parse tab name "DD/MM/YY" to Date
+// FIX #21: Parse tab name "DD/MM/YY" to Date using UTC to avoid timezone issues
 function parseTabToDate(tab: string): Date | null {
   const match = tab.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
   if (!match) return null;
   const [, day, month, year] = match;
-  return new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+  return new Date(Date.UTC(2000 + parseInt(year), parseInt(month) - 1, parseInt(day)));
 }
 
 // BUG-018 fix: Safe date conversion that handles null
@@ -143,9 +143,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let totalItems = 0;
     let totalQty = 0;
 
-    // Period breakdown accumulators (single-pass instead of 3x re-scan)
+    // FIX #19: Use WIB timezone for "today" calculation instead of UTC
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const wibStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+    const wibDate = new Date(wibStr);
+    const todayStr = `${wibDate.getFullYear()}-${(wibDate.getMonth()+1).toString().padStart(2,'0')}-${wibDate.getDate().toString().padStart(2,'0')}`;
     const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
     const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
 

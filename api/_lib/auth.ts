@@ -34,8 +34,13 @@ export function verifyPassword(password: string, stored: string): boolean {
     return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(derived, "hex"));
   }
   // Legacy format: plain SHA-256 hex (migration support)
+  // SEC-FIX: Use timingSafeEqual to prevent timing attacks
   const sha256 = crypto.createHash("sha256").update(password).digest("hex");
-  return sha256 === stored;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(sha256, "hex"), Buffer.from(stored, "hex"));
+  } catch {
+    return false;
+  }
 }
 
 export function isLegacyHash(stored: string): boolean {
@@ -161,7 +166,7 @@ export class AuthError extends Error {
   }
 }
 
-export function handleAuthError(err: unknown, res: VercelResponse): void {
+export function handleAuthError(err: unknown, res: VercelResponse): VercelResponse | void {
   if (err instanceof AuthError) {
     res.status(err.status).json({ error: err.message });
   } else {

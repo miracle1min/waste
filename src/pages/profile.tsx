@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, User, Building2, Shield, Clock, Smartphone } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 

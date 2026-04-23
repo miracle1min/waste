@@ -1,13 +1,13 @@
 import { useLocation } from "wouter";
-import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, ClipboardPaste, X, Copy, CheckCheck, RefreshCw, WifiOff, ShieldAlert, ServerCrash } from "lucide-react";
+import { useState, useEffect, useCallback, type ElementType } from "react";
+import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, CheckCheck, RefreshCw, WifiOff, ShieldAlert, ServerCrash, Plus, Trash2, Soup, Package, CupSoda, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
-import { getCurrentWIBDateString } from "@shared/timezone";
+import { getCurrentWIBDateString } from "@/lib/timezone";
 import { apiFetch, ApiRequestError, getErrorMessage } from "@/lib/api-client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ========================
 // TYPES & CONSTANTS
@@ -20,9 +20,17 @@ type AutoStep = "config" | "paste" | "preview" | "success";
 const VALID_SHIFTS: Shift[] = ["OPENING", "MIDDLE", "CLOSING", "MIDNIGHT"];
 const VALID_STATIONS: Station[] = ["NOODLE", "DIMSUM", "BAR", "PRODUKSI"];
 
-const STATION_ICONS: Record<Station, string> = {
-  NOODLE: "🍜", DIMSUM: "🥟", BAR: "🍹", PRODUKSI: "🏭",
+const STATION_ICONS: Record<Station, ElementType> = {
+  NOODLE: Soup,
+  DIMSUM: Package,
+  BAR: CupSoda,
+  PRODUKSI: Factory,
 };
+
+function StationIcon({ station, className }: { station: Station; className?: string }) {
+  const Icon = STATION_ICONS[station];
+  return <Icon className={className} />;
+}
 
 type ParsedItem = {
   namaProduk: string;
@@ -37,79 +45,103 @@ type ParseError = {
   message: string;
 };
 
+type StationCatalogItem = {
+  value: string;
+  label: string;
+  unit?: string;
+  manual?: boolean;
+  manualLot?: boolean;
+};
+
+type StationDraftRow = {
+  id: string;
+  optionValue: string;
+  manualName: string;
+  manualUnit: string;
+  qty: string;
+  alasan: string;
+  kodeLot: string;
+};
+
 // Per-station submission status
 type StationSubmitStatus = "pending" | "uploading" | "success" | "error";
 
 // ========================
-// ITEM-ONLY PARSER
+// ITEM CATALOG
 // ========================
 
-function parseItems(text: string): { items: ParsedItem[]; errors: ParseError[] } {
-  const errors: ParseError[] = [];
-  const items: ParsedItem[] = [];
-  const lines = text.trim().split("\n").map(l => l.trim()).filter(l => l.length > 0);
+const MANUAL_ITEM_VALUE = "__MANUAL__";
 
-  if (lines.length === 0) {
-    return { items: [], errors: [{ line: 0, message: "Kosong nih. Paste minimal 1 item dulu." }] };
-  }
+const STATION_ITEM_CATALOG: Record<Station, StationCatalogItem[]> = {
+  NOODLE: [
+    { value: "PANGSIT GORENG", label: "PANGSIT GORENG", unit: "PCS" },
+    { value: "MIE GACOAN LEVEL 0", label: "MIE GACOAN -> LEVEL 0", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 1", label: "MIE GACOAN -> LEVEL 1", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 2", label: "MIE GACOAN -> LEVEL 2", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 3", label: "MIE GACOAN -> LEVEL 3", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 4", label: "MIE GACOAN -> LEVEL 4", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 6", label: "MIE GACOAN -> LEVEL 6", unit: "PORSI" },
+    { value: "MIE GACOAN LEVEL 8", label: "MIE GACOAN -> LEVEL 8", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 1", label: "MIE HOMPIMPA -> LEVEL 1", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 2", label: "MIE HOMPIMPA -> LEVEL 2", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 3", label: "MIE HOMPIMPA -> LEVEL 3", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 4", label: "MIE HOMPIMPA -> LEVEL 4", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 6", label: "MIE HOMPIMPA -> LEVEL 6", unit: "PORSI" },
+    { value: "MIE HOMPIMPA LEVEL 8", label: "MIE HOMPIMPA -> LEVEL 8", unit: "PORSI" },
+    { value: "PAPERBOX MIE", label: "PAPERBOX MIE", unit: "PCS" },
+    { value: "MIE POLOS", label: "MIE POLOS", unit: "PCS", manualLot: true },
+    { value: "KERUPUK GORENG", label: "KERUPUK GORENG", unit: "GRAM" },
+    { value: `${MANUAL_ITEM_VALUE}_NOODLE`, label: "LAINNYA (isi manual)", manual: true },
+  ],
+  DIMSUM: [
+    { value: "UDANG KEJU", label: "UDANG KEJU", unit: "PCS" },
+    { value: "UDANG RAMBUTAN", label: "UDANG RAMBUTAN", unit: "PCS" },
+    { value: "LUMPIA UDANG", label: "LUMPIA UDANG", unit: "PCS" },
+    { value: "SIOMAY AYAM", label: "SIOMAY AYAM", unit: "PCS" },
+    { value: "PAPERBOX DIMSUM", label: "PAPERBOX DIMSUM", unit: "PCS" },
+    { value: "SURAI NAGA", label: "SURAI NAGA", unit: "GRAM", manualLot: true },
+    { value: "PENTOL", label: "PENTOL", unit: "PCS", manualLot: true },
+  ],
+  PRODUKSI: [
+    { value: "KULIT PANGSIT", label: "KULIT PANGSIT", unit: "GRAM", manualLot: true },
+    { value: "CABE RAWIT", label: "CABE RAWIT", unit: "GRAM" },
+    { value: "KERUPUK GORENG", label: "KERUPUK GORENG", unit: "GRAM" },
+    { value: `${MANUAL_ITEM_VALUE}_PRODUKSI`, label: "LAINNYA (isi manual)", manual: true },
+  ],
+  BAR: [
+    { value: "APEL", label: "APEL", unit: "GRAM" },
+    { value: "PEAR", label: "PEAR", unit: "GRAM" },
+    { value: "BELIMBING", label: "BELIMBING", unit: "GRAM" },
+    { value: "STROBERI SUSUT", label: "STROBERI SUSUT", unit: "GRAM" },
+    { value: "STOBERI BUSUK", label: "STOBERI BUSUK", unit: "GRAM" },
+    { value: "CUP 16", label: "CUP -> CUP 16", unit: "PCS" },
+    { value: "CUP 14", label: "CUP -> CUP 14", unit: "PCS" },
+    { value: "CUP 12", label: "CUP -> CUP 12", unit: "PCS" },
+    { value: `${MANUAL_ITEM_VALUE}_BAR`, label: "LAINNYA (isi manual)", manual: true },
+  ],
+};
 
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    const lineNum = i + 1;
-
-    // Skip "Data Item:" header if user accidentally pastes it
-    if (/^data\s*item/i.test(line)) continue;
-
-    // Remove leading "- " or "• " or number prefix like "1. "
-    line = line.replace(/^[-•]\s*/, "").replace(/^\d+[.)]\s*/, "").trim();
-    if (!line) continue;
-
-    // Format: NAMA PRODUK (KODE_LOT): QTY UNIT ALASAN
-    const withLot = line.match(/^(.+?)\s*\(([^)]+)\)\s*:\s*(\d+)\s+(\S+)\s+(.+)$/);
-    if (withLot) {
-      items.push({
-        namaProduk: withLot[1].trim().toUpperCase(),
-        kodeLot: withLot[2].trim(),
-        qty: parseInt(withLot[3]),
-        unit: withLot[4].trim().toUpperCase(),
-        alasan: withLot[5].trim(),
-      });
-      continue;
-    }
-
-    // Format without kode lot: NAMA PRODUK: QTY UNIT ALASAN
-    const noLot = line.match(/^(.+?):\s*(\d+)\s+(\S+)\s+(.+)$/);
-    if (noLot) {
-      items.push({
-        namaProduk: noLot[1].trim().toUpperCase(),
-        kodeLot: "",
-        qty: parseInt(noLot[2]),
-        unit: noLot[3].trim().toUpperCase(),
-        alasan: noLot[4].trim(),
-      });
-      continue;
-    }
-
-    errors.push({ line: lineNum, message: `Format salah nih: "${line}". Gunakan: NAMA (KODE LOT): QTY SATUAN ALASAN` });
-  }
-
-  if (items.length === 0 && errors.length === 0) {
-    errors.push({ line: 0, message: "Ga ada item yang ke-parse" });
-  }
-
-  return { items, errors };
+function createEmptyDraftRow(selectedDate: string): StationDraftRow {
+  return {
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    optionValue: "",
+    manualName: "",
+    manualUnit: "",
+    qty: "",
+    alasan: "",
+    kodeLot: selectedDate,
+  };
 }
-
 // ========================
 // REUSABLE CLAY STYLES
 // ========================
-const CLAY_CARD = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] p-4 lg:p-5";
-const CLAY_CARD_SM = "bg-[#23262F] border border-[rgba(79,209,255,0.08)] rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]";
-const CLAY_INPUT = "w-full px-3 py-2.5 lg:px-4 lg:py-3 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all";
+const CLAY_CARD = "rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,#181C23_0%,#14181F_100%)] p-4 shadow-[0_20px_56px_rgba(0,0,0,0.32)] lg:p-5";
+const CLAY_CARD_SM = "rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,#181C23_0%,#14181F_100%)] shadow-[0_16px_40px_rgba(0,0,0,0.28)]";
+const CLAY_INPUT = "w-full rounded-[16px] border border-white/8 bg-[#10141A] px-3 py-2.5 text-sm text-[#E7ECF3] outline-none transition focus:border-[#4FD1FF]/30 focus:ring-2 focus:ring-[#4FD1FF]/15 lg:px-4 lg:py-3 lg:text-base";
 const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]`;
-const CLAY_BTN_PRIMARY = "w-full bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] hover:from-[#4FD1FF]/90 hover:to-[#9F7AEA]/90 text-white py-5 lg:py-6 text-base lg:text-lg font-bold disabled:opacity-40 rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:shadow-[8px_8px_16px_rgba(0,0,0,0.6),-4px_-4px_10px_rgba(255,255,255,0.05)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.05)] transition-all duration-200";
-const CLAY_BTN_OUTLINE = "border-[rgba(79,209,255,0.12)] text-[#9CA3AF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] transition-all duration-200";
-const LABEL = "text-[10px] lg:text-xs text-[#9CA3AF] font-sans uppercase tracking-wide";
+const CLAY_BTN_PRIMARY = "w-full rounded-[18px] bg-[linear-gradient(180deg,#26364A_0%,#1D2939_100%)] py-5 text-base font-semibold text-white shadow-[0_20px_48px_rgba(0,0,0,0.3)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40 lg:py-6 lg:text-lg";
+const CLAY_BTN_OUTLINE = "border-white/10 bg-[#171B22] text-[#A8B5C7] shadow-[0_14px_36px_rgba(0,0,0,0.24)] transition hover:-translate-y-0.5 hover:bg-[#1D232D] hover:text-white";
+const LABEL = "text-[10px] font-sans uppercase tracking-[0.18em] text-[#7C8BA0] lg:text-xs";
 const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
 
 // ========================
@@ -163,16 +195,16 @@ export default function AutoWaste() {
 
   const testerAllChecked = Object.values(testerChecks).every(v => v);
   const testerResultText = testerAllChecked
-    ? 'Semua sisa bahan dan produk AMAN & Approved.'
+                      ? "OK: Semua sisa bahan dan produk aman dan approved."
     : testerKendala;
 
   // Multi-station selection
   const [selectedStations, setSelectedStations] = useState<Station[]>([]);
   const allStationsSelected = selectedStations.length === VALID_STATIONS.length;
 
-  // Per-station paste state
-  const [rawTexts, setRawTexts] = useState<Record<Station, string>>({
-    NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "",
+  // Per-station item builder state
+  const [stationDraftRowsMap, setStationDraftRowsMap] = useState<Record<Station, StationDraftRow[]>>({
+    NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [],
   });
   const [parsedItemsMap, setParsedItemsMap] = useState<Record<Station, ParsedItem[]>>({
     NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [],
@@ -207,8 +239,8 @@ export default function AutoWaste() {
     percent: 0,
   });
 
-  // Config validation
-  const configReady = selectedShift && selectedQC && selectedManajer && (selectedStations.length > 0 || testerEnabled) && jam;
+  // FIX #29: Add selectedDate validation to configReady
+  const configReady = selectedShift && selectedQC && selectedManajer && (selectedStations.length > 0 || testerEnabled) && jam && selectedDate;
 
   // Toggle station selection
   const toggleStation = (station: Station) => {
@@ -234,7 +266,7 @@ export default function AutoWaste() {
       } catch (e) {
         console.error("Failed to load signatures:", e);
         toast({ 
-          title: "⚠️ Gagal Muat TTD", 
+          title: "Gagal Muat TTD",
           description: e instanceof ApiRequestError ? getErrorMessage(e.type) : "Coba refresh halaman.",
           variant: "destructive" 
         });
@@ -260,7 +292,7 @@ export default function AutoWaste() {
       } catch (e) {
         console.error("Failed to load personnel:", e);
         toast({ 
-          title: "⚠️ Gagal Muat Data QC/Manager", 
+          title: "Gagal Muat Data QC/Manager",
           description: e instanceof ApiRequestError ? getErrorMessage(e.type) : "Coba refresh halaman.", 
           variant: "destructive" 
         });
@@ -271,46 +303,141 @@ export default function AutoWaste() {
     fetchPersonnel();
   }, []);
 
-  // Parse all stations' items
-  const handleParseAll = useCallback(() => {
-    const newParsedMap = { ...parsedItemsMap };
-    const newErrorsMap = { ...parseErrorsMap };
+  // Build selected items per station
+  const getCatalogItem = useCallback((station: Station, value: string) => {
+    return STATION_ITEM_CATALOG[station].find(item => item.value === value);
+  }, []);
+
+  const addDraftRow = useCallback((station: Station) => {
+    setStationDraftRowsMap(prev => ({
+      ...prev,
+      [station]: [...prev[station], createEmptyDraftRow(selectedDate)],
+    }));
+    setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+  }, [selectedDate]);
+
+  const updateDraftRow = useCallback((station: Station, rowId: string, patch: Partial<StationDraftRow>) => {
+    setStationDraftRowsMap(prev => ({
+      ...prev,
+      [station]: prev[station].map(row => row.id === rowId ? { ...row, ...patch } : row),
+    }));
+    setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+  }, []);
+
+  const removeDraftRow = useCallback((station: Station, rowId: string) => {
+    setStationDraftRowsMap(prev => ({
+      ...prev,
+      [station]: prev[station].filter(row => row.id != rowId),
+    }));
+    setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+  }, []);
+
+  const getAvailableOptions = useCallback((station: Station, rowId: string) => {
+    const selectedValues = new Set(
+      stationDraftRowsMap[station]
+        .filter(row => row.id !== rowId)
+        .map(row => row.optionValue)
+        .filter(Boolean)
+    );
+
+    return STATION_ITEM_CATALOG[station].filter(item => !selectedValues.has(item.value));
+  }, [stationDraftRowsMap]);
+
+  const buildItemsFromSelections = useCallback(() => {
+    const newParsedMap: Record<Station, ParsedItem[]> = { NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] };
+    const newErrorsMap: Record<Station, ParseError[]> = { NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] };
     let hasItems = false;
     let hasErrors = false;
 
     for (const station of selectedStations) {
-      const text = rawTexts[station];
-      if (!text.trim()) {
-        newParsedMap[station] = [];
-        newErrorsMap[station] = [{ line: 0, message: `Data ${station} kosong. Paste minimal 1 item.` }];
+      const rows = stationDraftRowsMap[station];
+      if (rows.length === 0) {
+        newErrorsMap[station] = [{ line: 0, message: `Pilih minimal 1 item untuk ${station}.` }];
         hasErrors = true;
         continue;
       }
-      const { items, errors } = parseItems(text);
-      newParsedMap[station] = items;
-      newErrorsMap[station] = errors;
-      if (items.length > 0) hasItems = true;
-      if (errors.length > 0) hasErrors = true;
+
+      const usedValues = new Set<string>();
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const option = getCatalogItem(station, row.optionValue);
+        const lineNum = i + 1;
+
+        if (!option) {
+          newErrorsMap[station].push({ line: lineNum, message: "Pilih item dari dropdown dulu." });
+          hasErrors = true;
+          continue;
+        }
+
+        if (usedValues.has(option.value)) {
+          newErrorsMap[station].push({ line: lineNum, message: "Item yang sama ga bisa dipilih dua kali dalam 1 station." });
+          hasErrors = true;
+          continue;
+        }
+        usedValues.add(option.value);
+
+        const namaProduk = option.manual ? row.manualName.trim().toUpperCase() : option.value;
+        const unit = option.manual ? row.manualUnit.trim().toUpperCase() : (option.unit || "");
+        const qty = Number(row.qty);
+        const alasan = row.alasan.trim();
+        const kodeLot = option.manualLot ? row.kodeLot.trim() : selectedDate;
+
+        if (!namaProduk) {
+          newErrorsMap[station].push({ line: lineNum, message: "Nama item manual masih kosong." });
+          hasErrors = true;
+        }
+        if (!unit) {
+          newErrorsMap[station].push({ line: lineNum, message: "Satuan item masih kosong." });
+          hasErrors = true;
+        }
+        if (!Number.isFinite(qty) || qty <= 0) {
+          newErrorsMap[station].push({ line: lineNum, message: "Qty harus lebih dari 0." });
+          hasErrors = true;
+        }
+        if (!alasan) {
+          newErrorsMap[station].push({ line: lineNum, message: "Alasan waste wajib diisi." });
+          hasErrors = true;
+        }
+        if (!kodeLot) {
+          newErrorsMap[station].push({ line: lineNum, message: "Kode lot / pick date wajib diisi." });
+          hasErrors = true;
+        }
+
+        newParsedMap[station].push({
+          namaProduk,
+          kodeLot,
+          qty,
+          unit,
+          alasan,
+        });
+      }
+
+      if (newParsedMap[station].length > 0) hasItems = true;
     }
 
+    return { newParsedMap, newErrorsMap, hasItems, hasErrors };
+  }, [getCatalogItem, selectedDate, selectedStations, stationDraftRowsMap]);
+
+  const handlePrepareItems = useCallback(() => {
+    const { newParsedMap, newErrorsMap, hasItems, hasErrors } = buildItemsFromSelections();
     setParsedItemsMap(newParsedMap);
     setParseErrorsMap(newErrorsMap);
 
     if (hasItems && !hasErrors) {
       setStep("preview");
     }
-  }, [rawTexts, selectedStations, parsedItemsMap, parseErrorsMap]);
+  }, [buildItemsFromSelections]);
 
   // Submit stations (supports retry for failed ones)
   const handleSubmit = useCallback(async (retryStations?: Station[]) => {
     const stationsToSubmit = retryStations || selectedStations;
     
-    // Validate all stations have docs (skip on retry — already validated)
+    // Validate all stations have docs (skip on retry - already validated)
     if (!retryStations) {
       const missingDocs = stationsToSubmit.filter(st => dokumentasiFilesMap[st].length === 0);
       if (missingDocs.length > 0) {
         toast({
-          title: "📸 Foto Dokumentasi Dong",
+          title: "Foto Dokumentasi Wajib",
           description: `Upload foto untuk: ${missingDocs.join(", ")}`,
           variant: "destructive",
         });
@@ -335,12 +462,12 @@ export default function AutoWaste() {
     const mgrUrl = signatureUrls[selectedManajer] || "";
 
     if (!qcUrl) {
-      toast({ title: "❌ TTD QC Ga Ketemu", description: `Tanda tangan "${selectedQC}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
+      toast({ title: "TTD QC Tidak Ditemukan", description: `Tanda tangan "${selectedQC}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
     if (!mgrUrl) {
-      toast({ title: "❌ TTD Manajer Ga Ketemu", description: `Tanda tangan "${selectedManajer}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
+      toast({ title: "TTD Manajer Tidak Ditemukan", description: `Tanda tangan "${selectedManajer}" belum di-upload. Tambah di Settings > Personnel.`, variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -348,6 +475,8 @@ export default function AutoWaste() {
     const jamFormatted = jam.includes("WIB") ? jam : `${jam} WIB`;
 
     // Submit tester first if enabled (and not a retry of failed stations)
+    // FIX #6: Use local variable to track tester status (avoid stale closure)
+    let localTesterFailed = false;
     if (testerEnabled && !retryStations) {
       setTesterSubmitStatus('submitting');
       try {
@@ -375,9 +504,10 @@ export default function AutoWaste() {
         }
         setTesterSubmitStatus('success');
       } catch (error) {
+        localTesterFailed = true;
         setTesterSubmitStatus('error');
         const errorMsg = error instanceof Error ? error.message : 'Tester error';
-        toast({ title: "❌ Tester Gagal", description: errorMsg, variant: "destructive" });
+        toast({ title: "Tester Gagal", description: errorMsg, variant: "destructive" });
         // Continue with station submissions even if tester fails
       }
     }
@@ -385,8 +515,8 @@ export default function AutoWaste() {
     // If tester-only (no stations), handle completion
     if (stationsToSubmit.length === 0) {
       setIsSubmitting(false);
-      // Send WA notification for tester-only
-      if (testerEnabled && testerSubmitStatus !== 'error') {
+      // FIX #6: Use localTesterFailed instead of stale testerSubmitStatus state
+      if (testerEnabled && !localTesterFailed) {
         try {
           const notifForm = new FormData();
           notifForm.append('mode', 'send-wa-notif');
@@ -403,13 +533,15 @@ export default function AutoWaste() {
         } catch {}
       }
       setStep("success");
-      toast({ title: "✅ Tester Berhasil!", description: "Data tester berhasil disimpan" });
+      toast({ title: "Tester Berhasil", description: "Data tester berhasil disimpan" });
       return;
     }
 
     let successCount = 0;
     let failCount = 0;
     const failedStations: Station[] = [];
+    // FIX #6: Track errors locally to avoid stale closure when reading state after setStationErrors
+    const localStationErrors: Record<string, string> = {};
 
     for (let idx = 0; idx < stationsToSubmit.length; idx++) {
       const station = stationsToSubmit[idx];
@@ -492,6 +624,8 @@ export default function AutoWaste() {
           errorMsg = error.message;
         }
         setStationErrors(prev => ({ ...prev, [station]: errorMsg }));
+        // FIX #6: Track error locally to avoid stale closure when reading state after setStationErrors
+        localStationErrors[station] = errorMsg;
       }
     }
 
@@ -533,21 +667,21 @@ export default function AutoWaste() {
     if (failCount === 0) {
       setStep("success");
       toast({
-        title: "✅ Semua Berhasil!",
+        title: "Semua Berhasil",
         description: `${stationsToSubmit.length} station berhasil disimpan`,
       });
     } else if (successCount > 0) {
-      // Partial success — show which failed with option to retry
+      // Partial success - show which failed with option to retry
       toast({
-        title: `⚠️ ${failCount} Station Gagal`,
+        title: `${failCount} Station Gagal`,
         description: `${successCount} berhasil, ${failCount} gagal. Klik "Retry" untuk coba lagi.`,
         variant: "destructive",
       });
     } else {
-      // All failed
-      const firstError = stationErrors[failedStations[0]] || "Terjadi kesalahan";
+      // All failed — FIX #6: Use local error map instead of stale state
+      const firstError = localStationErrors[failedStations[0]] || "Terjadi kesalahan";
       toast({
-        title: "❌ Semua Gagal",
+        title: "Semua Gagal",
         description: firstError,
         variant: "destructive",
       });
@@ -562,17 +696,9 @@ export default function AutoWaste() {
     }
   }, [selectedStations, submitStatusMap, handleSubmit]);
 
-  // Copy format template
-  const copyTemplate = useCallback(() => {
-    navigator.clipboard.writeText(
-      "- Mie Goreng (2025-03-09): 5 PCS Expired\n- Dimsum Ayam (2025-03-09): 3 PACK Rusak"
-    );
-    toast({ title: "📋 Copied!", description: "Contoh format sudah di-copy", variant: "success" as any });
-  }, [toast]);
-
   // Reset for new entry
   const handleNewEntry = useCallback(() => {
-    setRawTexts({ NOODLE: "", DIMSUM: "", BAR: "", PRODUKSI: "" });
+    setStationDraftRowsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
     setParsedItemsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
     setParseErrorsMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
     setDokumentasiFilesMap({ NOODLE: [], DIMSUM: [], BAR: [], PRODUKSI: [] });
@@ -600,11 +726,16 @@ export default function AutoWaste() {
   // ========================
 
   return (
-    <div className="flex-1 bg-[#1A1C22] flex flex-col">
+    <div className="flex-1 bg-[#111318] flex flex-col text-[#E7ECF3]">
       {/* Desktop page title */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]">
-        <Zap className="w-6 h-6 text-[#4FD1FF]" />
-        <h1 className="text-xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Auto Waste</h1>
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-white/8 bg-[#111318]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/8 bg-[#171B22]">
+          <Zap className="w-5 h-5 text-[#4FD1FF]" />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold text-white">Input Waste</h1>
+          <p className="text-xs text-[#7C8BA0]">Batch submit per shift</p>
+        </div>
         <div className="flex items-center gap-1 ml-auto">
           {(["config", "paste", "preview", "success"] as AutoStep[]).map((s, i) => (
             <div
@@ -619,13 +750,15 @@ export default function AutoWaste() {
       </div>
 
       {/* Header - Mobile only */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-[#111318] lg:hidden">
         <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-[#4FD1FF]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/8 bg-[#171B22]">
+              <Zap className="w-4 h-4 text-[#4FD1FF]" />
+            </div>
             <div>
-              <h1 className="text-sm font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Waste Otomatis</h1>
-              <p className="text-[10px] text-[#9CA3AF]">Fast Mode • Batch Submit</p>
+              <h1 className="text-sm font-semibold text-white">Input Waste</h1>
+              <p className="text-[10px] text-[#7C8BA0]">Batch submit per shift</p>
               {tenantName && <p className="text-[10px] text-[#4FD1FF]/60 font-sans truncate">{tenantName}</p>}
             </div>
           </div>
@@ -682,9 +815,12 @@ export default function AutoWaste() {
               <div className={`${CLAY_CARD_SM} p-3 text-center`}>
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
-                  <span className="text-sm text-[#E5E7EB] font-medium">
-                    {STATION_ICONS[globalProgress.currentStation as Station]} {globalProgress.currentStation}
-                  </span>
+                    <span className="text-sm text-[#E5E7EB] font-medium">
+                      {globalProgress.currentStation && (
+                        <StationIcon station={globalProgress.currentStation as Station} className="w-4 h-4 inline mr-1.5 align-[-2px]" />
+                      )}
+                      {globalProgress.currentStation}
+                    </span>
                 </div>
                 <p className="text-[10px] text-[#9CA3AF] mt-1">
                   Upload {dokumentasiFilesMap[globalProgress.currentStation as Station]?.length || 0} foto + {parsedItemsMap[globalProgress.currentStation as Station]?.length || 0} item...
@@ -701,7 +837,7 @@ export default function AutoWaste() {
                   submitStatusMap[st] === "error" ? "border-red-500/20" : ""
                 }`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{STATION_ICONS[st]}</span>
+                    <StationIcon station={st} className="w-4 h-4 text-[#9CA3AF]" />
                     <span className={`text-xs font-medium ${
                       submitStatusMap[st] === "success" ? "text-green-400" :
                       submitStatusMap[st] === "uploading" ? "text-[#4FD1FF]" :
@@ -710,14 +846,14 @@ export default function AutoWaste() {
                     }`}>{st}</span>
                   </div>
                   <div className="text-xs">
-                    {submitStatusMap[st] === "success" && <span className="text-green-400">✅</span>}
+                    {submitStatusMap[st] === "success" && <span className="text-green-400">OK</span>}
                     {submitStatusMap[st] === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-[#4FD1FF]" />}
                     {submitStatusMap[st] === "error" && (
                       <span className="text-red-400 flex items-center gap-1">
-                        ❌ <span className="text-[9px] max-w-[100px] truncate">{stationErrors[st]}</span>
+                        ERR <span className="text-[9px] max-w-[100px] truncate">{stationErrors[st]}</span>
                       </span>
                     )}
-                    {submitStatusMap[st] === "pending" && <span className="text-[#9CA3AF]">⏳</span>}
+                    {submitStatusMap[st] === "pending" && <span className="text-[#9CA3AF]">...</span>}
                   </div>
                 </div>
               ))}
@@ -730,13 +866,13 @@ export default function AutoWaste() {
         {/* User Identity Badge */}
         <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#9CA3AF] font-mono">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">
-            <span className="text-[#4FD1FF]/70">👤</span>
-            <span className="text-[#9CA3AF]">{qcName || "—"}</span>
+            <span className="text-[#4FD1FF]/70">User</span>
+            <span className="text-[#9CA3AF]">{qcName || "-"}</span>
             <span className="text-[#2A2D37] mx-0.5">|</span>
-            <span className="text-[#4FD1FF]/70">🏪</span>
-            <span className="text-[#9CA3AF]">{tenantName || "—"}</span>
+            <span className="text-[#4FD1FF]/70">Store</span>
+            <span className="text-[#9CA3AF]">{tenantName || "-"}</span>
             <span className="text-[#2A2D37] mx-0.5">|</span>
-            <span className="text-[#4FD1FF]/70">🌐</span>
+            <span className="text-[#4FD1FF]/70">IP</span>
             <span className="text-[#9CA3AF]">{clientIP}</span>
           </div>
         </div>
@@ -747,7 +883,7 @@ export default function AutoWaste() {
             <div className="hidden lg:flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">AUTO WASTE</h2>
-                <span className="text-sm text-[#9CA3AF]">Fast Mode • Batch Submit</span>
+                <span className="text-sm text-[#9CA3AF]">Fast Mode - Batch Submit</span>
               </div>
             </div>
 
@@ -755,7 +891,7 @@ export default function AutoWaste() {
             <div className={CLAY_CARD}>
               <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 <div className="space-y-1.5">
-                  <label className={LABEL}>📅 Tanggal</label>
+                  <label className={LABEL}>Tanggal</label>
                   <input
                     type="date"
                     value={selectedDate}
@@ -764,7 +900,7 @@ export default function AutoWaste() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className={LABEL}>🏪 Resto</label>
+                  <label className={LABEL}>Resto</label>
                   <div className={`${CLAY_INPUT} flex items-center font-medium`}>
                     {storeName || 'Loading...'}
                   </div>
@@ -775,7 +911,7 @@ export default function AutoWaste() {
             {/* ---- Card 2: Station picker ---- */}
             <div className={CLAY_CARD}>
               <div className="flex items-center justify-between mb-3">
-                <label className={LABEL}>🏭 Station</label>
+                <label className={LABEL}>Station</label>
                 <button
                   onClick={toggleAllStations}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
@@ -799,10 +935,12 @@ export default function AutoWaste() {
                         : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-[#4FD1FF]/20 hover:text-[#E5E7EB] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
                     }`}
                   >
-                    <div className="text-xl lg:text-3xl">{STATION_ICONS[st]}</div>
+                    <div className="flex justify-center">
+                      <StationIcon station={st} className="w-6 h-6 lg:w-8 lg:h-8" />
+                    </div>
                     <div className="text-[10px] lg:text-sm font-bold mt-0.5 lg:mt-1">{st}</div>
                     {selectedStations.includes(st) && (
-                      <div className="text-[8px] text-[#4FD1FF]/80 mt-0.5">✓</div>
+                      <div className="text-[8px] text-[#4FD1FF]/80 mt-0.5">OK</div>
                     )}
                   </button>
                 ))}
@@ -818,9 +956,9 @@ export default function AutoWaste() {
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-xl">🧪</span>
+                    <span className="text-xl">TS</span>
                     <span className="text-sm lg:text-base font-bold">TESTER</span>
-                    {testerEnabled && <span className="text-[8px] text-amber-400/80">✓</span>}
+                    {testerEnabled && <span className="text-[8px] text-amber-400/80">OK</span>}
                   </div>
                   <p className="text-[9px] lg:text-[10px] mt-1 opacity-70">QC Checklist Bahan</p>
                 </button>
@@ -831,7 +969,7 @@ export default function AutoWaste() {
                 <div className="mt-3 p-4 rounded-xl bg-[#1A1C22] border border-amber-500/15 space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-amber-400 flex items-center gap-2">
-                      🧪 Checklist Tester
+                      Tester Checklist
                     </h3>
                     <button
                       onClick={() => {
@@ -850,7 +988,7 @@ export default function AutoWaste() {
                       }`}
                     >
                       <CheckCheck className="w-3 h-3" />
-                      {testerAllChecked ? "Semua ✓" : "Centang Semua"}
+                      {testerAllChecked ? "Semua OK" : "Centang Semua"}
                     </button>
                   </div>
 
@@ -871,7 +1009,7 @@ export default function AutoWaste() {
                           className="w-4 h-4 rounded border-[rgba(79,209,255,0.2)] bg-[#1A1C22] text-amber-500 focus:ring-amber-500/30 accent-amber-500"
                         />
                         <span className={`text-sm ${checked ? "text-green-400" : "text-[#E5E7EB]"}`}>
-                          {checked ? "☑️" : "◻️"} {item}
+                          {checked ? "[x]" : "[ ]"} {item}
                         </span>
                       </label>
                     ))}
@@ -880,7 +1018,7 @@ export default function AutoWaste() {
                   {/* Kendala textarea - show when NOT all checked */}
                   {!testerAllChecked && (
                     <div className="space-y-1.5">
-                      <label className="text-xs text-amber-400 font-medium">⚠️ Jelaskan kendala:</label>
+                      <label className="text-xs text-amber-400 font-medium">Jelaskan kendala:</label>
                       <textarea
                         value={testerKendala}
                         onChange={e => setTesterKendala(e.target.value)}
@@ -897,8 +1035,8 @@ export default function AutoWaste() {
                       : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
                   }`}>
                     {testerAllChecked
-                      ? "✅ Semua sisa bahan dan produk AMAN & Approved."
-                      : `⚠️ Ada kendala: ${testerKendala || "(belum diisi)"}`
+                      ? "OK: Semua sisa bahan dan produk aman dan approved."
+                      : `Warning: Ada kendala: ${testerKendala || "(belum diisi)"}`
                     }
                   </div>
                 </div>
@@ -906,12 +1044,12 @@ export default function AutoWaste() {
 
               {selectedStations.length > 0 && (
                 <p className="text-[10px] lg:text-xs text-[#4FD1FF]/70 text-center mt-3">
-                  {selectedStations.length} station dipilih{testerEnabled ? " + Tester" : ""} — data akan disubmit terpisah per station
+                  {selectedStations.length} station dipilih{testerEnabled ? " + Tester" : ""} - data akan disubmit terpisah per station
                 </p>
               )}
               {selectedStations.length === 0 && testerEnabled && (
                 <p className="text-[10px] lg:text-xs text-amber-400/70 text-center mt-3">
-                  🧪 Tester only mode — checklist akan disubmit langsung
+                  Tester only mode - checklist akan disubmit langsung
                 </p>
               )}
             </div>
@@ -920,7 +1058,7 @@ export default function AutoWaste() {
             <div className={CLAY_CARD}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
                 <div className="space-y-1.5">
-                  <label className={LABEL}>🕐 Shift</label>
+                  <label className={LABEL}>Shift</label>
                   <select
                     value={selectedShift}
                     onChange={e => setSelectedShift(e.target.value as Shift)}
@@ -931,7 +1069,7 @@ export default function AutoWaste() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className={LABEL}>⏰ Jam Pemusnahan</label>
+                  <label className={LABEL}>Jam Pemusnahan</label>
                   <input
                     type="time"
                     value={jam}
@@ -946,7 +1084,7 @@ export default function AutoWaste() {
             <div className={CLAY_CARD}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
                 <div className="space-y-1.5">
-                  <label className={LABEL}>🔍 QC</label>
+                  <label className={LABEL}>QC</label>
                   <select
                     value={selectedQC}
                     onChange={e => setSelectedQC(e.target.value)}
@@ -958,12 +1096,12 @@ export default function AutoWaste() {
                   {selectedQC && signatureUrls[selectedQC] && (
                     <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
                       <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                      <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
+                      <span className="text-[10px] lg:text-xs text-green-400">OK TTD udah ada</span>
                     </div>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <label className={LABEL}>👔 Manajer</label>
+                  <label className={LABEL}>Manajer</label>
                   <select
                     value={selectedManajer}
                     onChange={e => setSelectedManajer(e.target.value)}
@@ -975,7 +1113,7 @@ export default function AutoWaste() {
                   {selectedManajer && signatureUrls[selectedManajer] && (
                     <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
                       <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                      <span className="text-[10px] lg:text-xs text-green-400">✓ TTD udah ada</span>
+                      <span className="text-[10px] lg:text-xs text-green-400">OK TTD udah ada</span>
                     </div>
                   )}
                 </div>
@@ -1002,8 +1140,8 @@ export default function AutoWaste() {
               className={CLAY_BTN_PRIMARY}
             >
               {selectedStations.length === 0 && testerEnabled
-                ? "Gas, Submit Tester →"
-                : `Gas, Paste Data Item (${selectedStations.length} Station${testerEnabled ? " + Tester" : ""}) →`
+                ? "Gas, Submit Tester ->"
+                : `Gas, Pilih Item Waste (${selectedStations.length} Station${testerEnabled ? " + Tester" : ""}) ->`
               }
             </Button>
           </div>
@@ -1013,91 +1151,52 @@ export default function AutoWaste() {
         {step === "paste" && (
           <div className="space-y-4 w-full">
             <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent mb-1 lg:mb-2">📋 Paste Data Item</h2>
+              <h2 className="text-lg lg:text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent mb-1 lg:mb-2">Pilih Item Waste</h2>
               <p className="text-xs lg:text-sm text-[#9CA3AF]">
-                {selectedShift} • {selectedDate} • {selectedStations.length} station
+                {selectedShift} - {selectedDate} - {selectedStations.length} station
               </p>
             </div>
 
-            {/* Format reference card */}
             <div className={CLAY_CARD}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs lg:text-sm font-bold text-[#4FD1FF]">📝 Format tiap baris</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyTemplate}
-                  className="text-xs text-[#4FD1FF] hover:text-[#4FD1FF] h-6 px-2"
-                >
-                  <Copy className="w-3 h-3 mr-1" /> Copy
-                </Button>
+              <div className="space-y-2">
+                <p className="text-xs lg:text-sm font-bold text-[#4FD1FF]">Rules input</p>
+                <ul className="space-y-1 text-[11px] lg:text-sm text-[#9CA3AF]">
+                  <li>- Item dipilih dari dropdown dan cuma bisa 1x per station.</li>
+                  <li>- Kode lot otomatis pakai tanggal input.</li>
+                  <li>- KULIT PANGSIT, SURAI NAGA, PENTOL, dan MIE POLOS pakai pick date manual.</li>
+                  <li>- LAINNYA wajib isi nama item dan satuan manual.</li>
+                </ul>
               </div>
-              <pre className="text-[11px] lg:text-sm text-[#9CA3AF] font-sans leading-relaxed">{
-`- NAMA PRODUK (KODE LOT): QTY SATUAN ALASAN
-
-Contoh:
-- Mie Goreng (2025-03-09): 5 PCS Expired
-- Dimsum Ayam (2025-03-09): 3 PACK Rusak`
-              }</pre>
             </div>
 
-            {/* Per-station textareas */}
-            {selectedStations.map(station => (
+            {selectedStations.map((station) => (
               <div key={station} className={CLAY_CARD}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">{STATION_ICONS[station]}</span>
-                  <span className="text-sm lg:text-base font-bold text-[#E5E7EB]">{station}</span>
-                  {rawTexts[station].trim() && (
-                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20">ada data</span>
-                  )}
-                </div>
-                <div className="relative">
-                  <textarea
-                    value={rawTexts[station]}
-                    onChange={e => {
-                      setRawTexts(prev => ({ ...prev, [station]: e.target.value }));
-                      setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
-                    }}
-                    placeholder={`Paste item ${station} di sini...\n\n- Mie Goreng (2025-03-09): 5 PCS Expired\n- Bakso Ikan (2025-03-09): 2 PACK Rusak`}
-                    className={`w-full h-36 lg:h-56 px-4 py-3 lg:px-5 lg:py-4 bg-[#1A1C22] border border-[rgba(79,209,255,0.12)] rounded-xl text-[#E5E7EB] font-sans text-sm lg:text-base shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] focus:border-[#4FD1FF]/30 focus:ring-1 focus:ring-[#4FD1FF]/15 outline-none transition-all resize-none placeholder:text-[#9CA3AF]`}
-                  />
-                  {rawTexts[station] && (
-                    <button
-                      onClick={() => {
-                        setRawTexts(prev => ({ ...prev, [station]: "" }));
-                        setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
-                      }}
-                      className="absolute top-2 right-2 p-1 text-[#9CA3AF] hover:text-[#E5E7EB] transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <StationIcon station={station} className="w-5 h-5 text-[#9CA3AF]" />
+                    <span className="text-sm lg:text-base font-bold text-[#E5E7EB]">{station}</span>
+                    {stationDraftRowsMap[station].length > 0 && (
+                      <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20">
+                        {stationDraftRowsMap[station].length} item
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addDraftRow(station)}
+                    className={`${CLAY_BTN_OUTLINE} h-8 px-3 text-xs text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> Tambah Item
+                  </Button>
                 </div>
 
-                {/* Per-station paste button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      const text = await navigator.clipboard.readText();
-                      setRawTexts(prev => ({ ...prev, [station]: text }));
-                      toast({ title: "📋 Pasted!", description: `Teks clipboard ke-paste ke ${station}`, variant: "success" as any });
-                    } catch {
-                      toast({ title: "⚠️ Gagal", description: "Ga bisa akses clipboard. Paste manual ya.", variant: "warning" as any });
-                    }
-                  }}
-                  className={`w-full mt-2 ${CLAY_BTN_OUTLINE} h-8 text-xs text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
-                >
-                  <ClipboardPaste className="w-3 h-3 mr-1" /> Paste dari Clipboard ke {station}
-                </Button>
-
-                {/* Parse errors for this station */}
                 {parseErrorsMap[station].length > 0 && (
-                  <div className="mt-2 p-3 rounded-xl border border-red-500/20 bg-[#1A1C22] space-y-1">
+                  <div className="mb-3 p-3 rounded-xl border border-red-500/20 bg-[#1A1C22] space-y-1">
                     <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
                       <AlertTriangle className="w-3 h-3" />
-                      <span>{station} — Error ({parseErrorsMap[station].length})</span>
+                      <span>{station} - Error ({parseErrorsMap[station].length})</span>
                     </div>
                     {parseErrorsMap[station].map((err, i) => (
                       <p key={i} className="text-[10px] text-red-300">
@@ -1107,16 +1206,131 @@ Contoh:
                     ))}
                   </div>
                 )}
+
+                {stationDraftRowsMap[station].length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[rgba(79,209,255,0.16)] px-4 py-6 text-center text-sm text-[#9CA3AF]">
+                    Belum ada item dipilih untuk {station}.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {stationDraftRowsMap[station].map((row, index) => {
+                      const option = getCatalogItem(station, row.optionValue);
+                      const availableOptions = getAvailableOptions(station, row.id);
+                      const isManual = Boolean(option?.manual);
+                      const needsManualLot = Boolean(option?.manualLot);
+
+                      return (
+                        <div key={row.id} className="rounded-xl border border-[rgba(79,209,255,0.10)] bg-[#1A1C22] p-3 lg:p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-[#4FD1FF]">Item {index + 1}</p>
+                            <button
+                              type="button"
+                              onClick={() => removeDraftRow(station, row.id)}
+                              className="inline-flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Hapus
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className={LABEL}>Item</label>
+                              <select
+                                value={row.optionValue}
+                                onChange={(e) => updateDraftRow(station, row.id, {
+                                  optionValue: e.target.value,
+                                  kodeLot: selectedDate,
+                                  manualName: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualName : "",
+                                  manualUnit: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualUnit : "",
+                                })}
+                                className={CLAY_SELECT}
+                              >
+                                <option value="">-- Pilih item --</option>
+                                {availableOptions.map((item) => (
+                                  <option key={item.value} value={item.value}>{item.label}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className={LABEL}>Qty</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={row.qty}
+                                onChange={(e) => updateDraftRow(station, row.id, { qty: e.target.value })}
+                                className={CLAY_INPUT}
+                                placeholder="Masukkan qty"
+                              />
+                            </div>
+
+                            {isManual ? (
+                              <>
+                                <div className="space-y-1.5">
+                                  <label className={LABEL}>Nama Item Manual</label>
+                                  <input
+                                    type="text"
+                                    value={row.manualName}
+                                    onChange={(e) => updateDraftRow(station, row.id, { manualName: e.target.value })}
+                                    className={CLAY_INPUT}
+                                    placeholder="Contoh: SAMBAL KHUSUS"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className={LABEL}>Satuan Manual</label>
+                                  <input
+                                    type="text"
+                                    value={row.manualUnit}
+                                    onChange={(e) => updateDraftRow(station, row.id, { manualUnit: e.target.value })}
+                                    className={CLAY_INPUT}
+                                    placeholder="Contoh: PCS / GRAM"
+                                  />
+                                </div>
+                              </>
+                            ) : option?.unit ? (
+                              <div className="space-y-1.5">
+                                <label className={LABEL}>Satuan</label>
+                                <div className={`${CLAY_INPUT} flex items-center font-medium`}>{option.unit}</div>
+                              </div>
+                            ) : null}
+
+                            {needsManualLot && (
+                              <div className="space-y-1.5">
+                                <label className={LABEL}>Kode Lot / Pick Date</label>
+                                <input
+                                  type="date"
+                                  value={row.kodeLot}
+                                  onChange={(e) => updateDraftRow(station, row.id, { kodeLot: e.target.value })}
+                                  className={CLAY_INPUT}
+                                />
+                              </div>
+                            )}
+
+                            <div className={`space-y-1.5 ${needsManualLot ? "lg:col-span-1" : "lg:col-span-2"}`}>
+                              <label className={LABEL}>Alasan Waste</label>
+                              <input
+                                type="text"
+                                value={row.alasan}
+                                onChange={(e) => updateDraftRow(station, row.id, { alasan: e.target.value })}
+                                className={CLAY_INPUT}
+                                placeholder="Contoh: Expired, rusak, pecah, susut"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
 
-            {/* Parse all & proceed */}
             <Button
-              onClick={handleParseAll}
-              disabled={selectedStations.every(st => !rawTexts[st].trim())}
+              onClick={handlePrepareItems}
+              disabled={selectedStations.every(st => stationDraftRowsMap[st].length === 0)}
               className={CLAY_BTN_PRIMARY}
             >
-              <Zap className="w-4 h-4 mr-2" /> Parse & Cek Semua Station
+              <Zap className="w-4 h-4 mr-2" /> Cek Semua Station
             </Button>
           </div>
         )}
@@ -1125,9 +1339,9 @@ Contoh:
         {step === "preview" && (
           <div className="space-y-4 w-full">
             <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold text-green-400 mb-1 lg:mb-2">✅ Cek Data</h2>
+              <h2 className="text-lg lg:text-2xl font-bold text-green-400 mb-1 lg:mb-2">Cek Data</h2>
               <p className="text-xs lg:text-sm text-[#9CA3AF]">
-                {selectedStations.length} station • {totalItems} total item
+                {selectedStations.length} station - {totalItems} total item
               </p>
             </div>
 
@@ -1172,21 +1386,21 @@ Contoh:
               <div className={`${CLAY_CARD} border-amber-500/15`}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-9 h-9 rounded-lg bg-amber-500/[0.08] flex items-center justify-center">
-                    <span className="text-xl">🧪</span>
+                    <span className="text-xl">T</span>
                   </div>
                   <div>
                     <span className="text-base lg:text-lg font-bold text-amber-400">TESTER</span>
                     <span className="text-xs lg:text-sm text-[#9CA3AF] ml-2">QC Checklist</span>
                   </div>
-                  {testerSubmitStatus === 'success' && <span className="ml-auto text-green-400 text-xs">✅ Done</span>}
-                  {testerSubmitStatus === 'error' && <span className="ml-auto text-red-400 text-xs">❌ Error</span>}
+                  {testerSubmitStatus === 'success' && <span className="ml-auto text-green-400 text-xs">OK Done</span>}
+                  {testerSubmitStatus === 'error' && <span className="ml-auto text-red-400 text-xs">ERR Error</span>}
                 </div>
                 <div className="space-y-1.5">
                   {Object.entries(testerChecks).map(([item, checked]) => (
                     <div key={item} className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
                       checked ? "text-green-400 bg-green-500/[0.05]" : "text-red-400 bg-red-500/[0.05]"
                     }`}>
-                      <span>{checked ? "☑️" : "☐"}</span>
+                      <span>{checked ? "[x]" : "[ ]"}</span>
                       <span>{item}</span>
                     </div>
                   ))}
@@ -1197,8 +1411,8 @@ Contoh:
                     : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
                 }`}>
                   {testerAllChecked
-                    ? "✅ Semua sisa bahan dan produk AMAN & Approved."
-                    : `⚠️ Kendala: ${testerKendala || "(kosong)"}`
+                      ? "OK: Semua sisa bahan dan produk aman dan approved."
+                    : `Warning: Kendala: ${testerKendala || "(kosong)"}`
                   }
                 </div>
 
@@ -1211,7 +1425,7 @@ Contoh:
                 {/* Station header */}
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/[0.08] flex items-center justify-center">
-                    <span className="text-xl">{STATION_ICONS[station]}</span>
+                    <StationIcon station={station} className="w-5 h-5 text-[#6FBDE7]" />
                   </div>
                   <div>
                     <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
@@ -1224,9 +1438,9 @@ Contoh:
                       submitStatusMap[station] === "error" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
                       "bg-[#2A2D37] text-[#9CA3AF] border border-[rgba(79,209,255,0.06)]"
                     }`}>
-                      {submitStatusMap[station] === "uploading" ? "⏳ Uploading..." :
-                       submitStatusMap[station] === "success" ? "✅ Done" :
-                       submitStatusMap[station] === "error" ? "❌ Error" : "⏸ Waiting"}
+                      {submitStatusMap[station] === "uploading" ? "Uploading..." :
+                       submitStatusMap[station] === "success" ? "OK Done" :
+                       submitStatusMap[station] === "error" ? "ERR Error" : "Waiting"}
                     </span>
                   )}
                 </div>
@@ -1264,7 +1478,7 @@ Contoh:
                 {/* Documentation photos per station */}
                 <div className="mt-3 space-y-2">
                   <label className="text-xs lg:text-sm font-medium text-[#E5E7EB]">
-                    📸 Foto Dokumentasi {station} <span className="text-red-400">*wajib</span>
+                    Foto Dokumentasi {station} <span className="text-red-400">*wajib</span>
                   </label>
                   <MultiFileUpload
                     onFilesSelect={(files) => setDokumentasiFilesMap(prev => ({ ...prev, [station]: files }))}
@@ -1273,9 +1487,9 @@ Contoh:
                     label={`Foto ${station}`}
                   />
                   {dokumentasiFilesMap[station].length === 0 ? (
-                    <p className="text-[10px] text-red-400 flex items-center gap-1">⚠️ Minimal 1 foto untuk {station}</p>
+                    <p className="text-[10px] text-red-400 flex items-center gap-1">Warning: Minimal 1 foto untuk {station}</p>
                   ) : (
-                    <p className="text-[10px] text-green-400 flex items-center gap-1">✅ {dokumentasiFilesMap[station].length} foto siap</p>
+                    <p className="text-[10px] text-green-400 flex items-center gap-1">OK: {dokumentasiFilesMap[station].length} foto siap</p>
                   )}
                 </div>
               </div>
@@ -1292,7 +1506,10 @@ Contoh:
                 </div>
                 {selectedStations.filter(st => submitStatusMap[st] === "error").map(st => (
                   <div key={st} className="flex items-start gap-2 text-xs mb-1">
-                    <span className="text-red-500 font-bold">{STATION_ICONS[st]} {st}:</span>
+                    <span className="text-red-500 font-bold inline-flex items-center gap-1.5">
+                      <StationIcon station={st} className="w-3.5 h-3.5" />
+                      {st}:
+                    </span>
                     <span className="text-red-300">{stationErrors[st] || "Error tidak diketahui"}</span>
                   </div>
                 ))}
@@ -1337,9 +1554,9 @@ Contoh:
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
             <div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-green-400 mb-2">Semua Data Tersimpan! 🎉</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold text-green-400 mb-2">Semua Data Tersimpan!</h2>
               <p className="text-sm lg:text-base text-[#9CA3AF]">
-                {selectedStations.length} station — {selectedShift} udah ke-record
+                {selectedStations.length} station - {selectedShift} udah ke-record
               </p>
             </div>
 
@@ -1373,24 +1590,27 @@ Contoh:
 
               {testerEnabled && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[#E5E7EB]">🧪 TESTER</span>
+                  <span className="text-[#E5E7EB]">TESTER</span>
                   <span className={`text-xs font-bold ${
                     testerSubmitStatus === "success" ? "text-green-400" : testerSubmitStatus === "error" ? "text-red-400" : "text-[#9CA3AF]"
                   }`}>
                     {testerSubmitStatus === "success"
-                      ? (testerAllChecked ? "✅ AMAN" : "⚠️ Kendala")
-                      : testerSubmitStatus === "error" ? "❌ Error" : "—"}
+                      ? (testerAllChecked ? "OK AMAN" : "Warning Kendala")
+                      : testerSubmitStatus === "error" ? "ERR Error" : "-"}
                   </span>
                 </div>
               )}
 
               {selectedStations.map(station => (
                 <div key={station} className="flex items-center justify-between">
-                  <span className="text-[#E5E7EB]">{STATION_ICONS[station]} {station}</span>
+                  <span className="text-[#E5E7EB] inline-flex items-center gap-1.5">
+                    <StationIcon station={station} className="w-4 h-4" />
+                    {station}
+                  </span>
                   <span className={`text-xs font-bold ${
                     submitStatusMap[station] === "success" ? "text-green-400" : "text-red-400"
                   }`}>
-                    {submitStatusMap[station] === "success" ? `✅ ${parsedItemsMap[station].length} item` : "❌ Error"}
+                    {submitStatusMap[station] === "success" ? `OK ${parsedItemsMap[station].length} item` : "ERR Error"}
                   </span>
                 </div>
               ))}
@@ -1422,9 +1642,7 @@ Contoh:
         )}
       </main>
 
-      <div className="lg:hidden">
-        <Footer />
-      </div>
+      <Footer />
     </div>
   );
 }

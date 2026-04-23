@@ -11,12 +11,21 @@ interface R2Credentials {
   publicUrl: string;
 }
 
+// FIX #38: Cache S3Client per credential set to avoid creating new client per upload
+const clientCache = new Map<string, S3Client>();
+
 function createR2Client(creds: R2Credentials): S3Client {
-  return new S3Client({
+  const cacheKey = `${creds.accountId}:${creds.accessKeyId}`;
+  const cached = clientCache.get(cacheKey);
+  if (cached) return cached;
+  
+  const client = new S3Client({
     region: 'auto',
     endpoint: `https://${creds.accountId}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId: creds.accessKeyId, secretAccessKey: creds.secretAccessKey },
   });
+  clientCache.set(cacheKey, client);
+  return client;
 }
 
 function getDefaultR2Credentials(): R2Credentials {

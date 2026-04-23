@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext as useAuth } from "@/contexts/AuthContext";
 import { DesktopSidebar } from "@/components/ui/desktop-sidebar";
 import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 
@@ -15,7 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
+    <div className="min-h-screen flex bg-[#111318] text-[#E7ECF3]">
       {/* Sidebar - hidden on mobile, shown on desktop */}
       <DesktopSidebar
         qcName={qcName}
@@ -26,10 +26,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-[240px] min-h-screen flex flex-col bg-[#1A1C22] overflow-x-hidden">
+      <div className="flex-1 lg:ml-[248px] min-h-screen flex flex-col bg-[#111318] overflow-x-hidden">
         {children}
         {/* Spacer for mobile bottom nav */}
-        <div className="h-[72px] lg:hidden" />
+        <div className="h-[calc(92px+env(safe-area-inset-bottom))] lg:hidden" />
       </div>
 
       {/* Bottom nav - mobile only */}

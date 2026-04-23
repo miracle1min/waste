@@ -18,23 +18,26 @@ function normalizeMaskedSecrets(body: Record<string, any>): Record<string, any> 
   return cleaned;
 }
 
-// BUG-005 fix: Mask sensitive fields in API responses
+// FIX: Remove dead code (unreachable second return block)
 function maskConfig(config: any): any {
-  const maskedConfig = {
+  return {
     ...config,
     google_sheets_credentials: config.google_sheets_credentials ? MASKED_SECRET : "",
     r2_secret_access_key: config.r2_secret_access_key ? MASKED_SECRET : "",
     has_sheets_creds: !!config.google_sheets_credentials,
     has_r2_secret: !!config.r2_secret_access_key,
   };
-  return maskedConfig;
-  return {
-    ...config,
-    google_sheets_credentials: config.google_sheets_credentials ? "••••••••" : "",
-    r2_secret_access_key: config.r2_secret_access_key ? "••••••••" : "",
-    has_sheets_creds: !!config.google_sheets_credentials,
-    has_r2_secret: !!config.r2_secret_access_key,
-  };
+}
+
+// FIX #17: Validate DB URL format to prevent SSRF via arbitrary database protocol
+function isValidNeonUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (parsed.protocol === 'postgresql:' || parsed.protocol === 'postgres:') &&
+      (parsed.hostname.endsWith('.neon.tech') || parsed.hostname.endsWith('.aws.neon.tech'));
+  } catch {
+    return false;
+  }
 }
 
 export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
@@ -57,8 +60,9 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
 
       // Database management actions
       if (body.action === "db-test") {
-        // BUG-007 fix: Only allow testing with preconfigured DB URLs, not arbitrary ones
         if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
+        // FIX #17: Validate URL format to prevent SSRF
+        if (!isValidNeonUrl(body.db_url)) return res.status(400).json({ error: "URL database tidak valid. Hanya Neon PostgreSQL yang diizinkan." });
         const result = await testConnection(body.db_url);
         return res.json(result);
       }
@@ -67,6 +71,7 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
       if (body.action === "seed-tenant-db") {
         if (!body.db_url) return res.status(400).json({ error: "URL database wajib diisi!" });
         if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
+        if (!isValidNeonUrl(body.db_url)) return res.status(400).json({ error: "URL database tidak valid. Hanya Neon PostgreSQL yang diizinkan." });
         const result = await seedTenantDatabase(body.db_url, body.tenant_id);
         return res.json(result);
       }
@@ -75,6 +80,7 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
       if (body.action === "migrate-tenant-db") {
         if (!body.db_url) return res.status(400).json({ error: "URL database target wajib diisi!" });
         if (!body.tenant_id) return res.status(400).json({ error: "tenant_id wajib diisi!" });
+        if (!isValidNeonUrl(body.db_url)) return res.status(400).json({ error: "URL database tidak valid. Hanya Neon PostgreSQL yang diizinkan." });
         const sourceUrl = process.env.NEON_DATABASE_URL;
         if (!sourceUrl) return res.status(500).json({ error: "Database source belum dikonfigurasi." });
         const result = await migrateToTenantDb(sourceUrl, body.db_url, body.tenant_id);
@@ -83,6 +89,7 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
 
       if (body.action === "db-seed") {
         if (!body.target_url) return res.status(400).json({ error: "URL database target wajib diisi!" });
+        if (!isValidNeonUrl(body.target_url)) return res.status(400).json({ error: "URL database tidak valid. Hanya Neon PostgreSQL yang diizinkan." });
         const sourceUrl = process.env.NEON_DATABASE_URL;
         if (!sourceUrl) return res.status(500).json({ error: "Database source belum dikonfigurasi." });
         const result = await seedDatabase(sourceUrl, body.target_url);

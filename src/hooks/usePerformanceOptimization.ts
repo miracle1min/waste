@@ -157,15 +157,21 @@ export function useImagePreloader(imageUrls: string[]) {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (imageUrls.length === 0) return;
+
+    let cancelled = false;
+    const images: HTMLImageElement[] = [];
+
     const loadImage = (url: string): Promise<void> => {
       return new Promise((resolve) => {
         const img = new Image();
+        images.push(img);
         img.onload = () => {
-          setLoadedImages(prev => new Set(prev).add(url));
+          if (!cancelled) setLoadedImages(prev => new Set(prev).add(url));
           resolve();
         };
         img.onerror = () => {
-          setFailedImages(prev => new Set(prev).add(url));
+          if (!cancelled) setFailedImages(prev => new Set(prev).add(url));
           resolve();
         };
         img.src = url;
@@ -177,10 +183,15 @@ export function useImagePreloader(imageUrls: string[]) {
       await Promise.all(promises);
     };
 
-    if (imageUrls.length > 0) {
-      preloadImages();
-    }
-  }, [imageUrls]);
+    preloadImages();
+
+    // FIX #32: Cleanup to prevent state updates on unmounted component
+    return () => {
+      cancelled = true;
+      images.forEach(img => { img.onload = null; img.onerror = null; });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(imageUrls)]);
 
   return {
     loadedImages,

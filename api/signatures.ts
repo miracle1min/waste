@@ -80,6 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ success: true, signatures, personnel });
   } catch (err: any) {
     console.error('Signatures API error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Server error' });
+    // SEC-FIX: Don't leak internal error details to client
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
   }
 }

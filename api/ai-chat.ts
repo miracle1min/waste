@@ -16,12 +16,14 @@ function formatDateToTab(date: Date): string {
   return `${d}/${m}/${y}`;
 }
 
+// FIX: Use proper WIB timezone via Intl instead of manual UTC offset
 function getWIBDate(): Date {
   const now = new Date();
-  const wib = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const wibStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+  const wib = new Date(wibStr);
   // Business date cutoff at 05:00 WIB
-  if (wib.getUTCHours() < 5) {
-    wib.setUTCDate(wib.getUTCDate() - 1);
+  if (wib.getHours() < 5) {
+    wib.setDate(wib.getDate() - 1);
   }
   return wib;
 }
@@ -48,12 +50,12 @@ interface DaySummary {
   shiftTotals: Record<string, number>;
 }
 
-// Parse tab name "DD/MM/YY" to Date
+// FIX #21: Parse tab name "DD/MM/YY" to Date using UTC to avoid timezone issues
 function parseTabToDate(tab: string): Date | null {
   const match = tab.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
   if (!match) return null;
   const [, day, month, year] = match;
-  return new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+  return new Date(Date.UTC(2000 + parseInt(year), parseInt(month) - 1, parseInt(day)));
 }
 
 async function fetchWasteData(
@@ -431,8 +433,9 @@ interface GeminiMessage {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // SEC-FIX: Restrict CORS to known origin instead of wildcard
+  const allowedOrigin = process.env.CORS_ORIGIN || 'https://gacoanku.my.id';
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-tenant-id');
   if (req.method === 'OPTIONS') return res.status(200).end();

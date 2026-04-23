@@ -129,9 +129,19 @@ export async function apiFetch(
 
   for (let attempt = 0; attempt <= (config.maxRetries || 0); attempt++) {
     try {
-      // Add timeout via AbortController
+      // FIX #28: Combine caller's signal with timeout signal instead of overriding
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+      
+      // If caller provided a signal, abort our controller when their signal aborts
+      const callerSignal = options.signal;
+      if (callerSignal) {
+        if (callerSignal.aborted) {
+          controller.abort();
+        } else {
+          callerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+        }
+      }
       
       const response = await fetch(url, { 
         ...fetchOptions, 

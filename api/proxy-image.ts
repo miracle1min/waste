@@ -59,7 +59,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(response.status).json({ error: 'Failed to fetch image' });
     }
 
+    // FIX #37: Limit proxied image size to prevent memory exhaustion (max 5MB)
+    const contentLength = response.headers.get('content-length');
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+      return res.status(413).json({ error: 'Image too large (max 5MB)' });
+    }
+
     const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > MAX_SIZE) {
+      return res.status(413).json({ error: 'Image too large (max 5MB)' });
+    }
     const base64 = buffer.toString('base64');
     const contentType = response.headers.get('content-type') || 'image/png';
 

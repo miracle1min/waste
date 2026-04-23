@@ -5,14 +5,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { LoginForm } from "@/components/ui/login-form";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import React, { Suspense } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-const Analytics = React.lazy(() => import("@vercel/analytics/react").then(m => ({ default: m.Analytics })));
-const SpeedInsights = React.lazy(() => import("@vercel/speed-insights/react").then(m => ({ default: m.SpeedInsights })));
 import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
-import { UpdateBanner } from "@/components/ui/update-banner";
 import { AppLayout } from "@/components/ui/app-layout";
+
+const Analytics = React.lazy(() => import("@vercel/analytics/react").then((m) => ({ default: m.Analytics })));
+const SpeedInsights = React.lazy(() => import("@vercel/speed-insights/react").then((m) => ({ default: m.SpeedInsights })));
 
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 const AutoWaste = React.lazy(() => import("@/pages/auto-waste"));
@@ -21,6 +21,58 @@ const AdminPanel = React.lazy(() => import("@/pages/admin-panel"));
 const PdfDownload = React.lazy(() => import("@/pages/pdf-download"));
 const Profile = React.lazy(() => import("@/pages/profile"));
 const AiAssistant = React.lazy(() => import("@/pages/ai-assistant"));
+
+type AppErrorBoundaryProps = {
+  children: React.ReactNode;
+};
+
+type AppErrorBoundaryState = {
+  hasError: boolean;
+  message: string;
+};
+
+class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
+  constructor(props: AppErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
+    return { hasError: true, message: error?.message || "Terjadi error tak terduga." };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("App crashed:", error, errorInfo);
+  }
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-6">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#171B22] p-6 text-center space-y-4">
+            <h2 className="text-xl font-semibold text-white">Aplikasi perlu dimuat ulang</h2>
+            <p className="text-sm text-[#9CA3AF]">
+              {this.state.message || "Halaman mengalami gangguan saat memuat data."}
+            </p>
+            <button
+              type="button"
+              onClick={this.handleReload}
+              className="w-full rounded-xl bg-[#26364A] py-2.5 text-sm font-medium text-white hover:brightness-110 transition"
+            >
+              Refresh Halaman
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function UserRouter() {
   return (
@@ -51,25 +103,22 @@ function AdminRouter() {
 }
 
 function AuthenticatedApp() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useAuthContext();
 
   return (
     <AppLayout>
       <main>
         <Toaster />
-        <UpdateBanner />
         {isSuperAdmin ? <AdminRouter /> : <UserRouter />}
       </main>
     </AppLayout>
   );
 }
 
-/** Animated logout screen */
 function LogoutScreen({ reason }: { reason?: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-6 animate-in fade-in duration-500">
-        {/* Animated lock icon */}
         <div className="relative mx-auto w-20 h-20">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 animate-pulse" />
           <div className="absolute inset-2 rounded-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center border border-yellow-500/30">
@@ -86,7 +135,6 @@ function LogoutScreen({ reason }: { reason?: string }) {
           )}
         </div>
 
-        {/* Animated progress bar */}
         <div className="w-48 mx-auto h-1 bg-gray-800 rounded-full overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full"
@@ -109,44 +157,52 @@ function LogoutScreen({ reason }: { reason?: string }) {
   );
 }
 
-function App() {
-  const { isAuthenticated, isLoading, isLoggingOut, logoutReason, login } = useAuth();
+function AppContent() {
+  const { isAuthenticated, isLoading, isLoggingOut, logoutReason, login } = useAuthContext();
 
   if (isLoading) {
     return (
-      <ThemeProvider defaultTheme="dark" storageKey="product-destruction-theme">
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <LoadingSpinner size="lg" text="Lagi loading..." />
-        </div>
-      </ThemeProvider>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoadingSpinner size="lg" text="Lagi loading..." />
+      </div>
     );
   }
 
   if (isLoggingOut) {
     return (
-      <ThemeProvider defaultTheme="dark" storageKey="product-destruction-theme">
+      <>
         <LogoutScreen reason={logoutReason} />
         <Toaster />
-      </ThemeProvider>
+      </>
     );
   }
 
   return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        {isAuthenticated ? (
+          <AuthenticatedApp />
+        ) : (
+          <LoginForm onLogin={login} />
+        )}
+        <PWAInstallPrompt />
+        <Suspense fallback={null}>
+          <Analytics />
+          <SpeedInsights />
+        </Suspense>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+function App() {
+  return (
     <ThemeProvider defaultTheme="dark" storageKey="product-destruction-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {isAuthenticated ? (
-            <AuthenticatedApp />
-          ) : (
-            <LoginForm onLogin={login} />
-          )}
-          <PWAInstallPrompt />
-          <Suspense fallback={null}>
-            <Analytics />
-            <SpeedInsights />
-          </Suspense>
-        </TooltipProvider>
-      </QueryClientProvider>
+      <AuthProvider>
+        <AppErrorBoundary>
+          <AppContent />
+        </AppErrorBoundary>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -40,7 +40,9 @@ export async function handlePersonnel(req: VercelRequest, res: VercelResponse) {
 
       case 'PUT': {
         const id = req.query.id as string;
-        const tenantId = (req.body?.tenant_id || req.query.tenant_id) as string;
+        // SEC-FIX: Use JWT-based tenant isolation for PUT, not client-provided tenant_id
+        const jwtPut = verifyToken(extractToken(req) || "");
+        const tenantId = jwtPut ? getAuthorizedTenantId(req, jwtPut) : (req.body?.tenant_id || req.query.tenant_id) as string;
         if (!id) return res.status(400).json({ success: false, message: 'id wajib diisi' });
         if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
         const { name, full_name, role, signature_url, status } = req.body || {};
@@ -65,7 +67,9 @@ export async function handlePersonnel(req: VercelRequest, res: VercelResponse) {
 
       case 'DELETE': {
         const delId = req.query.id as string;
-        const tenantId = (req.query.tenant_id || req.body?.tenant_id) as string;
+        // SEC-FIX: Use JWT-based tenant isolation for DELETE
+        const jwtDel = verifyToken(extractToken(req) || "");
+        const tenantId = jwtDel ? getAuthorizedTenantId(req, jwtDel) : (req.query.tenant_id || req.body?.tenant_id) as string;
         if (!delId) return res.status(400).json({ success: false, message: 'id wajib diisi' });
         if (!tenantId) return res.status(400).json({ success: false, message: 'tenant_id wajib diisi' });
         const rows = await tenantQuery(tenantId, 'DELETE FROM personnel WHERE id = $1 RETURNING id', [delId]);

@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// FIX: Lazy load toast to avoid circular dependency issues
+function showToast(title: string, description: string, variant: string = "destructive", duration: number = 4000) {
+  try {
+    import("@/hooks/use-toast").then(({ toast }) => {
+      toast({ title, description, variant: variant as any, duration });
+    });
+  } catch {}
+}
+
 // ========================
 // GLOBAL AUTH EVENT SYSTEM
 // ========================
@@ -129,15 +138,9 @@ export function useAuth() {
       };
       const msg = detail?.message || messages[detail?.reason] || "Sesi berakhir.";
 
-      // Show toast before logout if available
+      // FIX #18: Use lazy import instead of top-level import
       try {
-        const { toast } = require("@/hooks/use-toast");
-        toast({
-          title: "⏰ Sesi Berakhir",
-          description: msg,
-          variant: "warning" as any,
-          duration: 4000,
-        });
+        showToast("Sesi Berakhir", msg, "destructive", 4000);
       } catch {}
 
       // Perform logout after brief delay (let toast show)
@@ -172,14 +175,9 @@ export function useAuth() {
       if (remaining <= WARNING_BEFORE_EXPIRE && !warningShown.current) {
         warningShown.current = true;
         const minutesLeft = Math.ceil(remaining / 60000);
+        // FIX #18: Use lazy import instead of top-level import
         try {
-          const { toast } = require("@/hooks/use-toast");
-          toast({
-            title: "⚠️ Sesi Hampir Habis",
-            description: `Sisa ${minutesLeft} menit lagi. Gerakin mouse/klik untuk perpanjang sesi.`,
-            variant: "warning" as any,
-            duration: 10000,
-          });
+          showToast("Sesi Hampir Habis", `Sisa ${minutesLeft} menit lagi. Gerakin mouse/klik untuk perpanjang sesi.`, "destructive", 10000);
         } catch {}
       }
 

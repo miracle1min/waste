@@ -505,35 +505,41 @@ export default function PdfDownload() {
  const tenantName = localStorage.getItem("waste_app_tenant_name") || "";
  const userName = localStorage.getItem("waste_app_qc_name") || "User";
 
- // Fetch ALL available dates once
- useEffect(() => {
-   async function fetchDates() {
-     setLoading(true);
-     try {
-       const res = await apiFetch(`/api/dashboard-data`);
-       const json = await res.json();
-       if (json.success) {
-         const dates = json.availableDates || [];
-         setAvailableDates(dates);
-         if (dates.length > 0) {
-           const now = new Date();
-           const currentKey = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
-           const months = [...new Set(dates.map((d: string) => {
-             const parsed = parseTabDate(d);
-             if (!parsed) return '';
-             return `${parsed.getFullYear()}-${(parsed.getMonth()+1).toString().padStart(2,'0')}`;
-           }).filter(Boolean))]  as string[];
-           setSelectedMonth(months.includes(currentKey) ? currentKey : (months[months.length - 1] || ''));
-         }
-       }
-     } catch {
-       toast({ title: "Error", description: "Gagal load daftar tanggal", variant: "destructive" });
-     } finally {
-       setLoading(false);
-     }
-   }
-   fetchDates();
- }, []);
+  // Fetch ALL available dates once
+  useEffect(() => {
+    // FIX #33: Add AbortController to prevent state update on unmounted component
+    const controller = new AbortController();
+    async function fetchDates() {
+      setLoading(true);
+      try {
+        const res = await apiFetch(`/api/dashboard-data`, {}, { timeout: 30000 });
+        if (controller.signal.aborted) return;
+        const json = await res.json();
+        if (json.success) {
+          const dates = json.availableDates || [];
+          setAvailableDates(dates);
+          if (dates.length > 0) {
+            const now = new Date();
+            const currentKey = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+            const months = [...new Set(dates.map((d: string) => {
+              const parsed = parseTabDate(d);
+              if (!parsed) return '';
+              return `${parsed.getFullYear()}-${(parsed.getMonth()+1).toString().padStart(2,'0')}`;
+            }).filter(Boolean))]  as string[];
+            setSelectedMonth(months.includes(currentKey) ? currentKey : (months[months.length - 1] || ''));
+          }
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          toast({ title: "Error", description: "Gagal load daftar tanggal", variant: "destructive" });
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    fetchDates();
+    return () => controller.abort();
+  }, []);
 
  // Fetch signatures
  useEffect(() => {
@@ -614,7 +620,8 @@ export default function PdfDownload() {
    }
    setPdfGenerating(true);
    const dates = Array.from(selectedPdfDates).sort();
-   const storeName = localStorage.getItem('waste_app_store') || 'Store';
+    // FIX #12: Use correct localStorage key for store name
+    const storeName = localStorage.getItem('waste_app_tenant_name') || 'Store';
    let successCount = 0, failCount = 0, lastError = '';
    setPdfProgressNum({ current: 0, total: dates.length });
 

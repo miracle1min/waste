@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Pencil, Trash2, Save, X, Store, Users, Database, Loader2, Eye, EyeOff, RefreshCw, UserCheck, Shield, HardDrive, CheckCircle, AlertCircle, Zap, Upload } from "lucide-react";
 
 // ===== Types =====
@@ -11,18 +11,27 @@ interface Personnel { id: number; tenant_id: string; name: string; full_name: st
 interface TenantConfig { tenant_id: string; google_spreadsheet_id: string; google_sheets_credentials: string; r2_account_id: string; r2_access_key_id: string; r2_secret_access_key: string; r2_bucket_name: string; r2_public_url: string; updated_at: string; }
 
 // ===== API Helpers =====
-// BUG-004 fix: Use JWT token from localStorage instead of hardcoded x-user-role
+// FIX #14-15: Add error handling, use centralized auth headers, check res.ok
 async function api(url: string, method = "GET", body?: any) {
  const token = localStorage.getItem("waste_app_token") || "";
  const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
- const headers: Record<string, string> = {
- "Content-Type": "application/json",
- };
+ const headers: Record<string, string> = {};
  if (token) headers["Authorization"] = `Bearer ${token}`;
  if (tenantId) headers["x-tenant-id"] = tenantId;
+ // Only set Content-Type for requests with body
+ if (body) headers["Content-Type"] = "application/json";
  const opts: RequestInit = { method, headers };
  if (body) opts.body = JSON.stringify(body);
  const res = await fetch(url, opts);
+ // FIX: Check response status before parsing JSON
+ if (!res.ok) {
+   let errorMsg = `Server error (${res.status})`;
+   try {
+     const errData = await res.json();
+     errorMsg = errData.error || errData.message || errorMsg;
+   } catch {}
+   throw new Error(errorMsg);
+ }
  return res.json();
 }
 
@@ -911,11 +920,13 @@ function DatabaseTab() {
  const [switchResult, setSwitchResult] = useState<{ ok: boolean; message: string } | null>(null);
  const token = localStorage.getItem("waste_app_token") || "";
 
- const headers = {
- "Content-Type": "application/json",
- Authorization: `Bearer ${token}`,
- "x-user-role": "super_admin",
- };
+  // FIX #16: Remove hardcoded x-user-role header — role is validated server-side via JWT
+  const tenantId = localStorage.getItem("waste_app_tenant_id") || "";
+  const headers: Record<string, string> = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+  };
+  if (tenantId) headers["x-tenant-id"] = tenantId;
 
  async function handleTest() {
  if (!newDbUrl.trim()) { toast({ title: "⚠️ URL Kosong", description: "URL database wajib diisi dulu!", variant: "warning" as any }); return; };

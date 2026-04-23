@@ -84,10 +84,10 @@ const STATION_COLORS: Record<string, string> = {
 };
 
 const STATION_ICONS: Record<string, string> = {
-  NOODLE: "🍜",
-  DIMSUM: "🥟",
-  BAR: "🍹",
-  PRODUKSI: "🏭",
+  NOODLE: "ND",
+  DIMSUM: "DS",
+  BAR: "BR",
+  PRODUKSI: "PR",
 };
 
 const SHIFT_COLORS: Record<string, string> = {
@@ -300,7 +300,7 @@ export default function Dashboard() {
   // Time-based greeting
   const hour = new Date().getHours();
   const greeting = hour < 11 ? "Selamat Pagi" : hour < 15 ? "Selamat Siang" : hour < 18 ? "Selamat Sore" : "Selamat Malam";
-  const greetingEmoji = hour < 11 ? "☀️" : hour < 15 ? "🌤️" : hour < 18 ? "🌅" : "🌙";
+  const sessionLabel = hour < 11 ? "Pagi" : hour < 15 ? "Siang" : hour < 18 ? "Sore" : "Malam";
 
   // Compute trend (compare last 2 days qty)
   const trend = useMemo(() => {
@@ -314,9 +314,9 @@ export default function Dashboard() {
   }, [data]);
 
   return (
-    <div className="flex-1 bg-[#1A1C22] text-white flex flex-col">
-      {/* ═══════ DESKTOP HEADER ═══════ */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-3.5 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22]/95">
+    <div className="flex-1 bg-[#111318] text-white flex flex-col">
+      {/* Desktop Header */}
+      <div className="hidden lg:flex items-center gap-3 px-6 py-3.5 border-b border-white/8 bg-[#111318]/95">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4FD1FF]/20 to-[#9F7AEA]/20 border border-[#4FD1FF]/15 flex items-center justify-center">
           <LayoutDashboard className="w-4 h-4 text-[#4FD1FF]" />
         </div>
@@ -353,8 +353,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ═══════ MOBILE HEADER ═══════ */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(79,209,255,0.08)] bg-[#1A1C22] lg:hidden">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-[#111318] lg:hidden">
         <div className="w-full px-3 pt-2 pb-1.5 flex items-center justify-between desktop-header-container">
           <div className="flex items-center gap-2.5">
             <img src={wasteLogo} alt="AWAS" className="w-7 h-7 rounded-md" />
@@ -443,7 +443,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* ═══════ MAIN CONTENT ═══════ */}
+      {/* Main Content */}
       <main className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4 sm:py-5 space-y-4 sm:space-y-5 overflow-x-hidden desktop-container">
         {loading && <DashboardSkeleton />}
 
@@ -464,7 +464,7 @@ export default function Dashboard() {
 
         {data && !loading && (
           <>
-            {/* ═══════ HERO WELCOME BANNER ═══════ */}
+            {/* Hero Welcome Banner */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#23262F] via-[#1F2128] to-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[6px_6px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04)]">
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-[#4FD1FF]/[0.02] rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
@@ -475,13 +475,13 @@ export default function Dashboard() {
                   {/* Greeting */}
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{greetingEmoji}</span>
+                      <span className="rounded-full border border-[#4FD1FF]/16 bg-[#4FD1FF]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6FBDE7]">{sessionLabel}</span>
                       <h1 className="text-base sm:text-lg font-bold text-white">{greeting}, <span className="bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">{userName}</span></h1>
                     </div>
                     <p className="text-xs text-[#9CA3AF] flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
                       {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-                      <span className="text-[#4FD1FF]/40">•</span>
+                      <span className="text-[#4FD1FF]/40">|</span>
                       <span className="text-[#4FD1FF]/60">{rangeLabels[range]}</span>
                     </p>
                   </div>
@@ -494,8 +494,8 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider">Entry Terakhir</p>
-                        <p className="text-xs font-bold text-white truncate">{data.lastEntry.station} • {data.lastEntry.shift}</p>
-                        <p className="text-[10px] text-[#4FD1FF]/70">{data.lastEntry.date} — QC: {userName}</p>
+                        <p className="text-xs font-bold text-white truncate">{data.lastEntry.station} | {data.lastEntry.shift}</p>
+                        <p className="text-[10px] text-[#4FD1FF]/70">{data.lastEntry.date} | QC: {userName}</p>
                       </div>
                     </div>
                   )}
@@ -513,13 +513,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ═══════ SUMMARY STAT CARDS ═══════ */}
+            {/* Summary Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {[
                 { label: "Total Hari", value: data.summary.totalDays, icon: <Calendar className="w-4 h-4" />, gradient: "from-[#4FD1FF]/15 to-[#4FD1FF]/5", iconBg: "bg-[#4FD1FF]/10 border-[#4FD1FF]/15", textColor: "text-[#4FD1FF]" },
                 { label: "Total Item", value: data.summary.totalItems, icon: <Package className="w-4 h-4" />, gradient: "from-[#8b5cf6]/15 to-[#8b5cf6]/5", iconBg: "bg-[#8b5cf6]/10 border-[#8b5cf6]/15", textColor: "text-[#8b5cf6]" },
                 { label: "Total Qty", value: data.summary.totalQty, icon: <Boxes className="w-4 h-4" />, gradient: "from-[#f59e0b]/15 to-[#f59e0b]/5", iconBg: "bg-[#f59e0b]/10 border-[#f59e0b]/15", textColor: "text-[#f59e0b]" },
-                { label: "Rata² Qty/Hari", value: data.summary.avgQtyPerDay, icon: <Target className="w-4 h-4" />, gradient: "from-[#10b981]/15 to-[#10b981]/5", iconBg: "bg-[#10b981]/10 border-[#10b981]/15", textColor: "text-[#10b981]" },
+                { label: "Rata-rata Qty/Hari", value: data.summary.avgQtyPerDay, icon: <Target className="w-4 h-4" />, gradient: "from-[#10b981]/15 to-[#10b981]/5", iconBg: "bg-[#10b981]/10 border-[#10b981]/15", textColor: "text-[#10b981]" },
               ].map((card) => (
                 <div
                   key={card.label}
@@ -550,7 +550,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* ═══════ STATION DETAIL (PERIOD BREAKDOWN) ═══════ */}
+            {/* Station Detail (Period Breakdown) */}
             {data.periodBreakdown && (
               <Section
                 title="Waste per Station"
@@ -582,7 +582,7 @@ export default function Dashboard() {
                             : "text-[#9CA3AF] hover:text-[#9CA3AF]"
                         }`}
                       >
-                        📅
+                        CUS
                       </button>
                     </div>
                     {statPeriod === "custom" && (
@@ -640,7 +640,7 @@ export default function Dashboard() {
                             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[rgba(79,209,255,0.04)]">
                               <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: `${STATION_COLORS[station] || '#64748b'}15` }}>
-                                  {STATION_ICONS[station] || "📦"}
+                                  {STATION_ICONS[station] || "ST"}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
@@ -650,7 +650,7 @@ export default function Dashboard() {
                                       color: STATION_COLORS[station] || '#64748b'
                                     }}>#{idx + 1}</span>
                                   </div>
-                                  <p className="text-[10px] text-[#9CA3AF]">{stationItemCount} item • {pct}% dari total</p>
+                                  <p className="text-[10px] text-[#9CA3AF]">{stationItemCount} item | {pct}% dari total</p>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -714,7 +714,7 @@ export default function Dashboard() {
               </Section>
             )}
 
-            {/* ═══════ TREND CHART (AREA) ═══════ */}
+            {/* Trend Chart (Area) */}
             <Section
               title="Tren Waste Harian"
               icon={<TrendingUp className="w-4 h-4" />}
@@ -756,7 +756,7 @@ export default function Dashboard() {
               )}
             </Section>
 
-            {/* ═══════ STATION & SHIFT CHARTS ═══════ */}
+            {/* Station and Shift Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Station Bar Chart */}
               <Section title="Waste per Station" icon={<BarChart3 className="w-4 h-4" />} defaultOpen={true}>
@@ -823,7 +823,7 @@ export default function Dashboard() {
               </Section>
             </div>
 
-            {/* ═══════ STATION TREND (STACKED BAR) ═══════ */}
+            {/* Station Trend (Stacked Bar) */}
             <Section title="Tren per Station" icon={<Activity className="w-4 h-4" />}>
               {stationLineData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -843,14 +843,14 @@ export default function Dashboard() {
               )}
             </Section>
 
-            {/* ═══════ TOP PRODUCTS ═══════ */}
+            {/* Top Products */}
             <Section title="Top 10 Produk Waste" icon={<Trophy className="w-4 h-4" />}>
               {data.topProducts.length > 0 ? (
                 <div className="space-y-2">
                   {data.topProducts.map((p, i) => {
                     const maxQty = data.topProducts[0]?.qty || 1;
                     const pct = (p.qty / maxQty) * 100;
-                    const medals = ["🥇", "🥈", "🥉"];
+                    const medals = ["#1", "#2", "#3"];
                     return (
                       <div
                         key={i}
@@ -906,3 +906,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

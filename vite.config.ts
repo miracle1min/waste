@@ -113,6 +113,13 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      ignored: [
+        "**/.codex-temp/**",
+        "**/.vercel/**",
+        "**/dist/**",
+      ],
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3000",

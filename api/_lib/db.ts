@@ -162,17 +162,18 @@ export async function updateUser(id: number, data: Partial<User>, tenantId?: str
     return (rows[0] as User) || null;
   };
 
-  // If tenant specified, try tenant DB first
+  // FIX #22: If tenant specified, use tenant DB only — don't silently fall through to master
   if (tenantId && tenantId !== "ALL") {
     try {
       const result = await doUpdate((sql, params) => tenantQuery(tenantId, sql, params));
-      if (result) return result;
+      return result; // Return even if null (user not found in tenant DB)
     } catch (err) {
       console.error("Error updating in tenant DB:", err);
+      throw err; // Propagate error instead of silently falling through
     }
   }
 
-  // Fallback to master DB
+  // Only use master DB when no tenant specified
   const masterSql = getMasterSQL();
   return doUpdate(async (sql, params) => {
     const result = await masterSql(sql, params);
@@ -182,16 +183,18 @@ export async function updateUser(id: number, data: Partial<User>, tenantId?: str
 
 /** Delete user from correct DB */
 export async function deleteUser(id: number, tenantId?: string): Promise<boolean> {
+  // FIX #22: Don't silently fall through to master DB on tenant DB failure
   if (tenantId && tenantId !== "ALL") {
     try {
       const rows = await tenantQuery(tenantId, 'DELETE FROM users WHERE id = $1 RETURNING id', [id]);
-      if (rows.length) return true;
+      return rows.length > 0;
     } catch (err) {
       console.error("Error deleting from tenant DB:", err);
+      throw err; // Propagate error instead of silently falling through
     }
   }
 
-  // Fallback to master
+  // Only use master DB when no tenant specified
   const sql = getMasterSQL();
   const rows = await sql`DELETE FROM users WHERE id = ${id} RETURNING id`;
   return rows.length > 0;

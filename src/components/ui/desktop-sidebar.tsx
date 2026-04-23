@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, BarChart3, FileDown, User, Shield, LogOut, Sparkles } from "lucide-react";
+import { BarChart3, FileDown, LogOut, Shield, Sparkles, User, Zap } from "lucide-react";
 import wasteLogo from "@assets/waste-logo_1753322218969.webp";
 
 interface NavItem {
@@ -16,7 +16,13 @@ interface DesktopSidebarProps {
   isLoggingOut: boolean;
 }
 
-export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isLoggingOut }: DesktopSidebarProps) {
+export function DesktopSidebar({
+  qcName,
+  tenantName,
+  isSuperAdmin,
+  onLogout,
+  isLoggingOut,
+}: DesktopSidebarProps) {
   const [currentPath, setLocation] = useLocation();
 
   const userNavItems: NavItem[] = [
@@ -33,88 +39,90 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
   ];
 
   const navItems = isSuperAdmin ? adminNavItems : userNavItems;
+  const initial = qcName ? qcName.charAt(0).toUpperCase() : "U";
 
   return (
-    <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-[240px] z-40 bg-[#1A1C22] border-r border-[rgba(79,209,255,0.06)]">
-      {/* App Logo & Branding */}
-      <div className="px-5 pt-5 pb-4 border-b border-[rgba(79,209,255,0.06)]">
+    <aside className="fixed left-0 top-0 hidden h-screen w-[248px] flex-col border-r border-white/6 bg-[#11141A] lg:flex">
+      <div className="border-b border-white/6 px-5 pb-5 pt-6">
         <div className="flex items-center gap-3">
-          <img src={wasteLogo} alt="AWAS Logo" className="w-10 h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]" />
-          <div>
-            <h1 className="text-base font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent leading-tight">
-              AWAS
-            </h1>
-            <p className="text-[9px] text-[#9CA3AF] font-mono leading-tight">Aplikasi Waste Always Simple</p>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/8 bg-[#181C23]">
+            <img src={wasteLogo} alt="AWAS Logo" className="h-9 w-9 object-contain" />
           </div>
-        </div>
-        {tenantName && (
-          <p className="text-[10px] text-[#4FD1FF]/60 font-mono mt-2 truncate">{tenantName}</p>
-        )}
-      </div>
-
-      {/* User Info Section */}
-      <div className="px-4 py-3 border-b border-[rgba(79,209,255,0.06)]">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-[12px] bg-[#23262F]/60 border border-[rgba(79,209,255,0.06)] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-          <div className="w-7 h-7 rounded-full bg-[#23262F] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] flex items-center justify-center flex-shrink-0">
-            <span className="text-[10px] font-bold text-[#4FD1FF]">
-              {qcName ? qcName.charAt(0).toUpperCase() : "?"}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-mono text-[#E5E7EB] truncate">{qcName || "User"}</p>
-            {isSuperAdmin ? (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#9F7AEA]/20 text-[#9F7AEA] font-mono inline-flex items-center gap-0.5">
-                👑 Super Admin
-              </span>
-            ) : (
-              <span className="text-[9px] text-[#9CA3AF] font-mono">QC Staff</span>
-            )}
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-semibold tracking-[0.16em] text-white">AWAS</h1>
+            <p className="truncate text-[11px] text-[#8291A6]">Aplikasi Waste Always Simple</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+      <div className="border-b border-white/6 px-4 py-4">
+        <div className="rounded-2xl border border-white/6 bg-[#171B22] p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#202631] text-sm font-semibold text-[#6FBDE7]">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">{qcName || "User"}</p>
+              <p className="truncate text-xs text-[#8694A8]">
+                {isSuperAdmin ? "Super Admin" : tenantName || "Admin Store"}
+              </p>
+            </div>
+          </div>
+          {tenantName && !isSuperAdmin && (
+            <div className="mt-3 rounded-xl border border-white/6 bg-[#12161D] px-3 py-2 text-[11px] text-[#90A0B6]">
+              {tenantName}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.path;
+
           return (
             <button
-              key={item.path + item.label}
+              key={`${item.path}-${item.label}`}
               onClick={() => setLocation(item.path)}
-              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-left transition-all duration-200 ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
                 isActive
-                  ? "bg-[#23262F] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)] text-[#E5E7EB]"
-                  : "text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#23262F]/40"
+                  ? "bg-[#1B212B] text-white shadow-[inset_0_0_0_1px_rgba(79,209,255,0.14)]"
+                  : "text-[#8D9AAF] hover:bg-white/[0.03] hover:text-white"
               }`}
             >
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#4FD1FF] to-[#9F7AEA] shadow-[0_0_6px_rgba(79,209,255,0.3)]" />
-              )}
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#4FD1FF]" : "text-[#9CA3AF]"}`} />
-              <span className={`text-sm font-medium ${isActive ? "text-[#E5E7EB]" : ""}`}>{item.label}</span>
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                  isActive ? "bg-[#202938] text-[#6FBDE7]" : "bg-[#171B22] text-[#7E8DA2]"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium">{item.label}</span>
             </button>
           );
         })}
       </nav>
 
-      {/* Bottom Section */}
-      <div className="px-3 pb-4 pt-2 border-t border-[rgba(79,209,255,0.06)] space-y-2">
+      <div className="border-t border-white/6 px-3 py-4">
         <button
           onClick={onLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[12px] text-sm font-mono text-red-400/60 hover:text-red-400 hover:bg-red-500/5 border border-transparent hover:border-red-900/20 transition-all disabled:opacity-40"
+          className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[#D5DDE8] transition hover:bg-white/[0.03] disabled:opacity-60"
         >
-          {isLoggingOut ? (
-            <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <LogOut className="w-4 h-4" />
-          )}
-          {isLoggingOut ? "Keluar..." : "Logout"}
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#171B22] text-[#E58989]">
+            {isLoggingOut ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+          </div>
+          <span className="text-sm font-medium">{isLoggingOut ? "Keluar..." : "Logout"}</span>
         </button>
-        <div className="text-center space-y-0.5 pt-1">
-          <p className="text-[9px] font-mono text-[#9CA3AF]">v3.3.0</p>
-          <p className="text-[9px] text-[#9CA3AF]">Made with ☕ By ~/DirgaX</p>
+
+        <div className="mt-4 flex items-center justify-between px-1 text-[11px] text-[#6F7C8F]">
+          <span>v4.0.0</span>
+          <span>dark mode</span>
         </div>
       </div>
     </aside>

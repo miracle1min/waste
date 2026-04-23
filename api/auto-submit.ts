@@ -9,6 +9,20 @@ import { sendWhatsAppNotif } from './_lib/twilio-wa.js';
 
 export const config = { api: { bodyParser: false } };
 
+// SEC-FIX: Allowed MIME types for file uploads
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+]);
+const ALLOWED_PDF_TYPES = new Set(['application/pdf']);
+
+function isAllowedImageType(mimeType: string): boolean {
+  return ALLOWED_IMAGE_TYPES.has(mimeType.toLowerCase());
+}
+
+function isAllowedPdfType(mimeType: string): boolean {
+  return ALLOWED_PDF_TYPES.has(mimeType.toLowerCase());
+}
+
 // BUG-013 fix: Safe JSON parse
 function safeJsonParse(input: string | undefined, fallback: any[] = []): any[] {
   if (!input) return fallback;
@@ -49,7 +63,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ success: false, message: 'Only one PDF file is allowed' });
       }
 
-      const { buffer } = await fileToBuffer(pdfFile);
+      const { buffer, type: pdfMimeType } = await fileToBuffer(pdfFile);
+      // SEC-FIX: Validate PDF file type
+      if (!isAllowedPdfType(pdfMimeType)) {
+        return res.status(400).json({ success: false, message: 'Only PDF files are allowed for upload-pdf mode' });
+      }
       const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       const folder = `${tenantId}/pdf-reports`;
       const tenantCreds = await resolveTenantCredentials(tenantId);
@@ -76,7 +94,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { buffer, name, type } = await fileToBuffer(photoFile);
-      const folder = fields.folder || 'waste-management/dokumentasi';
+      // SEC-FIX: Validate image file type
+      if (!isAllowedImageType(type)) {
+        return res.status(400).json({ success: false, message: `File type "${type}" not allowed. Use JPEG, PNG, WebP, or GIF.` });
+      }
+      // SEC-FIX: Sanitize folder path to prevent path traversal
+      const rawFolder = fields.folder || 'waste-management/dokumentasi';
+      const folder = rawFolder.replace(/\.\./g, '').replace(/^\/+/, '');
       const url = await uploadToR2(buffer, name, type, folder, {
         accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
         secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
@@ -255,11 +279,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
     // Support pre-uploaded dokumentasi URLs
+    // SEC-FIX: Validate URLs to prevent injection of javascript: or data: URIs
     if (fields.dokumentasiUrls) {
       try {
         const preUploadedUrls = JSON.parse(fields.dokumentasiUrls);
         if (Array.isArray(preUploadedUrls)) {
-          dokumentasiUrls.push(...preUploadedUrls);
+          const safeUrls = preUploadedUrls.filter((u: unknown) =>
+            typeof u === 'string' && u.startsWith('https://')
+          );
+          dokumentasiUrls.push(...safeUrls);
         }
       } catch {}
     }

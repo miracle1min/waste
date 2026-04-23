@@ -22,14 +22,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  // FIX #26: Validate query params before check-duplicate
+  const parsedQuery = validate(getDayDataQuerySchema, req.query, res);
+  if (!parsedQuery) return;
+
   // If shift and station params present, handle as check-duplicate
-  const { date, shift, station } = req.query;
+  const { date, shift, station } = parsedQuery;
   if (date && shift && station) {
     return handleCheckDuplicate(req, res);
   }
-
-  const parsedQuery = validate(getDayDataQuerySchema, req.query, res);
-  if (!parsedQuery) return;
 
   // SEC-FIX: Require authentication
   let jwtPayload;

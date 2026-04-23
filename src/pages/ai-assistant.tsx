@@ -171,7 +171,8 @@ async function generateWastePdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 10;
-  const storeName = localStorage.getItem('waste_app_store') || dayData.storeName || '-';
+  // FIX #13: Use correct localStorage key for store name
+  const storeName = localStorage.getItem('waste_app_tenant_name') || dayData.storeName || '-';
 
   // Logo
   let logoImg: string | null = null;
@@ -523,6 +524,16 @@ export default function AiAssistant() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyPanelRef = useRef<HTMLDivElement>(null);
+
+  // FIX #31: Revoke all blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      setMessages(prev => {
+        prev.forEach(m => { if (m.pdfBlobUrl) URL.revokeObjectURL(m.pdfBlobUrl); });
+        return prev;
+      });
+    };
+  }, []);
 
   // ==================== CHAT HISTORY ====================
 

@@ -1,7 +1,29 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import crypto from "crypto";
 import { createToken, requireRole, handleAuthError, hashPassword } from "../_lib/auth.js";
 import { getMasterSQL } from "../_lib/tenant-db.js";
 import { createUser } from "../_lib/db.js";
+
+// SEC-FIX: Sign OAuth state parameter with HMAC to prevent forgery
+function signState(data: object): string {
+  const secret = process.env.JWT_SECRET || "fallback-secret";
+  const payload = Buffer.from(JSON.stringify(data)).toString("base64");
+  const sig = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 16);
+  return `${payload}.${sig}`;
+}
+
+function verifyState(state: string): object | null {
+  try {
+    const secret = process.env.JWT_SECRET || "fallback-secret";
+    const [payload, sig] = state.split(".");
+    if (!payload || !sig) return null;
+    const expectedSig = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 16);
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) return null;
+    return JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
 
 function decodeBase64Url(str: string): string {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -57,9 +79,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleCallback(req, res);
   }
 
-  // GET with action=setup → setup table
+  // GET with action=setup → setup table (requires super_admin)
   const action = req.query.action as string;
   if (action === "setup") {
+    try {
+      requireRole(req, "super_admin");
+    } catch (err) {
+      return handleAuthError(err, res);
+    }
     return handleSetup(req, res);
   }
 
@@ -84,7 +111,7 @@ async function handleRedirect(req: VercelRequest, res: VercelResponse) {
     const origin = `https://${req.headers.host || "gacoanku.my.id"}`;
     const redirectUri = `${origin}/api/auth/google`;
 
-    const state = Buffer.from(JSON.stringify({ tenant_id: tenantId })).toString("base64");
+    const state = signState({ tenant_id: tenantId });
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -120,13 +147,15 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
       return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Kode otorisasi tidak ditemukan.")}`);
     }
 
-    // Decode state
+    // SEC-FIX: Verify signed state parameter to prevent forgery
     let tenantId = "";
     if (stateParam) {
-      try {
-        const stateData = JSON.parse(Buffer.from(stateParam, "base64").toString("utf8"));
-        tenantId = stateData.tenant_id || "";
-      } catch {}
+      const stateData = verifyState(stateParam);
+      if (stateData && typeof stateData === "object" && "tenant_id" in stateData) {
+        tenantId = (stateData as any).tenant_id || "";
+      } else {
+        return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("State parameter tidak valid. Coba login ulang.")}`);
+      }
     }
 
     // Exchange code for tokens
@@ -178,10 +207,12 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
         return res.redirect(302, `${baseUrl}/?google_auth=error&message=${encodeURIComponent("Resto tidak ditemukan atau tidak aktif.")}`);
       }
 
-      // Generate username from email
+      // SEC-FIX: Generate unique username from email with suffix to prevent collision
       const emailPrefix = googleUser.email.split("@")[0].replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
-      const username = emailPrefix.substring(0, 50);
-      const displayName = googleUser.name || username;
+      const baseUsername = emailPrefix.substring(0, 45);
+      const suffix = Date.now().toString(36).slice(-4);
+      const username = `${baseUsername}_${suffix}`;
+      const displayName = googleUser.name || emailPrefix;
 
       // Create random password hash (user will login via Google, not password)
       const randomPass = hashPassword(crypto.randomUUID());
@@ -266,6 +297,12 @@ async function handlePostActions(req: VercelRequest, res: VercelResponse) {
   const action = req.body?.action || "link";
 
   if (action === "setup") {
+    // SEC-FIX: Setup also requires super_admin auth
+    try {
+      requireRole(req, "super_admin");
+    } catch (err) {
+      return handleAuthError(err, res);
+    }
     return handleSetup(req, res);
   }
 
@@ -334,7 +371,7 @@ async function handlePostActions(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true, message: "Google account linked successfully." });
   } catch (err: any) {
     console.error("Google link error:", err);
-    return res.status(500).json({ error: "Terjadi kesalahan: " + err.message });
+    return res.status(500).json({ error: "Terjadi kesalahan saat memproses Google account." });
   }
 }
 
@@ -354,7 +391,7 @@ async function handleListLinkedUsers(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true, data: rows });
   } catch (err: any) {
     console.error("Google list error:", err);
-    return res.status(500).json({ error: "Terjadi kesalahan: " + err.message });
+    return res.status(500).json({ error: "Terjadi kesalahan saat mengambil data Google users." });
   }
 }
 
@@ -400,6 +437,6 @@ async function handleSetup(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error("Google OAuth setup error:", err);
-    return res.status(500).json({ error: "Failed to create google_users table: " + err.message });
+    return res.status(500).json({ error: "Failed to create/update google_users table." });
   }
 }

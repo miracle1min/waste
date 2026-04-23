@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Building2, UserCog, Globe, UserCheck, KeyRound, Server,
   Activity, Shield, LogOut, Menu, MoreHorizontal, Loader2, Sparkles

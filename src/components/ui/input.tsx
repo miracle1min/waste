@@ -12,7 +12,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-[12px] bg-[#1A1C22] shadow-[inset_3px_3px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.03)] border border-[rgba(79,209,255,0.06)] px-3 py-2 text-base text-[#E5E7EB] ring-offset-[#1A1C22] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[#E5E7EB] placeholder:text-[#9CA3AF] transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4FD1FF]/20 focus-visible:border-[#4FD1FF]/30 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-10 w-full rounded-[14px] border border-white/8 bg-[#10141A] px-3 py-2 text-base text-[#E7ECF3] ring-offset-[#111318] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[#E7ECF3] placeholder:text-[#708096] transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4FD1FF]/20 focus-visible:border-[#4FD1FF]/30 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           isTextInput && "uppercase",
           className
         )}

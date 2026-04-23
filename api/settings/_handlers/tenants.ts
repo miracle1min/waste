@@ -5,6 +5,15 @@ import { requireRole, handleAuthError, verifyToken, extractToken } from "../../_
 import { logActivity, getClientIP } from "../../_lib/activity-logger.js";
 import { validate, createTenantSchema } from "../../_lib/validators.js";
 
+// FIX #11: Mask neon_database_url in responses to prevent credential exposure
+function maskTenant(tenant: any): any {
+  return {
+    ...tenant,
+    neon_database_url: tenant.neon_database_url ? "••••••••" : "",
+    has_own_db: !!tenant.neon_database_url,
+  };
+}
+
 export async function handleTenants(req: VercelRequest, res: VercelResponse) {
   try {
     // BUG-003 fix: Server-side JWT auth instead of trusting x-user-role header
@@ -16,7 +25,7 @@ export async function handleTenants(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === "GET") {
       const tenants = await getAllTenants();
-      return res.json({ tenants });
+      return res.json({ tenants: tenants.map(maskTenant) });
     }
     if (req.method === "POST") {
       const parsed = validate(createTenantSchema, req.body, res);
@@ -31,7 +40,7 @@ export async function handleTenants(req: VercelRequest, res: VercelResponse) {
       });
       const jwt = verifyToken(extractToken(req) || "");
       logActivity({ action: "CREATE_TENANT", category: "tenant", userId: jwt?.userId, username: jwt?.username || "", tenantId: parsed.id, tenantName: parsed.name, ipAddress: getClientIP(req), userAgent: req.headers["user-agent"] || "", details: { storeName: parsed.name }, status: "success" });
-      return res.json({ success: true, tenant });
+      return res.json({ success: true, tenant: maskTenant(tenant) });
     }
     if (req.method === "PUT") {
       const { id, ...data } = req.body || {};
@@ -40,7 +49,7 @@ export async function handleTenants(req: VercelRequest, res: VercelResponse) {
       if (!tenant) return res.status(404).json({ error: "Store ga ketemu!" });
       // Clear DB URL cache when tenant is updated
       clearTenantDbCache(id);
-      return res.json({ success: true, tenant });
+      return res.json({ success: true, tenant: maskTenant(tenant) });
     }
     if (req.method === "DELETE") {
       const id = (req.query.id || req.body?.id) as string;
