@@ -133,16 +133,16 @@ function createEmptyDraftRow(selectedDate: string): StationDraftRow {
   };
 }
 // ========================
-// REUSABLE CLAY STYLES
+// REUSABLE NEO BRUTALISM STYLES
 // ========================
-const CLAY_CARD = "rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,#181C23_0%,#14181F_100%)] p-4 shadow-[0_20px_56px_rgba(0,0,0,0.32)] lg:p-5";
-const CLAY_CARD_SM = "rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,#181C23_0%,#14181F_100%)] shadow-[0_16px_40px_rgba(0,0,0,0.28)]";
-const CLAY_INPUT = "w-full rounded-[16px] border border-white/8 bg-[#10141A] px-3 py-2.5 text-sm text-[#E7ECF3] outline-none transition focus:border-[#4FD1FF]/30 focus:ring-2 focus:ring-[#4FD1FF]/15 lg:px-4 lg:py-3 lg:text-base";
-const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#23262F] [&>option]:text-[#E5E7EB]`;
-const CLAY_BTN_PRIMARY = "w-full rounded-[18px] bg-[linear-gradient(180deg,#26364A_0%,#1D2939_100%)] py-5 text-base font-semibold text-white shadow-[0_20px_48px_rgba(0,0,0,0.3)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40 lg:py-6 lg:text-lg";
-const CLAY_BTN_OUTLINE = "border-white/10 bg-[#171B22] text-[#A8B5C7] shadow-[0_14px_36px_rgba(0,0,0,0.24)] transition hover:-translate-y-0.5 hover:bg-[#1D232D] hover:text-white";
-const LABEL = "text-[10px] font-sans uppercase tracking-[0.18em] text-[#7C8BA0] lg:text-xs";
-const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
+const CLAY_CARD = "rounded-xl border-2 border-[#2a2a2a] bg-[#111] p-4 shadow-[3px_3px_0px_#000] lg:p-5";
+const CLAY_CARD_SM = "rounded-xl border-2 border-[#2a2a2a] bg-[#111] shadow-[2px_2px_0px_#000]";
+const CLAY_INPUT = "w-full rounded-lg border-2 border-[#2a2a2a] bg-[#0d0d0d] px-3 py-2.5 text-sm text-[#f0f0f0] outline-none transition focus:border-[#FFE500] lg:px-4 lg:py-3 lg:text-base placeholder:text-[#444]";
+const CLAY_SELECT = `${CLAY_INPUT} appearance-none [&>option]:bg-[#1a1a1a] [&>option]:text-[#f0f0f0]`;
+const CLAY_BTN_PRIMARY = "w-full rounded-lg border-2 border-[#000] bg-[#FFE500] py-4 text-sm font-black text-black shadow-[3px_3px_0px_#000] transition-all hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed lg:py-5 lg:text-base";
+const CLAY_BTN_OUTLINE = "border-2 border-[#2a2a2a] bg-[#141414] text-[#888] shadow-[2px_2px_0px_#000] transition-all hover:border-[#444] hover:text-white hover:-translate-x-px hover:-translate-y-px hover:shadow-[3px_3px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none";
+const LABEL = "text-[10px] font-black uppercase tracking-widest text-[#555] lg:text-[11px]";
+const LABEL_MD = "text-xs lg:text-sm font-bold text-[#777]";
 
 // ========================
 // AUTO-SAVE (localStorage)
@@ -913,23 +913,23 @@ export default function AutoWaste() {
   // ========================
 
   return (
-    <div className="flex-1 bg-[#111318] flex flex-col text-[#E7ECF3]">
+    <div className="flex-1 bg-[#0a0a0a] flex flex-col text-[#f0f0f0]">
       {/* Desktop page title */}
-      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b border-white/8 bg-[#111318]">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/8 bg-[#171B22]">
-          <Zap className="w-5 h-5 text-[#4FD1FF]" />
+      <div className="hidden lg:flex items-center gap-3 px-6 py-4 border-b-2 border-[#1a1a1a] bg-[#0a0a0a]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-[#FFE500] bg-[#1a1a00] shadow-[2px_2px_0px_#000]">
+          <Zap className="w-4 h-4 text-[#FFE500]" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-white">Input Waste</h1>
-          <p className="text-xs text-[#7C8BA0]">Batch submit per shift</p>
+          <h1 className="text-base font-black text-white uppercase tracking-wide">Input Waste</h1>
+          <p className="text-[10px] text-[#555] font-bold uppercase tracking-widest">Batch submit per shift</p>
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-1.5 ml-auto">
           {(["config", "paste", "preview", "success"] as AutoStep[]).map((s, i) => (
             <div
               key={s}
-              className={`w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full transition-colors ${
-                step === s ? "bg-[#4FD1FF]" : 
-                (["config", "paste", "preview", "success"].indexOf(step) > i) ? "bg-[#4FD1FF]/40" : "bg-[#2A2D37]"
+              className={`w-2 h-2 rounded-sm transition-colors border ${
+                step === s ? "bg-[#FFE500] border-[#FFE500]" :
+                (["config", "paste", "preview", "success"].indexOf(step) > i) ? "bg-[#FFE500]/30 border-[#FFE500]/30" : "bg-[#222] border-[#333]"
               }`}
             />
           ))}
@@ -937,26 +937,24 @@ export default function AutoWaste() {
       </div>
 
       {/* Header - Mobile only */}
-      <header className="sticky top-0 z-50 border-b border-white/8 bg-[#111318] lg:hidden">
-        <div className="w-full px-4 py-2 flex items-center justify-between desktop-header-container">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/8 bg-[#171B22]">
-              <Zap className="w-4 h-4 text-[#4FD1FF]" />
+      <header className="sticky top-0 z-50 border-b-2 border-[#1a1a1a] bg-[#0a0a0a] lg:hidden">
+        <div className="w-full px-4 py-2.5 flex items-center justify-between desktop-header-container">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-[#FFE500] bg-[#1a1a00] shadow-[2px_2px_0px_#000]">
+              <Zap className="w-3.5 h-3.5 text-[#FFE500]" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-white">Input Waste</h1>
-              <p className="text-[10px] text-[#7C8BA0]">Batch submit per shift</p>
-              {tenantName && <p className="text-[10px] text-[#4FD1FF]/60 font-sans truncate">{tenantName}</p>}
+              <h1 className="text-sm font-black text-white uppercase tracking-wide">Input Waste</h1>
+              {tenantName && <p className="text-[9px] text-[#FFE500]/60 font-bold uppercase truncate">{tenantName}</p>}
             </div>
           </div>
-          {/* Step indicator */}
           <div className="flex items-center gap-1">
             {(["config", "paste", "preview", "success"] as AutoStep[]).map((s, i) => (
               <div
                 key={s}
-                className={`w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full transition-colors ${
-                  step === s ? "bg-[#4FD1FF]" : 
-                  (["config", "paste", "preview", "success"].indexOf(step) > i) ? "bg-[#4FD1FF]/40" : "bg-[#2A2D37]"
+                className={`w-1.5 h-1.5 rounded-sm transition-colors border ${
+                  step === s ? "bg-[#FFE500] border-[#FFE500]" :
+                  (["config", "paste", "preview", "success"].indexOf(step) > i) ? "bg-[#FFE500]/30 border-[#FFE500]/30" : "bg-[#222] border-[#333]"
                 }`}
               />
             ))}
@@ -966,81 +964,63 @@ export default function AutoWaste() {
 
       {/* ========== GLOBAL PROGRESS OVERLAY ========== */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-[100] bg-[#1A1C22] flex items-center justify-center p-6">
-          <div className="w-full max-w-sm space-y-6">
-            {/* Animated icon */}
+        <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center p-6">
+          <div className="w-full max-w-sm space-y-5">
             <div className="flex justify-center">
-              <div className={`w-20 h-20 rounded-full bg-[#4FD1FF]/10 border-2 border-[#4FD1FF]/20 flex items-center justify-center animate-pulse ${CLAY_CARD_SM}`}>
-                <Send className="w-8 h-8 text-[#4FD1FF]" />
+              <div className="w-16 h-16 rounded-xl border-2 border-[#FFE500] bg-[#1a1a00] flex items-center justify-center shadow-[4px_4px_0px_#000]">
+                <Send className="w-7 h-7 text-[#FFE500]" />
               </div>
             </div>
-
-            {/* Title */}
             <div className="text-center">
-              <h3 className="text-lg font-bold text-[#E5E7EB] mb-1">Mengirim Data...</h3>
-              <p className="text-xs text-[#9CA3AF]">Jangan tutup halaman ini</p>
+              <h3 className="text-base font-black text-white uppercase tracking-wide mb-1">Mengirim Data...</h3>
+              <p className="text-xs text-[#555] font-bold">Jangan tutup halaman ini</p>
             </div>
-
-            {/* Progress bar */}
-            <div className="space-y-2">
-              <div className="h-3 w-full bg-[#1A1C22] rounded-full overflow-hidden shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]">
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-full bg-[#1a1a1a] rounded-sm border border-[#2a2a2a] overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#4FD1FF] via-[#9F7AEA] to-[#9F7AEA] rounded-full transition-all duration-700 ease-out"
+                  className="h-full bg-[#FFE500] rounded-sm transition-all duration-700 ease-out"
                   style={{ width: `${globalProgress.percent}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#4FD1FF] font-sans font-bold">{globalProgress.percent}%</span>
-                <span className="text-[#9CA3AF]">
-                  Station {globalProgress.current}/{globalProgress.total}
-                </span>
+              <div className="flex items-center justify-between text-[10px] font-bold">
+                <span className="text-[#FFE500]">{globalProgress.percent}%</span>
+                <span className="text-[#555]">Station {globalProgress.current}/{globalProgress.total}</span>
               </div>
             </div>
-
-            {/* Current station status */}
             {globalProgress.currentStation && (
-              <div className={`${CLAY_CARD_SM} p-3 text-center`}>
+              <div className="rounded-lg border-2 border-[#2a2a2a] bg-[#111] p-2.5 text-center shadow-[2px_2px_0px_#000]">
                 <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#4FD1FF]" />
-                    <span className="text-sm text-[#E5E7EB] font-medium">
-                      {globalProgress.currentStation && (
-                        <StationIcon station={globalProgress.currentStation as Station} className="w-4 h-4 inline mr-1.5 align-[-2px]" />
-                      )}
-                      {globalProgress.currentStation}
-                    </span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FFE500]" />
+                  <span className="text-sm font-bold text-white">
+                    <StationIcon station={globalProgress.currentStation as Station} className="w-3.5 h-3.5 inline mr-1 align-[-2px]" />
+                    {globalProgress.currentStation}
+                  </span>
                 </div>
-                <p className="text-[10px] text-[#9CA3AF] mt-1">
-                  Upload {dokumentasiFilesMap[globalProgress.currentStation as Station]?.length || 0} foto + {parsedItemsMap[globalProgress.currentStation as Station]?.length || 0} item...
+                <p className="text-[10px] text-[#555] mt-1 font-bold">
+                  {dokumentasiFilesMap[globalProgress.currentStation as Station]?.length || 0} foto + {parsedItemsMap[globalProgress.currentStation as Station]?.length || 0} item
                 </p>
               </div>
             )}
-
-            {/* Station checklist */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {selectedStations.map((st) => (
-                <div key={st} className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all ${CLAY_CARD_SM} ${
-                  submitStatusMap[st] === "success" ? "border-green-500/20" :
-                  submitStatusMap[st] === "uploading" ? "border-[#4FD1FF]/20" :
-                  submitStatusMap[st] === "error" ? "border-red-500/20" : ""
+                <div key={st} className={`flex items-center justify-between px-3 py-1.5 rounded-lg border-2 transition-all ${
+                  submitStatusMap[st] === "success" ? "border-green-500/40 bg-green-500/5" :
+                  submitStatusMap[st] === "uploading" ? "border-[#FFE500]/40 bg-[#1a1a00]" :
+                  submitStatusMap[st] === "error" ? "border-red-500/40 bg-red-500/5" : "border-[#222] bg-[#111]"
                 }`}>
                   <div className="flex items-center gap-2">
-                    <StationIcon station={st} className="w-4 h-4 text-[#9CA3AF]" />
-                    <span className={`text-xs font-medium ${
+                    <StationIcon station={st} className="w-3.5 h-3.5 text-[#666]" />
+                    <span className={`text-xs font-bold ${
                       submitStatusMap[st] === "success" ? "text-green-400" :
-                      submitStatusMap[st] === "uploading" ? "text-[#4FD1FF]" :
-                      submitStatusMap[st] === "error" ? "text-red-400" :
-                      "text-[#9CA3AF]"
+                      submitStatusMap[st] === "uploading" ? "text-[#FFE500]" :
+                      submitStatusMap[st] === "error" ? "text-red-400" : "text-[#555]"
                     }`}>{st}</span>
                   </div>
-                  <div className="text-xs">
+                  <div className="text-xs font-bold">
                     {submitStatusMap[st] === "success" && <span className="text-green-400">OK</span>}
-                    {submitStatusMap[st] === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-[#4FD1FF]" />}
-                    {submitStatusMap[st] === "error" && (
-                      <span className="text-red-400 flex items-center gap-1">
-                        ERR <span className="text-[9px] max-w-[100px] truncate">{stationErrors[st]}</span>
-                      </span>
-                    )}
-                    {submitStatusMap[st] === "pending" && <span className="text-[#9CA3AF]">...</span>}
+                    {submitStatusMap[st] === "uploading" && <Loader2 className="w-3 h-3 animate-spin text-[#FFE500]" />}
+                    {submitStatusMap[st] === "error" && <span className="text-red-400">ERR</span>}
+                    {submitStatusMap[st] === "pending" && <span className="text-[#444]">...</span>}
                   </div>
                 </div>
               ))}
@@ -1051,34 +1031,34 @@ export default function AutoWaste() {
 
       <main className="flex-1 w-full px-4 sm:px-6 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
         {/* User Identity Badge - compact */}
-        <div className="flex items-center text-[9px] lg:text-[10px] text-[#9CA3AF] font-mono px-2 py-1 rounded-md bg-[#23262F] border border-[rgba(79,209,255,0.08)] w-fit">
-          <span className="text-[#4FD1FF]/60">{qcName || "-"}</span>
-          <span className="text-[#2A2D37] mx-1">|</span>
+        <div className="flex items-center text-[9px] text-[#555] font-mono px-2 py-1 rounded-md bg-[#111] border-2 border-[#1a1a1a] w-fit shadow-[1px_1px_0px_#000]">
+          <span className="text-[#FFE500]/60">{qcName || "-"}</span>
+          <span className="text-[#333] mx-1">|</span>
           <span>{tenantName || "-"}</span>
-          <span className="text-[#2A2D37] mx-1">|</span>
+          <span className="text-[#333] mx-1">|</span>
           <span>{clientIP}</span>
         </div>
 
         {/* ========== DRAFT RECOVERY BANNER ========== */}
         {showDraftBanner && pendingDraftRef.current && (
-          <div className={`${CLAY_CARD_SM} px-3 py-2.5 border-amber-500/20 flex items-center justify-between gap-3`}>
+          <div className="rounded-xl border-2 border-[#FFE500]/40 bg-[#1a1a00] px-3 py-2.5 flex items-center justify-between gap-3 shadow-[2px_2px_0px_#000]">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-amber-400">Ada draft tersimpan</p>
-              <p className="text-[10px] text-[#9CA3AF] truncate">
-                {pendingDraftRef.current.selectedShift || "?"} - {pendingDraftRef.current.selectedDate} - {pendingDraftRef.current.selectedStations.length} station
+              <p className="text-xs font-black text-[#FFE500] uppercase tracking-wide">Ada draft tersimpan</p>
+              <p className="text-[10px] text-[#888] truncate font-bold">
+                {pendingDraftRef.current.selectedShift || "?"} · {pendingDraftRef.current.selectedDate} · {pendingDraftRef.current.selectedStations.length} station
                 {pendingDraftRef.current.testerEnabled ? " + Tester" : ""}
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={restoreDraft}
-                className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/25 text-[10px] font-bold text-amber-400 hover:bg-amber-500/25 transition-colors"
+                className="px-3 py-1.5 rounded-lg border-2 border-[#FFE500] bg-[#FFE500] text-[10px] font-black text-black shadow-[2px_2px_0px_#000] hover:-translate-x-px hover:-translate-y-px hover:shadow-[3px_3px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
               >
                 Lanjutkan
               </button>
               <button
                 onClick={dismissDraft}
-                className="px-2 py-1.5 rounded-lg bg-[#23262F] border border-white/8 text-[10px] text-[#9CA3AF] hover:text-white transition-colors"
+                className="px-2 py-1.5 rounded-lg border-2 border-[#2a2a2a] bg-[#111] text-[10px] font-bold text-[#666] hover:border-[#444] hover:text-white transition-colors"
               >
                 Buang
               </button>
@@ -1089,11 +1069,11 @@ export default function AutoWaste() {
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
-            {/* Desktop: inline title with tagline */}
+            {/* Desktop: inline title */}
             <div className="hidden lg:flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">AUTO WASTE</h2>
-                <span className="text-sm text-[#9CA3AF]">Fast Mode - Batch Submit</span>
+                <h2 className="text-xl font-black text-white uppercase tracking-wide">AUTO WASTE</h2>
+                <span className="text-xs font-bold text-[#555] uppercase tracking-widest">Fast Mode</span>
               </div>
             </div>
 
@@ -1140,18 +1120,18 @@ export default function AutoWaste() {
 
             {/* ---- Card 2: Station picker ---- */}
             <div className={CLAY_CARD}>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2.5">
                 <label className={LABEL}>Station</label>
                 <button
                   onClick={toggleAllStations}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border-2 ${
                     allStationsSelected
-                      ? "bg-[#4FD1FF]/15 text-[#4FD1FF] border border-[#4FD1FF]/25 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
-                      : "bg-[#1A1C22] text-[#9CA3AF] border border-[rgba(79,209,255,0.12)] hover:border-[#4FD1FF]/25 hover:text-[#4FD1FF] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]"
+                      ? "bg-[#FFE500] border-[#000] text-black shadow-[2px_2px_0px_#000]"
+                      : "bg-[#141414] border-[#2a2a2a] text-[#666] hover:border-[#FFE500]/40 hover:text-[#FFE500]"
                   }`}
                 >
                   <CheckCheck className="w-3 h-3" />
-                  {allStationsSelected ? "Semua Dipilih" : "Pilih Semua"}
+                  {allStationsSelected ? "Semua" : "Pilih Semua"}
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-1.5 lg:gap-3">
@@ -1159,33 +1139,33 @@ export default function AutoWaste() {
                   <button
                     key={st}
                     onClick={() => toggleStation(st)}
-                    className={`p-2 lg:p-4 rounded-xl border-2 text-center transition-all duration-200 ${
+                    className={`p-2 lg:p-4 rounded-lg border-2 text-center transition-all ${
                       selectedStations.includes(st)
-                        ? "border-[#4FD1FF]/30 bg-[#4FD1FF]/10 text-[#4FD1FF] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
-                        : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-[#4FD1FF]/20 hover:text-[#E5E7EB] active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]"
+                        ? "border-[#FFE500] bg-[#1a1a00] text-[#FFE500] shadow-[2px_2px_0px_#000]"
+                        : "border-[#2a2a2a] bg-[#111] text-[#555] hover:border-[#444] hover:text-[#aaa] active:translate-x-0.5 active:translate-y-0.5"
                     }`}
                   >
-                    <StationIcon station={st} className="w-5 h-5 lg:w-7 lg:h-7 mx-auto" />
-                    <div className="text-[9px] lg:text-xs font-bold mt-0.5">{st}</div>
+                    <StationIcon station={st} className="w-5 h-5 lg:w-6 lg:h-6 mx-auto" />
+                    <div className="text-[9px] lg:text-[10px] font-black mt-0.5 uppercase">{st}</div>
                   </button>
                 ))}
               </div>
               {/* Tester toggle - compact inline */}
-              <div className="mt-2 pt-2 border-t border-[rgba(79,209,255,0.08)]">
+              <div className="mt-2 pt-2 border-t-2 border-[#1a1a1a]">
                 <button
                   onClick={() => setTesterEnabled(prev => !prev)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border transition-all duration-200 ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
                     testerEnabled
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                      : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-amber-500/20 hover:text-amber-300"
+                      ? "border-amber-500/50 bg-[#1a1200] text-amber-400 shadow-[2px_2px_0px_#000]"
+                      : "border-[#2a2a2a] bg-[#111] text-[#555] hover:border-[#444] hover:text-[#aaa]"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold">TESTER</span>
-                    <span className="text-[9px] opacity-70">QC Checklist</span>
+                    <span className="text-xs font-black uppercase tracking-wide">TESTER</span>
+                    <span className="text-[9px] font-bold text-[#555] uppercase">QC Checklist</span>
                   </div>
-                  <div className={`w-8 h-4 rounded-full transition-colors ${testerEnabled ? "bg-amber-500" : "bg-[#2A2D37]"} relative`}>
-                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${testerEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                  <div className={`w-8 h-4 rounded-sm border-2 transition-colors ${testerEnabled ? "bg-amber-500 border-amber-600" : "bg-[#1a1a1a] border-[#333]"} relative`}>
+                    <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-sm bg-white transition-transform ${testerEnabled ? "translate-x-3.5" : "translate-x-0.5"}`} />
                   </div>
                 </button>
               </div>
@@ -1733,13 +1713,13 @@ export default function AutoWaste() {
         {/* ========== STEP: SUCCESS ========== */}
         {step === "success" && (
           <div className="space-y-4 w-full text-center py-6">
-            <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-xl border-2 border-green-500 bg-green-500/10 flex items-center justify-center mx-auto shadow-[3px_3px_0px_#000]">
               <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
             <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-green-400 mb-1">Tersimpan!</h2>
-              <p className="text-xs lg:text-sm text-[#9CA3AF]">
-                {selectedStations.length} station - {selectedShift} ke-record
+              <h2 className="text-xl font-black text-white uppercase tracking-wide mb-1">Tersimpan!</h2>
+              <p className="text-xs font-bold text-[#555] uppercase tracking-widest">
+                {selectedStations.length} station · {selectedShift} ke-record
               </p>
             </div>
 

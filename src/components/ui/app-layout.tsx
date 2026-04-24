@@ -15,8 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#111318] text-[#E7ECF3]">
-      {/* Sidebar - hidden on mobile, shown on desktop */}
+    <div className="min-h-screen flex bg-[#0a0a0a] text-[#f0f0f0]">
       <DesktopSidebar
         qcName={qcName}
         tenantName={tenantName}
@@ -25,14 +24,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         isLoggingOut={isLoggingOut}
       />
 
-      {/* Main content area */}
-      <div className="flex-1 lg:ml-[248px] min-h-screen flex flex-col bg-[#111318] overflow-x-hidden">
+      <div className="flex-1 lg:ml-[240px] min-h-screen flex flex-col bg-[#0a0a0a] overflow-x-hidden">
         {children}
-        {/* Spacer for mobile bottom nav */}
-        <div className="h-[calc(92px+env(safe-area-inset-bottom))] lg:hidden" />
+        <div className="h-[calc(88px+env(safe-area-inset-bottom))] lg:hidden" />
       </div>
 
-      {/* Bottom nav - mobile only */}
       {!isSuperAdmin && <MobileBottomNav />}
     </div>
   );
