@@ -114,10 +114,13 @@ export default defineConfig({
   },
   server: {
     watch: {
+      usePolling: true,
+      interval: 1000,
       ignored: [
         "**/.codex-temp/**",
         "**/.vercel/**",
         "**/dist/**",
+        "**/node_modules/**",
       ],
     },
     proxy: {

@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
-import { useState, useEffect, useCallback, type ElementType } from "react";
-import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, CheckCheck, RefreshCw, WifiOff, ShieldAlert, ServerCrash, Plus, Trash2, Soup, Package, CupSoda, Factory } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, type ElementType } from "react";
+import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Send, Loader2, CheckCheck, RefreshCw, WifiOff, ShieldAlert, ServerCrash, Plus, Trash2, Soup, Package, CupSoda, Factory, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
@@ -145,6 +145,58 @@ const LABEL = "text-[10px] font-sans uppercase tracking-[0.18em] text-[#7C8BA0] 
 const LABEL_MD = "text-xs lg:text-sm font-medium text-[#9CA3AF]";
 
 // ========================
+// AUTO-SAVE (localStorage)
+// ========================
+const DRAFT_KEY = "waste_app_draft_v1";
+const DRAFT_DEBOUNCE = 800;
+const DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24h
+
+type DraftData = {
+  savedAt: number;
+  step: AutoStep;
+  selectedDate: string;
+  selectedShift: Shift | "";
+  selectedQC: string;
+  selectedManajer: string;
+  jam: string;
+  selectedStations: Station[];
+  stationDraftRowsMap: Record<Station, StationDraftRow[]>;
+  parsedItemsMap: Record<Station, ParsedItem[]>;
+  testerEnabled: boolean;
+  testerChecks: Record<string, boolean>;
+  testerKendala: string;
+};
+
+function saveDraftToStorage(data: DraftData) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
+}
+
+function loadDraftFromStorage(): DraftData | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const data: DraftData = JSON.parse(raw);
+    if (Date.now() - data.savedAt > DRAFT_MAX_AGE) {
+      localStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+}
+
+function clearDraftStorage() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+
+function hasMeaningfulDraft(d: DraftData): boolean {
+  const hasItems = d.selectedStations.some(
+    st => d.stationDraftRowsMap[st]?.length > 0
+  );
+  const hasConfig = !!(d.selectedShift || d.selectedQC || d.selectedManajer || d.jam);
+  return hasItems || (hasConfig && d.selectedStations.length > 0) || d.testerEnabled;
+}
+
+// ========================
 // MAIN COMPONENT
 // ========================
 
@@ -230,6 +282,32 @@ export default function AutoWaste() {
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
 
+  // Collapsible station sections (for paste & preview steps)
+  // Accordion behavior: only one station expanded at a time
+  const [expandedStations, setExpandedStations] = useState<Record<Station, boolean>>({
+    NOODLE: false, DIMSUM: false, BAR: false, PRODUKSI: false,
+  });
+  const toggleExpandStation = useCallback((station: Station) => {
+    setExpandedStations(prev => {
+      const isCurrentlyExpanded = prev[station];
+      // Collapse all, then toggle the clicked one
+      const allCollapsed: Record<Station, boolean> = { NOODLE: false, DIMSUM: false, BAR: false, PRODUKSI: false };
+      return { ...allCollapsed, [station]: !isCurrentlyExpanded };
+    });
+  }, []);
+  // Expand a specific station (and collapse others)
+  const focusStation = useCallback((station: Station) => {
+    setExpandedStations({ NOODLE: false, DIMSUM: false, BAR: false, PRODUKSI: false, [station]: true });
+  }, []);
+
+  // Collapsible preview station details
+  const [expandedPreviewStations, setExpandedPreviewStations] = useState<Record<Station, boolean>>({
+    NOODLE: false, DIMSUM: false, BAR: false, PRODUKSI: false,
+  });
+  const togglePreviewStation = useCallback((station: Station) => {
+    setExpandedPreviewStations(prev => ({ ...prev, [station]: !prev[station] }));
+  }, []);
+
   // Global progress state
   const [globalProgress, setGlobalProgress] = useState({
     current: 0,
@@ -238,6 +316,112 @@ export default function AutoWaste() {
     phase: "" as "uploading" | "processing" | "",
     percent: 0,
   });
+
+  // ========================
+  // AUTO-SAVE & RESTORE
+  // ========================
+  const draftRestoredRef = useRef(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const pendingDraftRef = useRef<DraftData | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Apply draft data to all state setters
+  const applyDraft = useCallback((d: DraftData) => {
+    const safeStep = d.step === "success" ? "config" : d.step;
+    setStep(safeStep);
+    setSelectedDate(d.selectedDate);
+    setSelectedShift(d.selectedShift);
+    setSelectedQC(d.selectedQC);
+    setSelectedManajer(d.selectedManajer);
+    setJam(d.jam);
+    setSelectedStations(d.selectedStations);
+    setStationDraftRowsMap(d.stationDraftRowsMap);
+    setParsedItemsMap(d.parsedItemsMap);
+    setTesterEnabled(d.testerEnabled);
+    setTesterChecks(d.testerChecks);
+    setTesterKendala(d.testerKendala);
+  }, []);
+
+  // Restore draft on mount (once)
+  // - Fresh draft (< 60s old) = auto-restore silently (user just navigated away and back)
+  // - Older draft = show banner and let user choose
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    const draft = loadDraftFromStorage();
+    if (!draft || !hasMeaningfulDraft(draft)) return;
+
+    const ageMs = Date.now() - draft.savedAt;
+    const isFresh = ageMs < 60_000; // < 60 seconds = in-app navigation
+
+    if (isFresh) {
+      // Auto-restore silently - user just switched tabs/pages
+      applyDraft(draft);
+    } else {
+      // Older draft - ask user
+      pendingDraftRef.current = draft;
+      setShowDraftBanner(true);
+    }
+  }, [applyDraft]);
+
+  const restoreDraft = useCallback(() => {
+    const d = pendingDraftRef.current;
+    if (!d) return;
+    applyDraft(d);
+    pendingDraftRef.current = null;
+    setShowDraftBanner(false);
+    toast({ title: "Draft Dipulihkan", description: "Data input sebelumnya berhasil dimuat." });
+  }, [applyDraft, toast]);
+
+  const dismissDraft = useCallback(() => {
+    pendingDraftRef.current = null;
+    setShowDraftBanner(false);
+    clearDraftStorage();
+  }, []);
+
+  // Auto-save: debounced write to localStorage on state change
+  useEffect(() => {
+    // Don't save during submit or on success (already submitted)
+    if (isSubmitting) return;
+    if (step === "success") return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const draft: DraftData = {
+        savedAt: Date.now(),
+        step,
+        selectedDate,
+        selectedShift,
+        selectedQC,
+        selectedManajer,
+        jam,
+        selectedStations,
+        stationDraftRowsMap,
+        parsedItemsMap,
+        testerEnabled,
+        testerChecks,
+        testerKendala,
+      };
+      if (hasMeaningfulDraft(draft)) {
+        saveDraftToStorage(draft);
+      }
+    }, DRAFT_DEBOUNCE);
+
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [step, selectedDate, selectedShift, selectedQC, selectedManajer, jam, selectedStations, stationDraftRowsMap, parsedItemsMap, testerEnabled, testerChecks, testerKendala, isSubmitting]);
+
+  // Warn before leaving page if there's unsaved data
+  useEffect(() => {
+    const hasData = selectedStations.some(st => stationDraftRowsMap[st].length > 0) || testerEnabled;
+    if (!hasData || step === "success") return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [selectedStations, stationDraftRowsMap, testerEnabled, step]);
 
   // FIX #29: Add selectedDate validation to configReady
   const configReady = selectedShift && selectedQC && selectedManajer && (selectedStations.length > 0 || testerEnabled) && jam && selectedDate;
@@ -533,6 +717,7 @@ export default function AutoWaste() {
         } catch {}
       }
       setStep("success");
+      clearDraftStorage();
       toast({ title: "Tester Berhasil", description: "Data tester berhasil disimpan" });
       return;
     }
@@ -666,6 +851,7 @@ export default function AutoWaste() {
 
     if (failCount === 0) {
       setStep("success");
+      clearDraftStorage();
       toast({
         title: "Semua Berhasil",
         description: `${stationsToSubmit.length} station berhasil disimpan`,
@@ -714,6 +900,7 @@ export default function AutoWaste() {
     setTesterKendala('');
     setTesterSubmitStatus('idle');
     setStep("config");
+    clearDraftStorage();
   }, []);
 
 
@@ -863,19 +1050,42 @@ export default function AutoWaste() {
       )}
 
       <main className="flex-1 w-full px-4 sm:px-6 py-5 lg:py-8 space-y-4 lg:space-y-6 desktop-narrow">
-        {/* User Identity Badge */}
-        <div className="flex items-center gap-2 text-[10px] lg:text-xs text-[#9CA3AF] font-mono">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#23262F] border border-[rgba(79,209,255,0.08)] shadow-[2px_2px_4px_rgba(0,0,0,0.3),-1px_-1px_3px_rgba(255,255,255,0.02)]">
-            <span className="text-[#4FD1FF]/70">User</span>
-            <span className="text-[#9CA3AF]">{qcName || "-"}</span>
-            <span className="text-[#2A2D37] mx-0.5">|</span>
-            <span className="text-[#4FD1FF]/70">Store</span>
-            <span className="text-[#9CA3AF]">{tenantName || "-"}</span>
-            <span className="text-[#2A2D37] mx-0.5">|</span>
-            <span className="text-[#4FD1FF]/70">IP</span>
-            <span className="text-[#9CA3AF]">{clientIP}</span>
-          </div>
+        {/* User Identity Badge - compact */}
+        <div className="flex items-center text-[9px] lg:text-[10px] text-[#9CA3AF] font-mono px-2 py-1 rounded-md bg-[#23262F] border border-[rgba(79,209,255,0.08)] w-fit">
+          <span className="text-[#4FD1FF]/60">{qcName || "-"}</span>
+          <span className="text-[#2A2D37] mx-1">|</span>
+          <span>{tenantName || "-"}</span>
+          <span className="text-[#2A2D37] mx-1">|</span>
+          <span>{clientIP}</span>
         </div>
+
+        {/* ========== DRAFT RECOVERY BANNER ========== */}
+        {showDraftBanner && pendingDraftRef.current && (
+          <div className={`${CLAY_CARD_SM} px-3 py-2.5 border-amber-500/20 flex items-center justify-between gap-3`}>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-amber-400">Ada draft tersimpan</p>
+              <p className="text-[10px] text-[#9CA3AF] truncate">
+                {pendingDraftRef.current.selectedShift || "?"} - {pendingDraftRef.current.selectedDate} - {pendingDraftRef.current.selectedStations.length} station
+                {pendingDraftRef.current.testerEnabled ? " + Tester" : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={restoreDraft}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/25 text-[10px] font-bold text-amber-400 hover:bg-amber-500/25 transition-colors"
+              >
+                Lanjutkan
+              </button>
+              <button
+                onClick={dismissDraft}
+                className="px-2 py-1.5 rounded-lg bg-[#23262F] border border-white/8 text-[10px] text-[#9CA3AF] hover:text-white transition-colors"
+              >
+                Buang
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ========== STEP: CONFIG ========== */}
         {step === "config" && (
           <div className="space-y-4 w-full">
@@ -887,10 +1097,10 @@ export default function AutoWaste() {
               </div>
             </div>
 
-            {/* ---- Card 1: Date & Resto ---- */}
+            {/* ---- Card 1: Date, Resto, Shift, Jam (merged compact) ---- */}
             <div className={CLAY_CARD}>
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-2.5 lg:gap-4">
+                <div className="space-y-1">
                   <label className={LABEL}>Tanggal</label>
                   <input
                     type="date"
@@ -899,11 +1109,31 @@ export default function AutoWaste() {
                     className={CLAY_INPUT}
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className={LABEL}>Resto</label>
-                  <div className={`${CLAY_INPUT} flex items-center font-medium`}>
+                  <div className={`${CLAY_INPUT} flex items-center font-medium text-xs lg:text-sm truncate`}>
                     {storeName || 'Loading...'}
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <label className={LABEL}>Shift</label>
+                  <select
+                    value={selectedShift}
+                    onChange={e => setSelectedShift(e.target.value as Shift)}
+                    className={CLAY_SELECT}
+                  >
+                    <option value="" disabled>-- Pilih --</option>
+                    {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className={LABEL}>Jam Pemusnahan</label>
+                  <input
+                    type="time"
+                    value={jam}
+                    onChange={e => setJam(e.target.value)}
+                    className={CLAY_INPUT}
+                  />
                 </div>
               </div>
             </div>
@@ -924,53 +1154,47 @@ export default function AutoWaste() {
                   {allStationsSelected ? "Semua Dipilih" : "Pilih Semua"}
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:gap-3">
+              <div className="grid grid-cols-4 gap-1.5 lg:gap-3">
                 {VALID_STATIONS.map(st => (
                   <button
                     key={st}
                     onClick={() => toggleStation(st)}
-                    className={`p-3 lg:p-5 rounded-xl border-2 text-center transition-all duration-200 ${
+                    className={`p-2 lg:p-4 rounded-xl border-2 text-center transition-all duration-200 ${
                       selectedStations.includes(st)
                         ? "border-[#4FD1FF]/30 bg-[#4FD1FF]/10 text-[#4FD1FF] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
-                        : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-[#4FD1FF]/20 hover:text-[#E5E7EB] shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                        : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-[#4FD1FF]/20 hover:text-[#E5E7EB] active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]"
                     }`}
                   >
-                    <div className="flex justify-center">
-                      <StationIcon station={st} className="w-6 h-6 lg:w-8 lg:h-8" />
-                    </div>
-                    <div className="text-[10px] lg:text-sm font-bold mt-0.5 lg:mt-1">{st}</div>
-                    {selectedStations.includes(st) && (
-                      <div className="text-[8px] text-[#4FD1FF]/80 mt-0.5">OK</div>
-                    )}
+                    <StationIcon station={st} className="w-5 h-5 lg:w-7 lg:h-7 mx-auto" />
+                    <div className="text-[9px] lg:text-xs font-bold mt-0.5">{st}</div>
                   </button>
                 ))}
               </div>
-              {/* Tester toggle */}
-              <div className="mt-3 pt-3 border-t border-[rgba(79,209,255,0.08)]">
+              {/* Tester toggle - compact inline */}
+              <div className="mt-2 pt-2 border-t border-[rgba(79,209,255,0.08)]">
                 <button
                   onClick={() => setTesterEnabled(prev => !prev)}
-                  className={`w-full p-3 lg:p-4 rounded-xl border-2 text-center transition-all duration-200 ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border transition-all duration-200 ${
                     testerEnabled
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
-                      : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-amber-500/20 hover:text-amber-300 shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.02)]"
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                      : "border-[rgba(79,209,255,0.1)] bg-[#1A1C22] text-[#9CA3AF] hover:border-amber-500/20 hover:text-amber-300"
                   }`}
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xl">TS</span>
-                    <span className="text-sm lg:text-base font-bold">TESTER</span>
-                    {testerEnabled && <span className="text-[8px] text-amber-400/80">OK</span>}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold">TESTER</span>
+                    <span className="text-[9px] opacity-70">QC Checklist</span>
                   </div>
-                  <p className="text-[9px] lg:text-[10px] mt-1 opacity-70">QC Checklist Bahan</p>
+                  <div className={`w-8 h-4 rounded-full transition-colors ${testerEnabled ? "bg-amber-500" : "bg-[#2A2D37]"} relative`}>
+                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${testerEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </div>
                 </button>
               </div>
 
-              {/* Tester checklist section */}
+              {/* Tester checklist section - compact */}
               {testerEnabled && (
-                <div className="mt-3 p-4 rounded-xl bg-[#1A1C22] border border-amber-500/15 space-y-3">
+                <div className="mt-2 p-3 rounded-xl bg-[#1A1C22] border border-amber-500/15 space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-amber-400 flex items-center gap-2">
-                      Tester Checklist
-                    </h3>
+                    <h3 className="text-xs font-bold text-amber-400">Checklist</h3>
                     <button
                       onClick={() => {
                         const allChecked = Object.values(testerChecks).every(v => v);
@@ -981,62 +1205,55 @@ export default function AutoWaste() {
                           return updated;
                         });
                       }}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold transition-all ${
                         testerAllChecked
-                          ? "bg-amber-500/15 text-amber-400 border border-amber-500/25 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"
-                          : "bg-[#23262F] text-[#9CA3AF] border border-[rgba(79,209,255,0.12)] hover:border-amber-500/25 hover:text-amber-400"
+                          ? "bg-amber-500/15 text-amber-400 border border-amber-500/25"
+                          : "bg-[#23262F] text-[#9CA3AF] border border-[rgba(79,209,255,0.12)] hover:text-amber-400"
                       }`}
                     >
-                      <CheckCheck className="w-3 h-3" />
-                      {testerAllChecked ? "Semua OK" : "Centang Semua"}
+                      <CheckCheck className="w-2.5 h-2.5" />
+                      {testerAllChecked ? "All OK" : "All"}
                     </button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {Object.entries(testerChecks).map(([item, checked]) => (
                       <label
                         key={item}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-all ${
                           checked
                             ? "border-green-500/20 bg-green-500/[0.05]"
-                            : "border-[rgba(79,209,255,0.08)] bg-[#23262F] hover:border-amber-500/15"
+                            : "border-[rgba(79,209,255,0.08)] bg-[#23262F]"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => setTesterChecks(prev => ({ ...prev, [item]: !prev[item] }))}
-                          className="w-4 h-4 rounded border-[rgba(79,209,255,0.2)] bg-[#1A1C22] text-amber-500 focus:ring-amber-500/30 accent-amber-500"
+                          className="w-3.5 h-3.5 rounded accent-amber-500"
                         />
-                        <span className={`text-sm ${checked ? "text-green-400" : "text-[#E5E7EB]"}`}>
-                          {checked ? "[x]" : "[ ]"} {item}
-                        </span>
+                        <span className={`text-xs ${checked ? "text-green-400" : "text-[#E5E7EB]"}`}>{item}</span>
                       </label>
                     ))}
                   </div>
 
-                  {/* Kendala textarea - show when NOT all checked */}
                   {!testerAllChecked && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-amber-400 font-medium">Jelaskan kendala:</label>
-                      <textarea
-                        value={testerKendala}
-                        onChange={e => setTesterKendala(e.target.value)}
-                        placeholder="Jelaskan kendala yang ditemukan..."
-                        className={`${CLAY_INPUT} h-20 resize-none`}
-                      />
-                    </div>
+                    <textarea
+                      value={testerKendala}
+                      onChange={e => setTesterKendala(e.target.value)}
+                      placeholder="Jelaskan kendala..."
+                      className={`${CLAY_INPUT} h-14 resize-none text-xs`}
+                    />
                   )}
 
-                  {/* Result preview */}
-                  <div className={`px-3 py-2 rounded-lg text-xs font-medium ${
+                  <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium ${
                     testerAllChecked
                       ? "bg-green-500/[0.08] border border-green-500/15 text-green-400"
                       : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
                   }`}>
                     {testerAllChecked
-                      ? "OK: Semua sisa bahan dan produk aman dan approved."
-                      : `Warning: Ada kendala: ${testerKendala || "(belum diisi)"}`
+                      ? "OK: Semua aman dan approved."
+                      : `Kendala: ${testerKendala || "(belum diisi)"}`
                     }
                   </div>
                 </div>
@@ -1054,74 +1271,49 @@ export default function AutoWaste() {
               )}
             </div>
 
-            {/* ---- Card 3: Shift & Jam ---- */}
-            <div className={CLAY_CARD}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                <div className="space-y-1.5">
-                  <label className={LABEL}>Shift</label>
-                  <select
-                    value={selectedShift}
-                    onChange={e => setSelectedShift(e.target.value as Shift)}
-                    className={CLAY_SELECT}
-                  >
-                    <option value="" disabled>-- Pilih Shift --</option>
-                    {VALID_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className={LABEL}>Jam Pemusnahan</label>
-                  <input
-                    type="time"
-                    value={jam}
-                    onChange={e => setJam(e.target.value)}
-                    className={CLAY_INPUT}
-                  />
-                </div>
-              </div>
-            </div>
+            {/* Card 3 (Shift & Jam) merged into Card 1 above */}
 
-            {/* ---- Card 4: QC & Manajer ---- */}
+            {/* ---- Card 4: QC & Manajer (compact) ---- */}
             <div className={CLAY_CARD}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-2.5 lg:gap-4">
+                <div className="space-y-1">
                   <label className={LABEL}>QC</label>
                   <select
                     value={selectedQC}
                     onChange={e => setSelectedQC(e.target.value)}
                     className={CLAY_SELECT}
                   >
-                    <option value="" disabled>-- Pilih QC --</option>
+                    <option value="" disabled>-- Pilih --</option>
                     {validQC.map(q => <option key={q} value={q}>{q}</option>)}
                   </select>
                   {selectedQC && signatureUrls[selectedQC] && (
-                    <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
-                      <img src={signatureUrls[selectedQC]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                      <span className="text-[10px] lg:text-xs text-green-400">OK TTD udah ada</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <img src={signatureUrls[selectedQC]} alt="TTD" className="h-5 rounded bg-[#2A2D37] p-0.5" />
+                      <span className="text-[9px] text-green-400">OK</span>
                     </div>
                   )}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className={LABEL}>Manajer</label>
                   <select
                     value={selectedManajer}
                     onChange={e => setSelectedManajer(e.target.value)}
                     className={CLAY_SELECT}
                   >
-                    <option value="" disabled>-- Pilih Manajer --</option>
+                    <option value="" disabled>-- Pilih --</option>
                     {validManagers.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                   {selectedManajer && signatureUrls[selectedManajer] && (
-                    <div className="flex items-center gap-2 mt-1.5 p-2 rounded-lg bg-[#1A1C22] border border-[rgba(79,209,255,0.08)]">
-                      <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-6 lg:h-8 rounded bg-[#2A2D37] p-0.5" />
-                      <span className="text-[10px] lg:text-xs text-green-400">OK TTD udah ada</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <img src={signatureUrls[selectedManajer]} alt="TTD" className="h-5 rounded bg-[#2A2D37] p-0.5" />
+                      <span className="text-[9px] text-green-400">OK</span>
                     </div>
                   )}
                 </div>
               </div>
-
               {isLoadingSignatures && (
-                <p className="text-xs lg:text-sm text-[#9CA3AF] text-center flex items-center justify-center gap-1 mt-3">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Lagi ambil TTD...
+                <p className="text-[10px] text-[#9CA3AF] text-center flex items-center justify-center gap-1 mt-2">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading TTD...
                 </p>
               )}
             </div>
@@ -1130,18 +1322,21 @@ export default function AutoWaste() {
             <Button
               onClick={() => {
                 if (selectedStations.length === 0 && testerEnabled) {
-                  // Tester-only: skip paste/preview, go to preview directly
                   setStep("preview");
                 } else {
+                  // Auto-expand first station when entering paste step
+                  if (selectedStations.length > 0) {
+                    focusStation(selectedStations[0]);
+                  }
                   setStep("paste");
                 }
               }}
               disabled={!configReady}
-              className={CLAY_BTN_PRIMARY}
+              className="w-full rounded-[16px] bg-[linear-gradient(180deg,#26364A_0%,#1D2939_100%)] py-4 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.3)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40 lg:py-5 lg:text-base"
             >
               {selectedStations.length === 0 && testerEnabled
-                ? "Gas, Submit Tester ->"
-                : `Gas, Pilih Item Waste (${selectedStations.length} Station${testerEnabled ? " + Tester" : ""}) ->`
+                ? "Submit Tester ->"
+                : `Pilih Item (${selectedStations.length} Station${testerEnabled ? " + Tester" : ""}) ->`
               }
             </Button>
           </div>
@@ -1149,35 +1344,53 @@ export default function AutoWaste() {
 
         {/* ========== STEP: PASTE ========== */}
         {step === "paste" && (
-          <div className="space-y-4 w-full">
-            <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent mb-1 lg:mb-2">Pilih Item Waste</h2>
-              <p className="text-xs lg:text-sm text-[#9CA3AF]">
-                {selectedShift} - {selectedDate} - {selectedStations.length} station
-              </p>
+          <div className="space-y-3 w-full">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base lg:text-xl font-bold bg-gradient-to-r from-[#4FD1FF] to-[#9F7AEA] bg-clip-text text-transparent">Pilih Item Waste</h2>
+                <p className="text-[10px] lg:text-xs text-[#9CA3AF]">
+                  {selectedShift} - {selectedDate} - {selectedStations.length} station
+                </p>
+              </div>
+              <button
+                onClick={() => setStep("config")}
+                className="text-[10px] text-[#9CA3AF] hover:text-white flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3 h-3" /> Config
+              </button>
             </div>
 
-            <div className={CLAY_CARD}>
-              <div className="space-y-2">
-                <p className="text-xs lg:text-sm font-bold text-[#4FD1FF]">Rules input</p>
-                <ul className="space-y-1 text-[11px] lg:text-sm text-[#9CA3AF]">
-                  <li>- Item dipilih dari dropdown dan cuma bisa 1x per station.</li>
-                  <li>- Kode lot otomatis pakai tanggal input.</li>
-                  <li>- KULIT PANGSIT, SURAI NAGA, PENTOL, dan MIE POLOS pakai pick date manual.</li>
-                  <li>- LAINNYA wajib isi nama item dan satuan manual.</li>
-                </ul>
-              </div>
-            </div>
+            {/* Compact rules - collapsible */}
+            <details className={`${CLAY_CARD_SM} px-3 py-2`}>
+              <summary className="text-[10px] lg:text-xs font-bold text-[#4FD1FF] cursor-pointer select-none">Info rules input</summary>
+              <ul className="mt-1.5 space-y-0.5 text-[10px] lg:text-xs text-[#9CA3AF]">
+                <li>- Item dropdown, 1x per station</li>
+                <li>- Lot otomatis = tanggal input</li>
+                <li>- KULIT PANGSIT, SURAI NAGA, PENTOL, MIE POLOS = pick date manual</li>
+                <li>- LAINNYA = isi nama & satuan manual</li>
+              </ul>
+            </details>
 
             {selectedStations.map((station) => (
-              <div key={station} className={CLAY_CARD}>
-                <div className="flex items-center justify-between gap-3 mb-3">
+              <div key={station} className={CLAY_CARD_SM}>
+                {/* Collapsible station header */}
+                <button
+                  type="button"
+                  onClick={() => toggleExpandStation(station)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 lg:px-4 lg:py-3"
+                >
                   <div className="flex items-center gap-2">
-                    <StationIcon station={station} className="w-5 h-5 text-[#9CA3AF]" />
-                    <span className="text-sm lg:text-base font-bold text-[#E5E7EB]">{station}</span>
+                    {expandedStations[station] ? <ChevronDown className="w-4 h-4 text-[#4FD1FF]" /> : <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />}
+                    <StationIcon station={station} className="w-4 h-4 text-[#9CA3AF]" />
+                    <span className="text-sm font-bold text-[#E5E7EB]">{station}</span>
                     {stationDraftRowsMap[station].length > 0 && (
-                      <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20">
+                      <span className="text-[9px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md border border-green-500/20">
                         {stationDraftRowsMap[station].length} item
+                      </span>
+                    )}
+                    {parseErrorsMap[station].length > 0 && (
+                      <span className="text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/20">
+                        {parseErrorsMap[station].length} error
                       </span>
                     )}
                   </div>
@@ -1185,141 +1398,137 @@ export default function AutoWaste() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => addDraftRow(station)}
-                    className={`${CLAY_BTN_OUTLINE} h-8 px-3 text-xs text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
+                    onClick={(e) => { e.stopPropagation(); addDraftRow(station); focusStation(station); }}
+                    className={`${CLAY_BTN_OUTLINE} h-7 px-2 text-[10px] text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> Tambah Item
+                    <Plus className="w-3 h-3 mr-0.5" /> Add
                   </Button>
-                </div>
+                </button>
 
-                {parseErrorsMap[station].length > 0 && (
-                  <div className="mb-3 p-3 rounded-xl border border-red-500/20 bg-[#1A1C22] space-y-1">
-                    <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
-                      <AlertTriangle className="w-3 h-3" />
-                      <span>{station} - Error ({parseErrorsMap[station].length})</span>
-                    </div>
-                    {parseErrorsMap[station].map((err, i) => (
-                      <p key={i} className="text-[10px] text-red-300">
-                        {err.line > 0 && <span className="text-red-500">Baris {err.line}: </span>}
-                        {err.message}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                {/* Collapsible content */}
+                {expandedStations[station] && (
+                  <div className="px-3 pb-3 lg:px-4 lg:pb-4 space-y-2">
+                    {parseErrorsMap[station].length > 0 && (
+                      <div className="p-2 rounded-lg border border-red-500/20 bg-[#1A1C22] space-y-0.5">
+                        {parseErrorsMap[station].map((err, i) => (
+                          <p key={i} className="text-[10px] text-red-300">
+                            {err.line > 0 && <span className="text-red-500">#{err.line}: </span>}
+                            {err.message}
+                          </p>
+                        ))}
+                      </div>
+                    )}
 
-                {stationDraftRowsMap[station].length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[rgba(79,209,255,0.16)] px-4 py-6 text-center text-sm text-[#9CA3AF]">
-                    Belum ada item dipilih untuk {station}.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {stationDraftRowsMap[station].map((row, index) => {
-                      const option = getCatalogItem(station, row.optionValue);
-                      const availableOptions = getAvailableOptions(station, row.id);
-                      const isManual = Boolean(option?.manual);
-                      const needsManualLot = Boolean(option?.manualLot);
+                    {stationDraftRowsMap[station].length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-[rgba(79,209,255,0.16)] px-3 py-4 text-center text-xs text-[#9CA3AF]">
+                        Belum ada item. Klik "+ Add" di atas.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {stationDraftRowsMap[station].map((row, index) => {
+                          const option = getCatalogItem(station, row.optionValue);
+                          const availableOptions = getAvailableOptions(station, row.id);
+                          const isManual = Boolean(option?.manual);
+                          const needsManualLot = Boolean(option?.manualLot);
 
-                      return (
-                        <div key={row.id} className="rounded-xl border border-[rgba(79,209,255,0.10)] bg-[#1A1C22] p-3 lg:p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold text-[#4FD1FF]">Item {index + 1}</p>
-                            <button
-                              type="button"
-                              onClick={() => removeDraftRow(station, row.id)}
-                              className="inline-flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Hapus
-                            </button>
-                          </div>
+                          return (
+                            <div key={row.id} className="rounded-lg border border-[rgba(79,209,255,0.10)] bg-[#1A1C22] p-2.5 lg:p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-bold text-[#4FD1FF]">#{index + 1}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => removeDraftRow(station, row.id)}
+                                  className="text-[10px] text-red-400 hover:text-red-300"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
 
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label className={LABEL}>Item</label>
-                              <select
-                                value={row.optionValue}
-                                onChange={(e) => updateDraftRow(station, row.id, {
-                                  optionValue: e.target.value,
-                                  kodeLot: selectedDate,
-                                  manualName: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualName : "",
-                                  manualUnit: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualUnit : "",
-                                })}
-                                className={CLAY_SELECT}
-                              >
-                                <option value="">-- Pilih item --</option>
-                                {availableOptions.map((item) => (
-                                  <option key={item.value} value={item.value}>{item.label}</option>
-                                ))}
-                              </select>
-                            </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className={LABEL}>Item</label>
+                                  <select
+                                    value={row.optionValue}
+                                    onChange={(e) => updateDraftRow(station, row.id, {
+                                      optionValue: e.target.value,
+                                      kodeLot: selectedDate,
+                                      manualName: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualName : "",
+                                      manualUnit: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualUnit : "",
+                                    })}
+                                    className={`${CLAY_SELECT} text-xs py-2`}
+                                  >
+                                    <option value="">-- Pilih --</option>
+                                    {availableOptions.map((item) => (
+                                      <option key={item.value} value={item.value}>{item.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
 
-                            <div className="space-y-1.5">
-                              <label className={LABEL}>Qty</label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={row.qty}
-                                onChange={(e) => updateDraftRow(station, row.id, { qty: e.target.value })}
-                                className={CLAY_INPUT}
-                                placeholder="Masukkan qty"
-                              />
-                            </div>
-
-                            {isManual ? (
-                              <>
-                                <div className="space-y-1.5">
-                                  <label className={LABEL}>Nama Item Manual</label>
+                                <div className="space-y-1">
+                                  <label className={LABEL}>Qty {option?.unit && !isManual ? `(${option.unit})` : ""}</label>
                                   <input
-                                    type="text"
-                                    value={row.manualName}
-                                    onChange={(e) => updateDraftRow(station, row.id, { manualName: e.target.value })}
-                                    className={CLAY_INPUT}
-                                    placeholder="Contoh: SAMBAL KHUSUS"
+                                    type="number"
+                                    min="1"
+                                    value={row.qty}
+                                    onChange={(e) => updateDraftRow(station, row.id, { qty: e.target.value })}
+                                    className={`${CLAY_INPUT} text-xs py-2`}
+                                    placeholder="Qty"
                                   />
                                 </div>
-                                <div className="space-y-1.5">
-                                  <label className={LABEL}>Satuan Manual</label>
+
+                                {isManual && (
+                                  <>
+                                    <div className="space-y-1">
+                                      <label className={LABEL}>Nama Manual</label>
+                                      <input
+                                        type="text"
+                                        value={row.manualName}
+                                        onChange={(e) => updateDraftRow(station, row.id, { manualName: e.target.value })}
+                                        className={`${CLAY_INPUT} text-xs py-2`}
+                                        placeholder="SAMBAL KHUSUS"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className={LABEL}>Satuan</label>
+                                      <input
+                                        type="text"
+                                        value={row.manualUnit}
+                                        onChange={(e) => updateDraftRow(station, row.id, { manualUnit: e.target.value })}
+                                        className={`${CLAY_INPUT} text-xs py-2`}
+                                        placeholder="PCS / GRAM"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+
+                                {needsManualLot && (
+                                  <div className="space-y-1">
+                                    <label className={LABEL}>Pick Date</label>
+                                    <input
+                                      type="date"
+                                      value={row.kodeLot}
+                                      onChange={(e) => updateDraftRow(station, row.id, { kodeLot: e.target.value })}
+                                      className={`${CLAY_INPUT} text-xs py-2`}
+                                    />
+                                  </div>
+                                )}
+
+                                <div className={`space-y-1 ${!isManual && !needsManualLot ? "col-span-2" : ""}`}>
+                                  <label className={LABEL}>Alasan</label>
                                   <input
                                     type="text"
-                                    value={row.manualUnit}
-                                    onChange={(e) => updateDraftRow(station, row.id, { manualUnit: e.target.value })}
-                                    className={CLAY_INPUT}
-                                    placeholder="Contoh: PCS / GRAM"
+                                    value={row.alasan}
+                                    onChange={(e) => updateDraftRow(station, row.id, { alasan: e.target.value })}
+                                    className={`${CLAY_INPUT} text-xs py-2`}
+                                    placeholder="Expired, rusak, susut"
                                   />
                                 </div>
-                              </>
-                            ) : option?.unit ? (
-                              <div className="space-y-1.5">
-                                <label className={LABEL}>Satuan</label>
-                                <div className={`${CLAY_INPUT} flex items-center font-medium`}>{option.unit}</div>
                               </div>
-                            ) : null}
-
-                            {needsManualLot && (
-                              <div className="space-y-1.5">
-                                <label className={LABEL}>Kode Lot / Pick Date</label>
-                                <input
-                                  type="date"
-                                  value={row.kodeLot}
-                                  onChange={(e) => updateDraftRow(station, row.id, { kodeLot: e.target.value })}
-                                  className={CLAY_INPUT}
-                                />
-                              </div>
-                            )}
-
-                            <div className={`space-y-1.5 ${needsManualLot ? "lg:col-span-1" : "lg:col-span-2"}`}>
-                              <label className={LABEL}>Alasan Waste</label>
-                              <input
-                                type="text"
-                                value={row.alasan}
-                                onChange={(e) => updateDraftRow(station, row.id, { alasan: e.target.value })}
-                                className={CLAY_INPUT}
-                                placeholder="Contoh: Expired, rusak, pecah, susut"
-                              />
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1328,219 +1537,193 @@ export default function AutoWaste() {
             <Button
               onClick={handlePrepareItems}
               disabled={selectedStations.every(st => stationDraftRowsMap[st].length === 0)}
-              className={CLAY_BTN_PRIMARY}
+              className="w-full rounded-[16px] bg-[linear-gradient(180deg,#26364A_0%,#1D2939_100%)] py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(0,0,0,0.3)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40 lg:py-4 lg:text-base"
             >
-              <Zap className="w-4 h-4 mr-2" /> Cek Semua Station
+              <Zap className="w-4 h-4 mr-1.5" /> Cek & Preview
             </Button>
           </div>
         )}
 
         {/* ========== STEP: PREVIEW ========== */}
         {step === "preview" && (
-          <div className="space-y-4 w-full">
-            <div className="text-center">
-              <h2 className="text-lg lg:text-2xl font-bold text-green-400 mb-1 lg:mb-2">Cek Data</h2>
-              <p className="text-xs lg:text-sm text-[#9CA3AF]">
-                {selectedStations.length} station - {totalItems} total item
-              </p>
-            </div>
-
-            {/* Info cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-3">
-              {[
-                { label: "Station", value: `${selectedStations.length}x`, color: "text-[#E5E7EB]" },
-                { label: "Shift", value: selectedShift, color: "text-[#E5E7EB]" },
-                { label: "Jam", value: `${jam} WIB`, color: "text-yellow-400" },
-              ].map((item, i) => (
-                <div key={i} className={`${CLAY_CARD_SM} p-2.5 lg:p-4 text-center`}>
-                  <p className={LABEL}>{item.label}</p>
-                  <p className={`text-sm lg:text-lg font-bold ${item.color} mt-0.5`}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* QC & Manajer */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className={`${CLAY_CARD_SM} p-3 lg:p-4`}>
-                <p className={LABEL}>QC</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm lg:text-base font-bold text-[#4FD1FF]">{selectedQC}</p>
-                  {signatureUrls[selectedQC] && (
-                    <img src={signatureUrls[selectedQC]} alt="TTD QC" className="h-6 rounded bg-[#1A1C22] p-0.5" />
-                  )}
-                </div>
+          <div className="space-y-3 w-full">
+            {/* Compact header with inline summary */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base lg:text-xl font-bold text-green-400">Cek & Kirim</h2>
+                <p className="text-[10px] lg:text-xs text-[#9CA3AF]">
+                  {selectedStations.length} station - {totalItems} item - {selectedShift} {jam} WIB
+                </p>
               </div>
-              <div className={`${CLAY_CARD_SM} p-3 lg:p-4`}>
-                <p className={LABEL}>Manajer</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm lg:text-base font-bold text-[#9F7AEA]">{selectedManajer}</p>
-                  {signatureUrls[selectedManajer] && (
-                    <img src={signatureUrls[selectedManajer]} alt="TTD Manajer" className="h-6 rounded bg-[#1A1C22] p-0.5" />
-                  )}
-                </div>
+              <div className="flex items-center gap-2">
+                {signatureUrls[selectedQC] && <img src={signatureUrls[selectedQC]} alt="QC" className="h-5 rounded bg-[#2A2D37] p-0.5" />}
+                {signatureUrls[selectedManajer] && <img src={signatureUrls[selectedManajer]} alt="Mgr" className="h-5 rounded bg-[#2A2D37] p-0.5" />}
               </div>
             </div>
 
-            {/* Tester preview card */}
+            {/* Compact info strip */}
+            <div className={`${CLAY_CARD_SM} px-3 py-2 flex items-center justify-between text-[10px] lg:text-xs`}>
+              <div className="flex items-center gap-3">
+                <span className="text-[#9CA3AF]">QC: <span className="text-[#4FD1FF] font-medium">{selectedQC}</span></span>
+                <span className="text-[#9CA3AF]">Mgr: <span className="text-[#9F7AEA] font-medium">{selectedManajer}</span></span>
+              </div>
+              <span className="text-[#9CA3AF]">{selectedDate}</span>
+            </div>
+
+            {/* Tester preview - compact */}
             {testerEnabled && (
-              <div className={`${CLAY_CARD} border-amber-500/15`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/[0.08] flex items-center justify-center">
-                    <span className="text-xl">T</span>
+              <div className={`${CLAY_CARD_SM} px-3 py-2 border-amber-500/15`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-amber-400">TESTER</span>
+                    {testerSubmitStatus === 'success' && <span className="text-[9px] text-green-400">Done</span>}
+                    {testerSubmitStatus === 'error' && <span className="text-[9px] text-red-400">Error</span>}
                   </div>
-                  <div>
-                    <span className="text-base lg:text-lg font-bold text-amber-400">TESTER</span>
-                    <span className="text-xs lg:text-sm text-[#9CA3AF] ml-2">QC Checklist</span>
-                  </div>
-                  {testerSubmitStatus === 'success' && <span className="ml-auto text-green-400 text-xs">OK Done</span>}
-                  {testerSubmitStatus === 'error' && <span className="ml-auto text-red-400 text-xs">ERR Error</span>}
+                  <span className={`text-[10px] font-medium ${testerAllChecked ? "text-green-400" : "text-amber-400"}`}>
+                    {testerAllChecked ? "All OK" : `Kendala: ${testerKendala || "-"}`}
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  {Object.entries(testerChecks).map(([item, checked]) => (
-                    <div key={item} className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
-                      checked ? "text-green-400 bg-green-500/[0.05]" : "text-red-400 bg-red-500/[0.05]"
-                    }`}>
-                      <span>{checked ? "[x]" : "[ ]"}</span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-medium ${
-                  testerAllChecked
-                    ? "bg-green-500/[0.08] border border-green-500/15 text-green-400"
-                    : "bg-amber-500/[0.08] border border-amber-500/15 text-amber-400"
-                }`}>
-                  {testerAllChecked
-                      ? "OK: Semua sisa bahan dan produk aman dan approved."
-                    : `Warning: Kendala: ${testerKendala || "(kosong)"}`
-                  }
-                </div>
-
               </div>
             )}
 
-            {/* Per-station items + documentation */}
+            {/* Per-station: collapsible with photo upload */}
             {selectedStations.map(station => (
-              <div key={station} className={CLAY_CARD}>
-                {/* Station header */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#4FD1FF]/[0.08] flex items-center justify-center">
-                    <StationIcon station={station} className="w-5 h-5 text-[#6FBDE7]" />
+              <div key={station} className={CLAY_CARD_SM}>
+                {/* Station header - clickable to expand/collapse */}
+                <button
+                  type="button"
+                  onClick={() => togglePreviewStation(station)}
+                  className="w-full flex items-center justify-between px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    {expandedPreviewStations[station] ? <ChevronDown className="w-3.5 h-3.5 text-[#4FD1FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-[#9CA3AF]" />}
+                    <StationIcon station={station} className="w-4 h-4 text-[#9CA3AF]" />
+                    <span className="text-sm font-bold text-[#E5E7EB]">{station}</span>
+                    <span className="text-[9px] text-[#9CA3AF]">({parsedItemsMap[station].length} item)</span>
                   </div>
-                  <div>
-                    <span className="text-base lg:text-lg font-bold text-[#E5E7EB]">{station}</span>
-                    <span className="text-xs lg:text-sm text-[#9CA3AF] ml-2">({parsedItemsMap[station].length} item)</span>
+                  <div className="flex items-center gap-2">
+                    {dokumentasiFilesMap[station].length > 0 ? (
+                      <span className="text-[9px] text-green-400">{dokumentasiFilesMap[station].length} foto</span>
+                    ) : (
+                      <span className="text-[9px] text-red-400">No foto</span>
+                    )}
+                    {isSubmitting && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                        submitStatusMap[station] === "uploading" ? "text-yellow-400" :
+                        submitStatusMap[station] === "success" ? "text-green-400" :
+                        submitStatusMap[station] === "error" ? "text-red-400" : "text-[#9CA3AF]"
+                      }`}>
+                        {submitStatusMap[station] === "uploading" ? "..." :
+                         submitStatusMap[station] === "success" ? "OK" :
+                         submitStatusMap[station] === "error" ? "ERR" : "-"}
+                      </span>
+                    )}
                   </div>
-                  {isSubmitting && (
-                    <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      submitStatusMap[station] === "uploading" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" :
-                      submitStatusMap[station] === "success" ? "bg-green-500/10 text-green-400 border border-green-500/20" :
-                      submitStatusMap[station] === "error" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                      "bg-[#2A2D37] text-[#9CA3AF] border border-[rgba(79,209,255,0.06)]"
-                    }`}>
-                      {submitStatusMap[station] === "uploading" ? "Uploading..." :
-                       submitStatusMap[station] === "success" ? "OK Done" :
-                       submitStatusMap[station] === "error" ? "ERR Error" : "Waiting"}
-                    </span>
-                  )}
-                </div>
+                </button>
 
-                {/* Items table */}
-                <div className="rounded-xl border border-[rgba(79,209,255,0.08)] overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs lg:text-sm">
-                      <thead>
-                        <tr className="bg-[#1A1C22] text-[#9CA3AF]">
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">#</th>
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Produk</th>
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Lot</th>
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-center">Qty</th>
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Satuan</th>
-                          <th className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-left">Alasan</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parsedItemsMap[station].map((item, i) => (
-                          <tr key={i} className="border-t border-[rgba(79,209,255,0.06)] hover:bg-[#1A1C22]/50 transition-colors">
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#9CA3AF]">{i + 1}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] font-medium truncate max-w-[100px] lg:max-w-[250px]">{item.namaProduk}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] text-[11px] lg:text-sm">{item.kodeLot || "-"}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-center text-yellow-400 font-bold">{item.qty}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB]">{item.unit}</td>
-                            <td className="px-2 py-1.5 lg:px-4 lg:py-2.5 text-[#E5E7EB] truncate max-w-[80px] lg:max-w-[200px]">{item.alasan}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {/* Expanded: items table + photo upload */}
+                {expandedPreviewStations[station] && (
+                  <div className="px-3 pb-3 space-y-2">
+                    {/* Compact items list */}
+                    <div className="rounded-lg border border-[rgba(79,209,255,0.08)] overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px] lg:text-xs">
+                          <thead>
+                            <tr className="bg-[#1A1C22] text-[#9CA3AF]">
+                              <th className="px-1.5 py-1 text-left">#</th>
+                              <th className="px-1.5 py-1 text-left">Produk</th>
+                              <th className="px-1.5 py-1 text-center">Qty</th>
+                              <th className="px-1.5 py-1 text-left">Unit</th>
+                              <th className="px-1.5 py-1 text-left">Alasan</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {parsedItemsMap[station].map((item, i) => (
+                              <tr key={i} className="border-t border-[rgba(79,209,255,0.06)]">
+                                <td className="px-1.5 py-1 text-[#9CA3AF]">{i + 1}</td>
+                                <td className="px-1.5 py-1 text-[#E5E7EB] font-medium truncate max-w-[90px] lg:max-w-[200px]">{item.namaProduk}</td>
+                                <td className="px-1.5 py-1 text-center text-yellow-400 font-bold">{item.qty}</td>
+                                <td className="px-1.5 py-1 text-[#E5E7EB]">{item.unit}</td>
+                                <td className="px-1.5 py-1 text-[#9CA3AF] truncate max-w-[60px] lg:max-w-[150px]">{item.alasan}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
 
-                {/* Documentation photos per station */}
-                <div className="mt-3 space-y-2">
-                  <label className="text-xs lg:text-sm font-medium text-[#E5E7EB]">
-                    Foto Dokumentasi {station} <span className="text-red-400">*wajib</span>
-                  </label>
-                  <MultiFileUpload
-                    onFilesSelect={(files) => setDokumentasiFilesMap(prev => ({ ...prev, [station]: files }))}
-                    maxFiles={10}
-                    accept="image/*"
-                    label={`Foto ${station}`}
-                  />
-                  {dokumentasiFilesMap[station].length === 0 ? (
-                    <p className="text-[10px] text-red-400 flex items-center gap-1">Warning: Minimal 1 foto untuk {station}</p>
-                  ) : (
-                    <p className="text-[10px] text-green-400 flex items-center gap-1">OK: {dokumentasiFilesMap[station].length} foto siap</p>
-                  )}
-                </div>
+                    {/* Photo upload */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-medium text-[#E5E7EB]">
+                        Foto {station} <span className="text-red-400">*</span>
+                      </label>
+                      <MultiFileUpload
+                        onFilesSelect={(files) => setDokumentasiFilesMap(prev => ({ ...prev, [station]: files }))}
+                        maxFiles={10}
+                        accept="image/*"
+                        label={`Foto ${station}`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Always show photo upload inline if collapsed and no photos yet */}
+                {!expandedPreviewStations[station] && dokumentasiFilesMap[station].length === 0 && (
+                  <div className="px-3 pb-2.5">
+                    <MultiFileUpload
+                      onFilesSelect={(files) => setDokumentasiFilesMap(prev => ({ ...prev, [station]: files }))}
+                      maxFiles={10}
+                      accept="image/*"
+                      label={`Foto ${station}`}
+                    />
+                  </div>
+                )}
               </div>
             ))}
 
             {/* Error summary banner */}
             {selectedStations.some(st => submitStatusMap[st] === "error") && !isSubmitting && (
-              <div className={`${CLAY_CARD} border-red-500/20`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
-                  <span className="text-sm font-bold text-red-400">
+              <div className={`${CLAY_CARD_SM} px-3 py-2.5 border-red-500/20`}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                  <span className="text-xs font-bold text-red-400">
                     {selectedStations.filter(st => submitStatusMap[st] === "error").length} station gagal
                   </span>
                 </div>
                 {selectedStations.filter(st => submitStatusMap[st] === "error").map(st => (
-                  <div key={st} className="flex items-start gap-2 text-xs mb-1">
-                    <span className="text-red-500 font-bold inline-flex items-center gap-1.5">
-                      <StationIcon station={st} className="w-3.5 h-3.5" />
-                      {st}:
-                    </span>
-                    <span className="text-red-300">{stationErrors[st] || "Error tidak diketahui"}</span>
-                  </div>
+                  <p key={st} className="text-[10px] text-red-300 mb-0.5">
+                    <span className="text-red-500 font-bold">{st}:</span> {stationErrors[st] || "Error"}
+                  </p>
                 ))}
                 <Button
                   onClick={handleRetryFailed}
-                  className="w-full mt-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)] hover:-translate-y-0.5 active:scale-[0.97] transition-all"
+                  size="sm"
+                  className="w-full mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-2 rounded-lg text-xs"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" /> Retry {selectedStations.filter(st => submitStatusMap[st] === "error").length} Station yang Gagal
+                  <RefreshCw className="w-3 h-3 mr-1.5" /> Retry Gagal
                 </Button>
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex gap-3 pt-2">
+            {/* Action buttons - compact */}
+            <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"
                 onClick={() => setStep(selectedStations.length > 0 ? "paste" : "config")}
                 disabled={isSubmitting}
-                className={`flex-1 ${CLAY_BTN_OUTLINE}`}
+                className={`flex-1 ${CLAY_BTN_OUTLINE} py-3 text-xs`}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Benerin
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Edit
               </Button>
               <Button
                 onClick={() => handleSubmit()}
                 disabled={isSubmitting || (selectedStations.length > 0 && selectedStations.some(st => dokumentasiFilesMap[st].length === 0))}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-[6px_6px_12px_rgba(0,0,0,0.5),-3px_-3px_8px_rgba(255,255,255,0.04)] hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-200"
+                className="flex-[2] bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl py-3 text-xs lg:text-sm transition-all duration-200"
               >
                 {isSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lagi nyimpen...</>
+                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Menyimpan...</>
                 ) : (
-                  <><Send className="w-4 h-4 mr-2" /> Kirim {selectedStations.length > 0 ? `${selectedStations.length} Station` : ""}{ testerEnabled ? (selectedStations.length > 0 ? " + Tester" : "Tester") : ""}</>
+                  <><Send className="w-3.5 h-3.5 mr-1.5" /> Kirim {selectedStations.length > 0 ? `${selectedStations.length} Station` : ""}{testerEnabled ? (selectedStations.length > 0 ? " + Tester" : "Tester") : ""}</>
                 )}
               </Button>
             </div>
@@ -1549,44 +1732,32 @@ export default function AutoWaste() {
 
         {/* ========== STEP: SUCCESS ========== */}
         {step === "success" && (
-          <div className="space-y-6 w-full text-center py-8">
-            <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto shadow-[4px_4px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03)]">
-              <CheckCircle className="w-10 h-10 text-green-400" />
+          <div className="space-y-4 w-full text-center py-6">
+            <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
             <div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-green-400 mb-2">Semua Data Tersimpan!</h2>
-              <p className="text-sm lg:text-base text-[#9CA3AF]">
-                {selectedStations.length} station - {selectedShift} udah ke-record
+              <h2 className="text-xl lg:text-2xl font-bold text-green-400 mb-1">Tersimpan!</h2>
+              <p className="text-xs lg:text-sm text-[#9CA3AF]">
+                {selectedStations.length} station - {selectedShift} ke-record
               </p>
             </div>
 
-            <div className={`${CLAY_CARD} text-left space-y-2 text-sm lg:text-base`}>
+            <div className={`${CLAY_CARD_SM} px-3 py-3 text-left space-y-1.5 text-xs lg:text-sm`}>
               <div className="flex items-center justify-between">
                 <span className="text-[#9CA3AF]">Tanggal</span>
-                <span className="text-[#E5E7EB] font-medium">{selectedDate}</span>
+                <span className="text-[#E5E7EB] font-medium">{selectedDate} - {jam} WIB</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF]">Resto</span>
-                <span className="text-[#E5E7EB] font-medium">{storeName}</span>
+                <span className="text-[#9CA3AF]">Resto / Shift</span>
+                <span className="text-[#E5E7EB] font-medium">{storeName} / {selectedShift}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF]">Shift</span>
-                <span className="text-[#E5E7EB] font-medium">{selectedShift}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF]">Jam</span>
-                <span className="text-yellow-400 font-medium">{jam} WIB</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF]">QC</span>
-                <span className="text-[#4FD1FF] font-medium">{selectedQC}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF]">Manajer</span>
-                <span className="text-[#9F7AEA] font-medium">{selectedManajer}</span>
+                <span className="text-[#9CA3AF]">QC / Manajer</span>
+                <span><span className="text-[#4FD1FF] font-medium">{selectedQC}</span> / <span className="text-[#9F7AEA] font-medium">{selectedManajer}</span></span>
               </div>
 
-              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+              <div className="border-t border-[rgba(79,209,255,0.08)] my-1.5" />
 
               {testerEnabled && (
                 <div className="flex items-center justify-between">
@@ -1615,27 +1786,27 @@ export default function AutoWaste() {
                 </div>
               ))}
 
-              <div className="border-t border-[rgba(79,209,255,0.08)] my-2" />
+              <div className="border-t border-[rgba(79,209,255,0.08)] my-1.5" />
 
               <div className="flex items-center justify-between">
                 <span className="text-[#9CA3AF]">Total</span>
-                <span className="text-[#E5E7EB] font-bold text-base lg:text-lg">{totalItems} produk</span>
+                <span className="text-[#E5E7EB] font-bold text-sm lg:text-base">{totalItems} produk</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
               <Button
                 onClick={handleNewEntry}
-                className={CLAY_BTN_PRIMARY}
+                className="flex-[2] rounded-[16px] bg-[linear-gradient(180deg,#26364A_0%,#1D2939_100%)] py-3 text-sm font-semibold text-white transition hover:brightness-105"
               >
-                <Zap className="w-5 h-5 mr-2" /> Shift Baru
+                <Zap className="w-4 h-4 mr-1.5" /> Shift Baru
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation("/")}
-                className={`w-full ${CLAY_BTN_OUTLINE}`}
+                className={`flex-1 ${CLAY_BTN_OUTLINE} py-3 text-xs`}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Balik ke Menu
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Menu
               </Button>
             </div>
           </div>
