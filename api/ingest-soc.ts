@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // Step 1: Load and chunk document
       console.log('[Ingest] Loading SOC document...');
-      const content = getSocContent();
+      const content = await getSocContent();
       
       console.log('[Ingest] Chunking document...');
       const chunks = chunkSocDocument(content);

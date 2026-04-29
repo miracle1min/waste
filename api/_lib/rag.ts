@@ -44,11 +44,35 @@ export function getRedisClient(): Redis {
 
 let cachedSocContent: string | null = null;
 
-export function getSocContent(): string {
+export async function getSocContent(): Promise<string> {
   if (cachedSocContent) return cachedSocContent;
-  const filePath = path.join(process.cwd(), 'soc_master.md');
-  cachedSocContent = fs.readFileSync(filePath, 'utf-8');
-  return cachedSocContent;
+  
+  // Try to fetch from Vercel Blob first (production)
+  const blobUrl = process.env.BLOB_SOC_URL;
+  if (blobUrl) {
+    try {
+      console.log('[SOC] Fetching from Vercel Blob:', blobUrl);
+      const response = await fetch(blobUrl);
+      if (response.ok) {
+        cachedSocContent = await response.text();
+        console.log('[SOC] Loaded from Blob:', (cachedSocContent.length / 1024).toFixed(2), 'KB');
+        return cachedSocContent;
+      }
+    } catch (error) {
+      console.error('[SOC] Failed to fetch from Blob:', error);
+      // Fall through to filesystem
+    }
+  }
+  
+  // Fallback to local filesystem (development)
+  try {
+    const filePath = path.join(process.cwd(), 'soc_master.md');
+    cachedSocContent = fs.readFileSync(filePath, 'utf-8');
+    console.log('[SOC] Loaded from filesystem:', (cachedSocContent.length / 1024).toFixed(2), 'KB');
+    return cachedSocContent;
+  } catch (error) {
+    throw new Error('SOC document not found. Please upload soc_master.md to Vercel Blob or place in project root.');
+  }
 }
 
 // ==================== CHUNKING ====================
