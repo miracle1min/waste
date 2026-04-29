@@ -3,7 +3,7 @@ import { requireAuth, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
 import { searchSocChunks } from './_lib/rag.js';
 
-const GEMINI_MODEL = 'gemini-2.0-flash-exp';
+const GEMINI_MODEL = 'gemini-1.5-flash-latest';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // ==================== SYSTEM PROMPT ====================
