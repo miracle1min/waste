@@ -1,69 +1,150 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
-import { searchSocChunks } from './_lib/rag.js';
+import { getSocContent } from './_lib/rag.js';
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // ==================== SYSTEM PROMPT ====================
 
-function buildSystemPrompt(socContext: string): string {
+async function buildSystemPrompt(): Promise<string> {
+  const socContent = await getSocContent();
+  
   return `Kamu adalah QC Helper AI — asisten khusus untuk Quality Control di Mie Gacoan.
 Kamu memiliki pengetahuan lengkap tentang SOC (Station Observation Checklist) V.4.0 dan membantu crew, supervisor, dan manajemen dalam memahami SOP, prosedur operasional, standar kualitas produk.
 
-=== KEMAMPUAN KAMU ===
-
-1. ✅ JAWAB pertanyaan seputar SOP & prosedur operasional di semua station (NOODLE, DIMSUM, BAR, PRODUKSI)
-2. ✅ JELASKAN standar kualitas produk (visual, aroma, rasa, tekstur, berat, dll)
-3. ✅ BERIKAN panduan cooking time, gramasi, parameter produk
-4. ✅ TROUBLESHOOT masalah kualitas produk
-5. ✅ JELASKAN prosedur QC dan food safety
-6. ✅ BANTU crew level, supervisor, manager dengan referensi SOC
-
 === PENGETAHUAN SOC (STATION OBSERVATION CHECKLIST) ===
-
-Berikut adalah bagian relevan dari dokumen SOC untuk menjawab pertanyaan user:
-
-${socContext}
-
+${socContent}
 === END SOC ===
 
 === CARA MENJAWAB ===
+1. Jawab pertanyaan berdasarkan SOC di atas
+2. Kalau informasi tidak ada di SOC, katakan dengan jujur
+3. Gunakan bahasa yang sama dengan pertanyaan user (Indonesia atau Inggris)
+4. Berikan contoh konkret dari SOC kalau relevan
+5. Kalau ditanya tentang parameter/standar, sebutkan angka spesifik dari SOC
 
-- Jawab berdasarkan dokumen SOC di atas
-- Jika informasi tidak ada di dokumen, katakan dengan jujur "Informasi ini tidak ada di SOC V.4.0"
-- Gunakan bahasa yang sama dengan pertanyaan user (Indonesia atau Inggris)
-- Berikan jawaban yang spesifik dengan referensi ke section SOC jika relevan
-- Jika user tanya tentang parameter/standar, sebutkan angka/nilai spesifik dari SOC
-- Boleh pakai emoji sesekali untuk friendly tone
-- Jawab singkat dan to the point, tapi lengkap
-
-=== CONTOH PERTANYAAN ===
-
-User: "Berapa cooking time mie Vinna?"
-Kamu: "Cooking time mie Vinna adalah 2'10" - 2'15" (2 menit 10 detik sampai 2 menit 15 detik). Pastikan suhu air minimal 98°C atau sudah mendidih sebelum mie dimasukkan. 🍜"
-
-User: "Apa parameter visual mie yang benar setelah direbus?"
-Kamu: "Parameter visual mie yang benar setelah direbus:
-- Bentuk mie lurus, tidak gepeng
-- Untaian mie utuh, tidak banyak patah/putus
-- Permukaan terlihat transparan
-- Bagian tengah matang sempurna (tidak ada bagian bertepung/warna putih)
-- Warna kuning muda
-✅ Pastikan tidak ada bagian yang undercooked atau overcooked!"
-
-User: "Gimana cara bikin mie gacoan level 3?"
-Kamu: "Cara bikin Mie Gacoan Level 3:
-1. Cabai: 15 gr
-2. Minyak mie: 1 TBS (13-14 gr)
-3. Bumbu basic: 1 TSP (11-12 gr)
-4. Kecap: 1 TSP (12 gr)
-5. Rebus mie sesuai cooking time supplier
-6. Aduk semua bumbu dengan mie
-7. Tambah topping (ayam cincang, bawang goreng, dry leaf, pangsit)
-🌶️ Level 3 = 15 gram cabai!"`;
+=== GAYA BAHASA ===
+- Casual tapi profesional, bahasa Indonesia
+- Boleh pakai emoji sesekali
+- Jawab singkat dan to the point
+- Kalau user tanya di luar konteks SOC/QC, tetap jawab dengan baik tapi ingatkan fokus ke SOC`;
 }
+
+// ==================== HANDLER ====================
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const allowedOrigin = process.env.CORS_ORIGIN || 'https://gacoanku.my.id';
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-tenant-id');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Rate limit: 20 requests per minute
+  if (checkRateLimit(req, res, { name: 'qc-chat', maxRequests: 20, windowSeconds: 60 })) return;
+
+  // Auth
+  let jwtPayload;
+  try {
+    jwtPayload = requireAuth(req);
+  } catch (error) {
+    return handleAuthError(error, res);
+  }
+
+  try {
+    const { message, history, attachments } = req.body;
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ success: false, error: 'Message is required' });
+    }
+
+    // Build system prompt with full SOC context
+    const systemPrompt = await buildSystemPrompt();
+
+    // Build Gemini messages
+    const geminiMessages: any[] = [];
+    
+    // Add history (last 10 messages for context)
+    if (history && Array.isArray(history)) {
+      const recentHistory = history.slice(-10);
+      for (const msg of recentHistory) {
+        geminiMessages.push({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }],
+        });
+      }
+    }
+
+    // Add current message with attachments
+    const userParts: any[] = [{ text: message }];
+    if (attachments && Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att.type === 'image' && att.data && att.mimeType) {
+          userParts.push({
+            inlineData: {
+              mimeType: att.mimeType,
+              data: att.data,
+            },
+          });
+        } else if (att.type === 'text' && att.data) {
+          userParts.push({ text: `\n\n[File: ${att.name}]\n${att.data}` });
+        }
+      }
+    }
+    geminiMessages.push({ role: 'user', parts: userParts });
+
+    // Call Gemini API
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not configured' });
+    }
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[QC Chat] Gemini API error:', errorText);
+      return res.status(response.status).json({
+        success: false,
+        error: `Gemini API error: ${response.status}`,
+      });
+    }
+
+    const data = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, tidak ada respons dari AI.';
+
+    return res.status(200).json({
+      success: true,
+      reply,
+    });
+  } catch (error: any) {
+    console.error('[QC Chat] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error',
+    });
+  }
+}
+
 
 // ==================== HANDLER ====================
 
