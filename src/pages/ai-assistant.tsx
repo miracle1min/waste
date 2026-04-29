@@ -863,7 +863,7 @@ export default function AiAssistant() {
         })),
       }));
 
-      const response = await apiFetch("/api/ai-chat", {
+      const response = await apiFetch("/api/qc-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1229,7 +1229,7 @@ export default function AiAssistant() {
             onClick={() => setShowHistory(!showHistory)}
             className="text-base font-bold text-white tracking-tight flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
-            AWAS AI <ChevronDown className={`w-3.5 h-3.5 text-white/50 transition-transform duration-200 ${showHistory ? 'rotate-180' : ''}`} />
+            QC Helper <ChevronDown className={`w-3.5 h-3.5 text-white/50 transition-transform duration-200 ${showHistory ? 'rotate-180' : ''}`} />
           </button>
 
           <div className="flex items-center gap-2">
@@ -1339,10 +1339,10 @@ export default function AiAssistant() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 w-full max-w-sm lg:max-w-2xl">
               {[
-                "💡 Tips mengurangi waste di kitchen",
-                "📊 Cara analisis data waste harian",
-                "🔒 Standar food safety yang harus dipenuhi",
-                "📄 Buatkan PDF waste hari ini",
+                "🍜 Berapa cooking time mie Vinna?",
+                "✅ Parameter visual mie yang benar?",
+                "🌶️ Cara bikin mie gacoan level 3?",
+                "📋 Standar kualitas bawang goreng?",
               ].map((prompt) => (
                 <button
                   key={prompt}
@@ -1589,7 +1589,7 @@ export default function AiAssistant() {
           </button>
         </div>
         <p className="text-[10px] text-[#444] text-center mt-2.5">
-          AWAS AI · Selalu verifikasi info penting
+          QC Helper · Asisten SOC Mie Gacoan
         </p>
         </div>
       </div>

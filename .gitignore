@@ -7,3 +7,7 @@ public/version.json
 .env*.local
 .playwright-cli/
 output/
+*.backup
+.codex-temp/
+test-results/
+soc_master.md
