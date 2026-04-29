@@ -282,6 +282,17 @@ export default function AutoWaste() {
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
 
+  // Per-row collapsed state: tracks which draft rows are collapsed (showing compact summary)
+  const [collapsedRows, setCollapsedRows] = useState<Set<string>>(new Set());
+
+  const toggleRowCollapse = useCallback((rowId: string) => {
+    setCollapsedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId); else next.add(rowId);
+      return next;
+    });
+  }, []);
+
   // Collapsible station sections (for paste & preview steps)
   // Accordion behavior: only one station expanded at a time
   const [expandedStations, setExpandedStations] = useState<Record<Station, boolean>>({
@@ -493,10 +504,19 @@ export default function AutoWaste() {
   }, []);
 
   const addDraftRow = useCallback((station: Station) => {
-    setStationDraftRowsMap(prev => ({
-      ...prev,
-      [station]: [...prev[station], createEmptyDraftRow(selectedDate)],
-    }));
+    setStationDraftRowsMap(prev => {
+      // Collapse all existing rows in this station before adding new one
+      const existingIds = prev[station].map(r => r.id);
+      setCollapsedRows(prevCollapsed => {
+        const next = new Set(prevCollapsed);
+        existingIds.forEach(id => next.add(id));
+        return next;
+      });
+      return {
+        ...prev,
+        [station]: [...prev[station], createEmptyDraftRow(selectedDate)],
+      };
+    });
     setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
   }, [selectedDate]);
 
@@ -514,6 +534,13 @@ export default function AutoWaste() {
       [station]: prev[station].filter(row => row.id != rowId),
     }));
     setParseErrorsMap(prev => ({ ...prev, [station]: [] }));
+    // Clean up collapsed state for removed row
+    setCollapsedRows(prev => {
+      if (!prev.has(rowId)) return prev;
+      const next = new Set(prev);
+      next.delete(rowId);
+      return next;
+    });
   }, []);
 
   const getAvailableOptions = useCallback((station: Station, rowId: string) => {
@@ -1374,15 +1401,6 @@ export default function AutoWaste() {
                       </span>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); addDraftRow(station); focusStation(station); }}
-                    className={`${CLAY_BTN_OUTLINE} h-7 px-2 text-[10px] text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
-                  >
-                    <Plus className="w-3 h-3 mr-0.5" /> Add
-                  </Button>
                 </button>
 
                 {/* Collapsible content */}
@@ -1401,7 +1419,7 @@ export default function AutoWaste() {
 
                     {stationDraftRowsMap[station].length === 0 ? (
                       <div className="rounded-lg border border-dashed border-[rgba(79,209,255,0.16)] px-3 py-4 text-center text-xs text-[#9CA3AF]">
-                        Belum ada item. Klik "+ Add" di atas.
+                        Belum ada item. Klik "+ Add" di bawah.
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1410,105 +1428,150 @@ export default function AutoWaste() {
                           const availableOptions = getAvailableOptions(station, row.id);
                           const isManual = Boolean(option?.manual);
                           const needsManualLot = Boolean(option?.manualLot);
+                          const isCollapsed = collapsedRows.has(row.id);
+
+                          // Derive display name for collapsed summary
+                          const displayName = isManual
+                            ? (row.manualName || "Manual item")
+                            : (option?.label || "Belum dipilih");
+                          const displayUnit = isManual
+                            ? (row.manualUnit || "?")
+                            : (option?.unit || "");
 
                           return (
-                            <div key={row.id} className="rounded-lg border border-[rgba(79,209,255,0.10)] bg-[#1A1C22] p-2.5 lg:p-3 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <p className="text-[10px] font-bold text-[#4FD1FF]">#{index + 1}</p>
+                            <div key={row.id} className={`rounded-lg border bg-[#1A1C22] transition-all ${isCollapsed ? "border-[rgba(79,209,255,0.06)]" : "border-[rgba(79,209,255,0.10)]"}`}>
+                              {/* Row header - always visible, clickable to toggle */}
+                              <button
+                                type="button"
+                                onClick={() => toggleRowCollapse(row.id)}
+                                className="w-full flex items-center justify-between px-2.5 py-2 lg:px-3"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {isCollapsed ? <ChevronRight className="w-3 h-3 text-[#555] shrink-0" /> : <ChevronDown className="w-3 h-3 text-[#4FD1FF] shrink-0" />}
+                                  <span className="text-[10px] font-bold text-[#4FD1FF] shrink-0">#{index + 1}</span>
+                                  {isCollapsed && (
+                                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                                      <span className="text-xs font-medium text-[#E5E7EB] truncate">{displayName}</span>
+                                      {row.qty && (
+                                        <span className="text-[10px] text-yellow-400 font-bold shrink-0">{row.qty} {displayUnit}</span>
+                                      )}
+                                      {row.alasan && (
+                                        <span className="text-[9px] text-[#666] truncate max-w-[80px]">{row.alasan}</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                                 <button
                                   type="button"
-                                  onClick={() => removeDraftRow(station, row.id)}
-                                  className="text-[10px] text-red-400 hover:text-red-300"
+                                  onClick={(e) => { e.stopPropagation(); removeDraftRow(station, row.id); }}
+                                  className="text-[10px] text-red-400 hover:text-red-300 shrink-0 ml-2"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
-                              </div>
+                              </button>
 
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                  <label className={LABEL}>Item</label>
-                                  <select
-                                    value={row.optionValue}
-                                    onChange={(e) => updateDraftRow(station, row.id, {
-                                      optionValue: e.target.value,
-                                      kodeLot: selectedDate,
-                                      manualName: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualName : "",
-                                      manualUnit: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualUnit : "",
-                                    })}
-                                    className={`${CLAY_SELECT} text-xs py-2`}
-                                  >
-                                    <option value="">-- Pilih --</option>
-                                    {availableOptions.map((item) => (
-                                      <option key={item.value} value={item.value}>{item.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <label className={LABEL}>Qty {option?.unit && !isManual ? `(${option.unit})` : ""}</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={row.qty}
-                                    onChange={(e) => updateDraftRow(station, row.id, { qty: e.target.value })}
-                                    className={`${CLAY_INPUT} text-xs py-2`}
-                                    placeholder="Qty"
-                                  />
-                                </div>
-
-                                {isManual && (
-                                  <>
+                              {/* Row form - only visible when expanded */}
+                              {!isCollapsed && (
+                                <div className="px-2.5 pb-2.5 lg:px-3 lg:pb-3">
+                                  <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className={LABEL}>Nama Manual</label>
+                                      <label className={LABEL}>Item</label>
+                                      <select
+                                        value={row.optionValue}
+                                        onChange={(e) => updateDraftRow(station, row.id, {
+                                          optionValue: e.target.value,
+                                          kodeLot: selectedDate,
+                                          manualName: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualName : "",
+                                          manualUnit: e.target.value.startsWith(MANUAL_ITEM_VALUE) ? row.manualUnit : "",
+                                        })}
+                                        className={`${CLAY_SELECT} text-xs py-2`}
+                                      >
+                                        <option value="">-- Pilih --</option>
+                                        {availableOptions.map((item) => (
+                                          <option key={item.value} value={item.value}>{item.label}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className={LABEL}>Qty {option?.unit && !isManual ? `(${option.unit})` : ""}</label>
                                       <input
-                                        type="text"
-                                        value={row.manualName}
-                                        onChange={(e) => updateDraftRow(station, row.id, { manualName: e.target.value })}
+                                        type="number"
+                                        min="1"
+                                        value={row.qty}
+                                        onChange={(e) => updateDraftRow(station, row.id, { qty: e.target.value })}
                                         className={`${CLAY_INPUT} text-xs py-2`}
-                                        placeholder="SAMBAL KHUSUS"
+                                        placeholder="Qty"
                                       />
                                     </div>
-                                    <div className="space-y-1">
-                                      <label className={LABEL}>Satuan</label>
+
+                                    {isManual && (
+                                      <>
+                                        <div className="space-y-1">
+                                          <label className={LABEL}>Nama Manual</label>
+                                          <input
+                                            type="text"
+                                            value={row.manualName}
+                                            onChange={(e) => updateDraftRow(station, row.id, { manualName: e.target.value })}
+                                            className={`${CLAY_INPUT} text-xs py-2`}
+                                            placeholder="SAMBAL KHUSUS"
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <label className={LABEL}>Satuan</label>
+                                          <input
+                                            type="text"
+                                            value={row.manualUnit}
+                                            onChange={(e) => updateDraftRow(station, row.id, { manualUnit: e.target.value })}
+                                            className={`${CLAY_INPUT} text-xs py-2`}
+                                            placeholder="PCS / GRAM"
+                                          />
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {needsManualLot && (
+                                      <div className="space-y-1">
+                                        <label className={LABEL}>Pick Date</label>
+                                        <input
+                                          type="date"
+                                          value={row.kodeLot}
+                                          onChange={(e) => updateDraftRow(station, row.id, { kodeLot: e.target.value })}
+                                          className={`${CLAY_INPUT} text-xs py-2`}
+                                        />
+                                      </div>
+                                    )}
+
+                                    <div className={`space-y-1 ${!isManual && !needsManualLot ? "col-span-2" : ""}`}>
+                                      <label className={LABEL}>Alasan</label>
                                       <input
                                         type="text"
-                                        value={row.manualUnit}
-                                        onChange={(e) => updateDraftRow(station, row.id, { manualUnit: e.target.value })}
+                                        value={row.alasan}
+                                        onChange={(e) => updateDraftRow(station, row.id, { alasan: e.target.value })}
                                         className={`${CLAY_INPUT} text-xs py-2`}
-                                        placeholder="PCS / GRAM"
+                                        placeholder="Expired, rusak, susut"
                                       />
                                     </div>
-                                  </>
-                                )}
-
-                                {needsManualLot && (
-                                  <div className="space-y-1">
-                                    <label className={LABEL}>Pick Date</label>
-                                    <input
-                                      type="date"
-                                      value={row.kodeLot}
-                                      onChange={(e) => updateDraftRow(station, row.id, { kodeLot: e.target.value })}
-                                      className={`${CLAY_INPUT} text-xs py-2`}
-                                    />
                                   </div>
-                                )}
-
-                                <div className={`space-y-1 ${!isManual && !needsManualLot ? "col-span-2" : ""}`}>
-                                  <label className={LABEL}>Alasan</label>
-                                  <input
-                                    type="text"
-                                    value={row.alasan}
-                                    onChange={(e) => updateDraftRow(station, row.id, { alasan: e.target.value })}
-                                    className={`${CLAY_INPUT} text-xs py-2`}
-                                    placeholder="Expired, rusak, susut"
-                                  />
                                 </div>
-                              </div>
+                              )}
                             </div>
                           );
                         })}
                       </div>
                     )}
+
+                    <div className="mt-2 pt-2 border-t border-[rgba(255,255,255,0.08)]">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { addDraftRow(station); focusStation(station); }}
+                        className={`${CLAY_BTN_OUTLINE} h-8 w-full text-[10px] text-[#4FD1FF] hover:bg-[#4FD1FF]/5`}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Item
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
