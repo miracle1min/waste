@@ -28,22 +28,32 @@ Return answer to user
 
 ## Setup Steps
 
-### 1. Vercel KV (Upstash Redis) Setup
+### 1. Vercel Blob Storage (SOC Document)
+
+✅ **DONE** - SOC file uploaded to Vercel Blob
+
+- Blob URL: `https://srau0bgt5vqz4agb.private.blob.vercel-storage.com/soc_master.md`
+- Env var `BLOB_SOC_URL` added to all environments
+- File size: 229KB (3054 lines)
+
+### 2. Upstash Redis (KV) - Vector Storage
 
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Select your project → **Storage** tab
 3. Click **Create Database** → Choose **KV (Redis)**
-4. Name: `waste-soc-vectors` (or any name)
-5. Region: Choose closest to your users (e.g., Singapore)
+4. Name: `waste-soc-vectors`
+5. Region: Singapore (closest to users)
 6. Click **Create**
 
-Vercel will automatically add these environment variables to your project:
+Vercel will automatically add these environment variables:
 ```
 KV_REST_API_URL=https://xxx.upstash.io
 KV_REST_API_TOKEN=xxx
 ```
 
-### 2. Gemini API Key
+### 3. Gemini API Key
+
+✅ **DONE** - Already configured
 
 If not already set, add to Vercel environment variables:
 ```
@@ -52,15 +62,15 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 Get free API key from: https://aistudio.google.com/app/apikey
 
-### 3. Deploy to Vercel
+### 4. Deploy to Vercel
+
+✅ **DONE** - Auto-deployed on push to main
 
 ```bash
-git add .
-git commit -m "feat: add QC Helper AI with RAG"
 git push origin main
 ```
 
-Vercel will auto-deploy.
+Vercel will auto-deploy. Check status: https://vercel.com/markos-projects-49639f12/waste/deployments
 
 ### 4. Run SOC Ingestion
 
