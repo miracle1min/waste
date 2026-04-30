@@ -1,21 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
-import { getSocContent } from './_lib/rag.js';
+import { getSocContent, searchSimilarChunks } from './_lib/rag.js';
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // ==================== SYSTEM PROMPT ====================
 
-async function buildSystemPrompt(): Promise<string> {
-  const socContent = await getSocContent();
-  
+async function buildSystemPrompt(socContext: string): Promise<string> {
   return `Kamu adalah QC Helper AI — asisten khusus untuk Quality Control di Mie Gacoan.
 Kamu memiliki pengetahuan lengkap tentang SOC (Station Observation Checklist) V.4.0 dan membantu crew, supervisor, dan manajemen dalam memahami SOP, prosedur operasional, standar kualitas produk.
 
 === PENGETAHUAN SOC (STATION OBSERVATION CHECKLIST) ===
-${socContent}
+${socContext}
 === END SOC ===
 
 === CARA MENJAWAB ===
@@ -60,8 +58,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ success: false, error: 'Message is required' });
     }
 
-    // Build system prompt with full SOC context
-    const systemPrompt = await buildSystemPrompt();
+    // Retrieve relevant SOC context using RAG
+    let socContext = '';
+    try {
+      const relevantChunks = await searchSimilarChunks(message, 3);
+      if (relevantChunks.length > 0) {
+        socContext = relevantChunks.map((chunk, i) => 
+          `[Referensi ${i + 1}]\n${chunk.content}`
+        ).join('\n\n');
+        console.log(`[QC Chat] Retrieved ${relevantChunks.length} relevant chunks`);
+      } else {
+        console.log('[QC Chat] No chunks found, loading full SOC');
+        socContext = await getSocContent();
+      }
+    } catch (error) {
+      console.error('[QC Chat] RAG retrieval failed:', error);
+      socContext = await getSocContent();
+    }
+
+    // Build system prompt with SOC context
+    const systemPrompt = await buildSystemPrompt(socContext);
 
     // Build Gemini messages
     const geminiMessages: any[] = [];

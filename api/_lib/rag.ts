@@ -158,19 +158,19 @@ function extractLevel(text: string): string {
 
 /**
  * Generate embedding using Gemini API
- * Using embedding-001 model (stable, available in v1beta)
+ * Using gemini-embedding-2 model
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`;
   
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'models/embedding-001',
+      model: 'models/gemini-embedding-2',
       content: { parts: [{ text }] },
     }),
   });
