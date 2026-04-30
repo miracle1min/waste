@@ -1,32 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyJwt } from './_lib/auth';
+import { verifyToken, requireRole, handleAuthError } from './_lib/auth.js';
 import {
   getSocContent,
   chunkSocDocument,
   generateEmbeddings,
   storeChunks,
   getIngestionStatus,
-} from './_lib/rag';
+} from './_lib/rag.js';
 
-/**
- * SOC Ingestion Endpoint
- * 
- * POST /api/ingest-soc - Ingest SOC document into vector database
- * GET /api/ingest-soc - Check ingestion status
- * 
- * Requires super_admin role
- */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // Auth check
+    // Auth check - super_admin only
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-
     const token = authHeader.slice(7);
-    const decoded = verifyJwt(token);
-    
+    const decoded = verifyToken(token);
     if (!decoded || decoded.role !== 'super_admin') {
       return res.status(403).json({ success: false, error: 'Forbidden: super_admin only' });
     }

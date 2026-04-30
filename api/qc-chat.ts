@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuth, handleAuthError } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/rate-limit.js';
-import { getSocContent, searchSimilarChunks } from './_lib/rag.js';
+import { getSocContent, searchSocChunks } from './_lib/rag.js';
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -61,10 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Retrieve relevant SOC context using RAG
     let socContext = '';
     try {
-      const relevantChunks = await searchSimilarChunks(message, 3);
+      const relevantChunks = await searchSocChunks(message, 3);
       if (relevantChunks.length > 0) {
-        socContext = relevantChunks.map((chunk, i) => 
-          `[Referensi ${i + 1}]\n${chunk.content}`
+        socContext = relevantChunks.map((result, i) => 
+          `[Referensi ${i + 1} - Score: ${(result.score * 100).toFixed(1)}%]\n${result.chunk.content}`
         ).join('\n\n');
         console.log(`[QC Chat] Retrieved ${relevantChunks.length} relevant chunks`);
       } else {
