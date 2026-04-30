@@ -33,6 +33,14 @@ const MASTER_TABLES_DDL = [
     status TEXT DEFAULT 'active',
     created_at TIMESTAMPTZ DEFAULT now()
   )`,
+  `CREATE TABLE IF NOT EXISTS gemini_api_keys (
+    id SERIAL PRIMARY KEY,
+    key_name TEXT UNIQUE NOT NULL,
+    api_key TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`,
 ];
 
 // Per-tenant DB tables

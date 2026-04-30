@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { checkRateLimit } from "../_lib/rate-limit.js";
 
-// Import all handler logic
 import { handleTenants } from "./_handlers/tenants.js";
 import { handleUsers } from "./_handlers/users.js";
 import { handleConfigs } from "./_handlers/configs.js";
 import { handlePersonnel } from "./_handlers/personnel.js";
+import { handleGeminiKeys } from "./_handlers/gemini-keys.js";
 
-const VALID_ENTITIES = ["tenants", "users", "configs", "personnel"] as const;
+const VALID_ENTITIES = ["tenants", "users", "configs", "personnel", "gemini-keys"] as const;
 type Entity = typeof VALID_ENTITIES[number];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,9 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   switch (entity) {
-    case "tenants": return handleTenants(req, res);
-    case "users": return handleUsers(req, res);
-    case "configs": return handleConfigs(req, res);
-    case "personnel": return handlePersonnel(req, res);
+    case "tenants":     return handleTenants(req, res);
+    case "users":       return handleUsers(req, res);
+    case "configs":     return handleConfigs(req, res);
+    case "personnel":   return handlePersonnel(req, res);
+    case "gemini-keys": return handleGeminiKeys(req, res);
   }
 }

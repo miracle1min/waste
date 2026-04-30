@@ -3,6 +3,7 @@ import { requireAuth, handleAuthError, getAuthorizedTenantId } from './_lib/auth
 import { checkRateLimit } from './_lib/rate-limit.js';
 import { resolveTenantCredentials } from './_lib/tenant-resolver.js';
 import { getGoogleAccessToken } from './_lib/google-sheets.js';
+import { getOrderedKeys, getFallbackMessage, ensureGeminiKeysTable } from './_lib/gemini-key-pool.js';
 
 const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -452,11 +453,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleAuthError(err, res);
   }
 
-  // Validate API key
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY belum di-set di server.' });
-  }
+  // Ensure gemini_api_keys table exists
+  await ensureGeminiKeysTable();
 
   // Parse body
   const { message, history, attachments } = req.body || {};
@@ -539,58 +537,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     contents.push({ role: 'user', parts: userParts });
 
-    // Call Gemini API
-    const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }],
-        },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 4096,
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      }),
-    });
+    // Build payload
+    const geminiPayload = {
+      system_instruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      contents,
+      generationConfig: { temperature: 0.7, topP: 0.95, topK: 40, maxOutputTokens: 4096 },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
+    };
 
-    if (!geminiResponse.ok) {
-      const errBody = await geminiResponse.text();
-      console.error(`[AI Chat] Gemini error ${geminiResponse.status}:`, errBody);
-
-      if (geminiResponse.status === 429) {
-        return res.status(429).json({ error: 'AI lagi sibuk, coba lagi dalam beberapa detik.' });
-      }
-      if (geminiResponse.status === 400) {
-        return res.status(400).json({ error: 'Request ke AI gagal. Coba kirim ulang pesan.' });
-      }
-      return res.status(502).json({ error: 'Gagal terhubung ke AI. Coba lagi nanti.' });
+    // Call Gemini with sticky pool rotation
+    const apiKeys = await getOrderedKeys(jwtPayload.userId, tenantId);
+    if (apiKeys.length === 0) {
+      const envKey = process.env.GEMINI_API_KEY;
+      if (envKey) apiKeys.push(envKey);
     }
 
-    const data = await geminiResponse.json();
+    let responseText: string | null = null;
+    for (let i = 0; i < apiKeys.length; i++) {
+      const apiKey = apiKeys[i];
+      const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiPayload),
+      });
 
-    // Extract response text
-    const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (geminiResponse.ok) {
+        const data = await geminiResponse.json();
+        responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        break;
+      }
+
+      const errBody = await geminiResponse.text();
+      console.warn(`[AI Chat] Key ${i + 1}/${apiKeys.length} failed (${geminiResponse.status}):`, errBody.slice(0, 100));
+      if (geminiResponse.status !== 429 && geminiResponse.status !== 403) break;
+    }
 
     if (!responseText) {
-      console.error('[AI Chat] Empty response from Gemini:', JSON.stringify(data));
-      return res.status(502).json({ error: 'AI tidak memberikan respons. Coba lagi.' });
+      return res.status(200).json({ success: true, reply: getFallbackMessage() });
     }
 
-    return res.json({
-      success: true,
-      reply: responseText,
-      model: GEMINI_MODEL,
-    });
+    return res.json({ success: true, reply: responseText, model: GEMINI_MODEL });
   } catch (err: any) {
     console.error('[AI Chat] Error:', err);
     return res.status(500).json({ error: 'Terjadi kesalahan server. Coba lagi.' });

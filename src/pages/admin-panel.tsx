@@ -15,19 +15,21 @@ const PersonnelPage = lazy(() => import("./admin/personnel"));
 const ConfigsPage = lazy(() => import("./admin/configs"));
 const DatabasePage = lazy(() => import("./admin/database"));
 const ActivityLogPage = lazy(() => import("./admin/activity"));
+const GeminiKeysPage = lazy(() => import("./admin/gemini-keys"));
 
-type PageKey = "overview" | "tenants" | "users" | "google-users" | "personnel" | "configs" | "database" | "activity";
+type PageKey = "overview" | "tenants" | "users" | "google-users" | "personnel" | "configs" | "database" | "activity" | "gemini-keys";
 
 // ===== Menu Items =====
 const MENU_ITEMS: { key: PageKey; label: string; shortLabel: string; icon: any; desc: string }[] = [
-  { key: "overview", label: "Overview", shortLabel: "Home", icon: LayoutDashboard, desc: "Ringkasan sistem" },
-  { key: "tenants", label: "Store", shortLabel: "Store", icon: Building2, desc: "Kelola resto/store" },
-  { key: "users", label: "Users", shortLabel: "Users", icon: UserCog, desc: "Manajemen user" },
-  { key: "google-users", label: "Google Users", shortLabel: "Google", icon: Globe, desc: "Akun Google OAuth" },
-  { key: "personnel", label: "QC & Manager", shortLabel: "QC", icon: UserCheck, desc: "Personil & TTD" },
-  { key: "configs", label: "Config", shortLabel: "Config", icon: KeyRound, desc: "Env & kredensial" },
-  { key: "database", label: "Database", shortLabel: "DB", icon: Server, desc: "DB management" },
-  { key: "activity", label: "Activity Log", shortLabel: "Log", icon: Activity, desc: "Riwayat aktivitas" },
+  { key: "overview",     label: "Overview",      shortLabel: "Home",   icon: LayoutDashboard, desc: "Ringkasan sistem" },
+  { key: "tenants",      label: "Store",         shortLabel: "Store",  icon: Building2,       desc: "Kelola resto/store" },
+  { key: "users",        label: "Users",         shortLabel: "Users",  icon: UserCog,         desc: "Manajemen user" },
+  { key: "google-users", label: "Google Users",  shortLabel: "Google", icon: Globe,           desc: "Akun Google OAuth" },
+  { key: "personnel",    label: "QC & Manager",  shortLabel: "QC",     icon: UserCheck,       desc: "Personil & TTD" },
+  { key: "configs",      label: "Config",        shortLabel: "Config", icon: KeyRound,        desc: "Env & kredensial" },
+  { key: "gemini-keys",  label: "Gemini Keys",   shortLabel: "AI Key", icon: Sparkles,        desc: "API key pool AI" },
+  { key: "database",     label: "Database",      shortLabel: "DB",     icon: Server,          desc: "DB management" },
+  { key: "activity",     label: "Activity Log",  shortLabel: "Log",    icon: Activity,        desc: "Riwayat aktivitas" },
 ];
 
 // Mobile bottom nav shows first 4, rest in "More" menu
@@ -184,6 +186,7 @@ export default function AdminPanel() {
                 {activePage === "google-users" && <GoogleUsersPage />}
                 {activePage === "personnel" && <PersonnelPage />}
                 {activePage === "configs" && <ConfigsPage />}
+                {activePage === "gemini-keys" && <GeminiKeysPage />}
                 {activePage === "database" && <DatabasePage />}
                 {activePage === "activity" && <ActivityLogPage />}
               </Suspense>

@@ -6,4 +6,5 @@ export { default as PersonnelPage } from "./personnel";
 export { default as ConfigsPage } from "./configs";
 export { default as DatabasePage } from "./database";
 export { default as ActivityLogPage } from "./activity";
+export { default as GeminiKeysPage } from "./gemini-keys";
 export type { PageKey } from "./types";

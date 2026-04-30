@@ -1,6 +1,7 @@
-import { Redis } from '@upstash/redis';
 import fs from 'fs';
 import path from 'path';
+import { Redis } from '@upstash/redis';
+import { getActiveKeys } from './gemini-key-pool.js';
 
 // ==================== TYPES ====================
 
@@ -158,30 +159,39 @@ function extractLevel(text: string): string {
 
 /**
  * Generate embedding using Gemini API
- * Using gemini-embedding-2 model
+ * Tries all active keys from pool, fallback to env var
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
-  
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'models/gemini-embedding-2',
-      content: { parts: [{ text }] },
-    }),
-  });
-  
-  if (!response.ok) {
+  // Get keys from pool, fallback to env var
+  const poolKeys = await getActiveKeys();
+  const apiKeys = poolKeys.map(k => k.api_key);
+  const envKey = process.env.GEMINI_API_KEY;
+  if (envKey && !apiKeys.includes(envKey)) apiKeys.push(envKey);
+
+  if (apiKeys.length === 0) throw new Error('No Gemini API keys available');
+
+  for (const apiKey of apiKeys) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/gemini-embedding-2',
+        content: { parts: [{ text }] },
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.embedding.values;
+    }
+
     const error = await response.text();
-    throw new Error(`Gemini embedding failed: ${error}`);
+    console.warn(`[RAG] Embedding key failed (${response.status}):`, error.slice(0, 100));
+    if (response.status !== 429 && response.status !== 403) break;
   }
-  
-  const data = await response.json();
-  return data.embedding.values;
+
+  throw new Error('All Gemini API keys failed for embedding');
 }
 
 /**
