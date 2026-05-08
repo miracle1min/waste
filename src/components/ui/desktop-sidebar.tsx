@@ -19,6 +19,8 @@ interface DesktopSidebarProps {
 export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isLoggingOut }: DesktopSidebarProps) {
   const [currentPath, setLocation] = useLocation();
 
+  const isWastePath = (path: string) => path === "/" && ["/", "/manual-waste", "/auto-waste"].includes(currentPath);
+
   const userNavItems: NavItem[] = [
     { label: "Input Waste", path: "/", icon: Zap },
     { label: "Dashboard", path: "/dashboard", icon: BarChart3 },
@@ -71,7 +73,7 @@ export function DesktopSidebar({ qcName, tenantName, isSuperAdmin, onLogout, isL
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentPath === item.path;
+          const isActive = isWastePath(item.path) || currentPath === item.path;
           return (
             <button
               key={`${item.path}-${item.label}`}

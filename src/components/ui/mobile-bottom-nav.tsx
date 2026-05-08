@@ -19,7 +19,7 @@ export function MobileBottomNav() {
   const [currentPath, navigate] = useLocation();
 
   const isActive = (path: string) => {
-    if (path === "/") return currentPath === "/" || currentPath === "/auto-waste";
+    if (path === "/") return currentPath === "/" || currentPath === "/auto-waste" || currentPath === "/manual-waste";
     return currentPath === path;
   };
 
