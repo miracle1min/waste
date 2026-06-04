@@ -17,7 +17,6 @@ const SpeedInsights = React.lazy(() => import("@vercel/speed-insights/react").th
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 const ManualWaste = React.lazy(() => import("@/pages/auto-waste"));
 const WasteMode = React.lazy(() => import("@/pages/waste-mode"));
-const AutoWaste = React.lazy(() => import("@/pages/auto-waste-paste"));
 const Dashboard = React.lazy(() => import("@/pages/dashboard"));
 const AdminPanel = React.lazy(() => import("@/pages/admin-panel"));
 const PdfDownload = React.lazy(() => import("@/pages/pdf-download"));
@@ -82,7 +81,7 @@ function UserRouter() {
       <Switch>
         <Route path="/" component={WasteMode} />
         <Route path="/manual-waste" component={ManualWaste} />
-        <Route path="/auto-waste" component={AutoWaste} />
+        <Route path="/auto-waste" component={ManualWaste} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/pdf" component={PdfDownload} />
         <Route path="/profile" component={Profile} />

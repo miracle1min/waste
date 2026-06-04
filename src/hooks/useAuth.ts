@@ -203,16 +203,17 @@ export function useAuth() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    let activityTimeout: ReturnType<typeof setTimeout>;
-
     const handleUserActivity = () => {
-      clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(() => {
-        if (localStorage.getItem("waste_app_authenticated") === "true") {
-          localStorage.setItem("waste_app_login_time", Date.now().toString());
-          warningShown.current = false; // Reset warning since session extended
-        }
-      }, ACTIVITY_THROTTLE);
+      if (localStorage.getItem("waste_app_authenticated") !== "true") return;
+
+      const now = Date.now();
+      const lastLoginTime = parseInt(localStorage.getItem("waste_app_login_time") || "0", 10);
+
+      // Keep extending the session while the user is active, but only once per throttle window.
+      if (!lastLoginTime || now - lastLoginTime >= ACTIVITY_THROTTLE) {
+        localStorage.setItem("waste_app_login_time", now.toString());
+        warningShown.current = false;
+      }
     };
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
@@ -224,7 +225,6 @@ export function useAuth() {
       events.forEach(event => {
         document.removeEventListener(event, handleUserActivity, true);
       });
-      clearTimeout(activityTimeout);
     };
   }, [isAuthenticated]);
 

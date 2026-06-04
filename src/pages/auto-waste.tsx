@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 import { getCurrentWIBDateString } from "@/lib/timezone";
+import { uploadFileToBlob } from "@/lib/blob-upload";
 import { apiFetch, ApiRequestError, getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -112,6 +113,10 @@ const STATION_ITEM_CATALOG: Record<Station, StationCatalogItem[]> = {
     { value: "APEL", label: "APEL", unit: "GRAM" },
     { value: "PEAR", label: "PEAR", unit: "GRAM" },
     { value: "BELIMBING", label: "BELIMBING", unit: "GRAM" },
+    { value: "JERUK NIPIS", label: "JERUK NIPIS", unit: "GRAM" },
+    { value: "APEL BUSUK", label: "APEL BUSUK", unit: "GRAM" },
+    { value: "PEAR BUSUK", label: "PEAR BUSUK", unit: "GRAM" },
+    { value: "BELIMBING BUSUK", label: "BELIMBING BUSUK", unit: "GRAM" },
     { value: "STROBERI SUSUT", label: "STROBERI SUSUT", unit: "GRAM" },
     { value: "STOBERI BUSUK", label: "STOBERI BUSUK", unit: "GRAM" },
     { value: "CUP 16", label: "CUP -> CUP 16", unit: "PCS" },
@@ -782,25 +787,12 @@ export default function AutoWaste() {
         formData.append("jamTanggalPemusnahan", jamFormatted);
         formData.append("jamTanggalPemusnahanList", JSON.stringify(jamList));
 
-        // Upload photos one-by-one with retry
+        // Upload photos directly from the browser to Blob to avoid double-hop latency.
         const uploadedUrls: string[] = [];
         for (let fi = 0; fi < files.length; fi++) {
           const file = files[fi];
-          const photoForm = new FormData();
-          photoForm.append('mode', 'upload-photo');
-          photoForm.append('photo', file);
-          
-          const photoRes = await apiFetch("/api/auto-submit", {
-            method: "POST",
-            body: photoForm,
-          }, { maxRetries: 3, timeout: 60000 }); // More retries + longer timeout for uploads
-          
-          const photoResult = await photoRes.json();
-          if (photoResult.success && photoResult.url) {
-            uploadedUrls.push(photoResult.url);
-          } else {
-            throw new Error(`Gagal upload foto ${fi + 1}: ${photoResult.message || "Unknown error"}`);
-          }
+          const url = await uploadFileToBlob(file, file.name, "dokumentasi");
+          uploadedUrls.push(url);
         }
         if (uploadedUrls.length > 0) {
           formData.append('dokumentasiUrls', JSON.stringify(uploadedUrls));

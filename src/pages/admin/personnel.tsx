@@ -152,7 +152,7 @@ export default function PersonnelPage() {
                           </div>
                         )}
                       </div>
-                      <p className="text-[10px] font-sans text-[#4FD1FF]/60 mt-1.5">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
+                      <p className="text-[10px] font-sans text-[#4FD1FF]/60 mt-1.5">Upload gambar TTD (JPG/PNG). Otomatis ke Vercel Blob.</p>
                     </div>
 
                     <div className="flex gap-2 pt-1">

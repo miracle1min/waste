@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ClipboardList, Zap } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type ModeCardProps = {
@@ -67,19 +67,6 @@ export default function WasteMode() {
             icon={ClipboardList}
             accent="border-[#4FD1FF] bg-[#08131a] text-[#4FD1FF]"
             onClick={() => setLocation("/manual-waste")}
-          />
-
-          <ModeCard
-            title="Auto Waste"
-            desc="Paste banyak item sekaligus pakai format cepat: NAMA (KODE LOT): QTY SATUAN ALASAN."
-            bullets={[
-              "Config shift/QC/manager dipilih di UI",
-              "Cocok buat power-user dan batch input cepat",
-              "Ada preview hasil parse sebelum submit",
-            ]}
-            icon={Zap}
-            accent="border-[#FFE500] bg-[#1a1a00] text-[#FFE500]"
-            onClick={() => setLocation("/auto-waste")}
           />
         </div>
       </div>

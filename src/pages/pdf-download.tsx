@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-client";
+import { uploadFileToBlob } from "@/lib/blob-upload";
 import { useState, useEffect, useMemo } from "react";
 import {
  FileDown, Calendar, Download, Loader2, FileText,
@@ -642,16 +643,12 @@ export default function PdfDownload() {
          a.href = url; a.download = result.fileName; a.click();
          URL.revokeObjectURL(url);
          successCount++;
-         // Backup to R2
+         // Backup to Blob
          try {
-           setPdfProgress(`☁️ Backup ${result.fileName} ke cloud...`);
-           const formData = new FormData();
-           formData.append('pdfFile', result.blob, result.fileName);
-           formData.append('fileName', result.fileName);
-           formData.append('mode', 'upload-pdf');
-           await apiFetch('/api/auto-submit', { method: 'POST', body: formData });
+           setPdfProgress(`☁️ Backup ${result.fileName} ke Blob...`);
+           await uploadFileToBlob(result.blob, result.fileName, "pdf");
          } catch (backupErr) {
-           console.warn('PDF backup to R2 failed:', backupErr);
+           console.warn('PDF backup to Blob failed:', backupErr);
          }
          if (i < dates.length - 1) await new Promise(r => setTimeout(r, 1500));
        } else { failCount++; }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { uploadFileToBlob } from "@/lib/blob-upload";
 import {
   Bot,
   Trash2,
@@ -798,13 +799,9 @@ export default function AiAssistant() {
         )
       );
 
-      // Also backup to R2
+      // Also backup to Blob without routing the PDF through the server.
       try {
-        const formData = new FormData();
-        formData.append('pdfFile', blob, fileName);
-        formData.append('fileName', fileName);
-        formData.append('mode', 'upload-pdf');
-        await apiFetch('/api/auto-submit', { method: 'POST', body: formData });
+        await uploadFileToBlob(blob, fileName, "pdf");
       } catch {}
     } catch (err: any) {
       setMessages((prev) =>

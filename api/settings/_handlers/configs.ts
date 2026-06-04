@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAllConfigs, upsertConfig, deleteConfig } from "../../_lib/db.js";
 import { testConnection, seedDatabase, switchDatabase, seedTenantDatabase, migrateToTenantDb } from "../../_lib/database-ops.js";
-import { uploadToR2 } from "../../_lib/r2.js";
-import { resolveTenantCredentials } from "../../_lib/tenant-resolver.js";
+import { uploadToBlob } from "../../_lib/blob.js";
 import { requireRole, handleAuthError } from "../../_lib/auth.js";
 
 const MASKED_SECRET = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
@@ -102,25 +101,16 @@ export async function handleConfigs(req: VercelRequest, res: VercelResponse) {
         return res.json(result);
       }
 
-      // Upload signature to R2
+      // Upload signature to Blob
       if (body.action === "upload-signature") {
         const { tenant_id, file_base64, file_name, mime_type } = body;
         if (!tenant_id || !file_base64 || !file_name) {
           return res.status(400).json({ error: "tenant_id, file_base64, dan file_name wajib diisi!" });
         }
-        const creds = await resolveTenantCredentials(tenant_id);
         const buffer = Buffer.from(file_base64, "base64");
         const safeName = file_name.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
-        const fullUrl = await uploadToR2(buffer, safeName, mime_type || "image/jpeg", "signatures", {
-          accountId: creds.r2AccountId,
-          accessKeyId: creds.r2AccessKeyId,
-          secretAccessKey: creds.r2SecretAccessKey,
-          bucketName: creds.r2BucketName,
-          publicUrl: creds.r2PublicUrl,
-        });
-        const publicBase = (creds.r2PublicUrl || "").replace(/\/$/, "");
-        const signaturePath = publicBase ? fullUrl.replace(publicBase + "/", "") : fullUrl;
-        return res.json({ success: true, signature_url: signaturePath, full_url: fullUrl });
+        const fullUrl = await uploadToBlob(buffer, safeName, mime_type || "image/jpeg", `${tenant_id}/signatures`);
+        return res.json({ success: true, signature_url: fullUrl, full_url: fullUrl });
       }
 
       // Migrate from env vars

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/ui/footer";
 import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 import { getCurrentWIBDateString } from "@/lib/timezone";
+import { uploadFileToBlob } from "@/lib/blob-upload";
 import { apiFetch, ApiRequestError, getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -194,9 +195,14 @@ export default function AutoWastePaste() {
       formData.append("jamTanggalPemusnahan", jamFormatted);
       formData.append("jamTanggalPemusnahanList", JSON.stringify(parsedItems.map(() => jamFormatted)));
 
-      dokumentasiFiles.forEach((file, idx) => {
-        formData.append(`dokumentasi_${idx}`, file);
-      });
+      if (dokumentasiFiles.length > 0) {
+        const uploadedUrls: string[] = [];
+        for (const file of dokumentasiFiles) {
+          const url = await uploadFileToBlob(file, file.name, "dokumentasi");
+          uploadedUrls.push(url);
+        }
+        formData.append("dokumentasiUrls", JSON.stringify(uploadedUrls));
+      }
 
       const res = await apiFetch("/api/auto-submit", { method: "POST", body: formData });
       const result = await res.json();

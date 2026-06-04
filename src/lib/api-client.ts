@@ -1,11 +1,8 @@
 import { dispatchAuthExpired } from "@/hooks/useAuth";
 
 /**
- * API Client — otomatis nambah tenant_id header + JWT token di setiap request.
- * BUG-002 fix: Send JWT token in Authorization header.
- * BUG-019 fix: All API calls now go through this client.
- * 
- * Enhanced: retry logic for network errors & 5xx responses
+ * API client that automatically adds tenant and auth headers to requests.
+ * Also includes retry handling for network errors, 5xx responses, and timeouts.
  */
 
 export function getTenantId(): string {
@@ -28,10 +25,6 @@ export function getAuthToken(): string {
   return localStorage.getItem("waste_app_token") || "";
 }
 
-// ========================
-// ERROR TYPES
-// ========================
-
 export type ApiErrorType = "network" | "timeout" | "server" | "auth" | "validation" | "unknown";
 
 export class ApiRequestError extends Error {
@@ -44,12 +37,10 @@ export class ApiRequestError extends Error {
     this.name = "ApiRequestError";
     this.type = type;
     this.status = status;
-    // Network, timeout, and server (5xx) errors are retryable
     this.retryable = type === "network" || type === "timeout" || type === "server";
   }
 }
 
-// User-friendly error messages per type
 const ERROR_MESSAGES: Record<ApiErrorType, string> = {
   network: "Koneksi internet bermasalah. Cek WiFi/data kamu.",
   timeout: "Server lama banget responnya. Coba lagi nanti.",
@@ -63,17 +54,13 @@ export function getErrorMessage(type: ApiErrorType): string {
   return ERROR_MESSAGES[type] || ERROR_MESSAGES.unknown;
 }
 
-// ========================
-// RETRY CONFIG
-// ========================
-
 interface RetryConfig {
-  maxRetries?: number;       // default: 2 (total 3 attempts)
-  baseDelay?: number;        // default: 1000ms
-  maxDelay?: number;         // default: 5000ms
-  retryOn5xx?: boolean;      // default: true
-  retryOnNetwork?: boolean;  // default: true
-  timeout?: number;          // default: 30000ms (30s)
+  maxRetries?: number;
+  baseDelay?: number;
+  maxDelay?: number;
+  retryOn5xx?: boolean;
+  retryOnNetwork?: boolean;
+  timeout?: number;
 }
 
 const DEFAULT_RETRY: RetryConfig = {
@@ -86,31 +73,19 @@ const DEFAULT_RETRY: RetryConfig = {
 };
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function getDelay(attempt: number, baseDelay: number, maxDelay: number): number {
-  // Exponential backoff with jitter
   const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
-  const jitter = delay * 0.2 * Math.random(); // ±20% jitter
+  const jitter = delay * 0.2 * Math.random();
   return delay + jitter;
 }
 
-// ========================
-// MAIN FETCH WRAPPER
-// ========================
-
-/**
- * Fetch wrapper dengan:
- * - Auto inject x-tenant-id header + Authorization Bearer token
- * - Retry logic untuk network errors & 5xx
- * - Timeout support
- * - Typed errors
- */
 export async function apiFetch(
-  url: string, 
+  url: string,
   options: RequestInit = {},
-  retryConfig?: RetryConfig
+  retryConfig?: RetryConfig,
 ): Promise<Response> {
   const config = { ...DEFAULT_RETRY, ...retryConfig };
   const tenantId = getTenantId();
@@ -128,63 +103,62 @@ export async function apiFetch(
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= (config.maxRetries || 0); attempt++) {
+    const controller = new AbortController();
+    const callerSignal = options.signal;
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, config.timeout);
+    const handleCallerAbort = () => controller.abort();
+
     try {
-      // FIX #28: Combine caller's signal with timeout signal instead of overriding
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-      
-      // If caller provided a signal, abort our controller when their signal aborts
-      const callerSignal = options.signal;
       if (callerSignal) {
         if (callerSignal.aborted) {
           controller.abort();
         } else {
-          callerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+          callerSignal.addEventListener("abort", handleCallerAbort, { once: true });
         }
       }
-      
-      const response = await fetch(url, { 
-        ...fetchOptions, 
-        signal: controller.signal 
-      });
-      
-      clearTimeout(timeoutId);
 
-      // Check for server errors (5xx) — retryable
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+
       if (response.status >= 500 && config.retryOn5xx && attempt < (config.maxRetries || 0)) {
         console.warn(`[apiFetch] Server error ${response.status} on ${url}, retry ${attempt + 1}/${config.maxRetries}`);
         await sleep(getDelay(attempt, config.baseDelay!, config.maxDelay!));
         continue;
       }
 
-      // Auth errors — dispatch global logout event + throw
       if (response.status === 401 || response.status === 403) {
         dispatchAuthExpired({
           reason: response.status === 401 ? "api_401" : "api_403",
-          message: response.status === 401 
-            ? "Sesi expired, otomatis logout..." 
-            : "Akses ditolak, otomatis logout...",
+          message:
+            response.status === 401
+              ? "Sesi expired, otomatis logout..."
+              : "Akses ditolak, otomatis logout...",
         });
         throw new ApiRequestError(
           response.status === 401 ? "Sesi expired, login ulang." : "Kamu ga punya akses.",
           "auth",
-          response.status
+          response.status,
         );
       }
 
       return response;
     } catch (error: any) {
-      // Don't retry ApiRequestError (auth errors etc)
       if (error instanceof ApiRequestError) {
         throw error;
       }
 
-      // Timeout (AbortError)
-      if (error.name === "AbortError") {
-        lastError = new ApiRequestError(
-          "Request timeout — server ga respon.",
-          "timeout"
-        );
+      if (error?.name === "AbortError" && callerSignal?.aborted && !timedOut) {
+        throw error;
+      }
+
+      if (error?.name === "AbortError") {
+        lastError = new ApiRequestError("Request timeout - server ga respon.", "timeout");
         if (attempt < (config.maxRetries || 0)) {
           console.warn(`[apiFetch] Timeout on ${url}, retry ${attempt + 1}/${config.maxRetries}`);
           await sleep(getDelay(attempt, config.baseDelay!, config.maxDelay!));
@@ -193,12 +167,8 @@ export async function apiFetch(
         throw lastError;
       }
 
-      // Network errors (TypeError: Failed to fetch)
-      if (error instanceof TypeError || error.message?.includes("fetch")) {
-        lastError = new ApiRequestError(
-          "Koneksi gagal — cek internet kamu.",
-          "network"
-        );
+      if (error instanceof TypeError || error?.message?.includes("fetch")) {
+        lastError = new ApiRequestError("Koneksi gagal - cek internet kamu.", "network");
         if (config.retryOnNetwork && attempt < (config.maxRetries || 0)) {
           console.warn(`[apiFetch] Network error on ${url}, retry ${attempt + 1}/${config.maxRetries}`);
           await sleep(getDelay(attempt, config.baseDelay!, config.maxDelay!));
@@ -207,26 +177,23 @@ export async function apiFetch(
         throw lastError;
       }
 
-      // Unknown errors
-      lastError = new ApiRequestError(
-        error.message || "Terjadi kesalahan.",
-        "unknown"
-      );
+      lastError = new ApiRequestError(error?.message || "Terjadi kesalahan.", "unknown");
       if (attempt < (config.maxRetries || 0)) {
         await sleep(getDelay(attempt, config.baseDelay!, config.maxDelay!));
         continue;
       }
       throw lastError;
+    } finally {
+      clearTimeout(timeoutId);
+      if (callerSignal) {
+        callerSignal.removeEventListener("abort", handleCallerAbort);
+      }
     }
   }
 
-  // Should never reach here, but just in case
   throw lastError || new ApiRequestError("Request gagal setelah retry.", "unknown");
 }
 
-/**
- * Tambah tenant_id ke URL sebagai query param.
- */
 export function withTenantParam(url: string): string {
   const tenantId = getTenantId();
   if (!tenantId) return url;

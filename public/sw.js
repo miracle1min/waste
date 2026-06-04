@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ba-waste-v1';
+const CACHE_NAME = 'ba-waste-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -39,6 +39,33 @@ self.addEventListener('fetch', (event) => {
   
   // API calls & version.json: Network only (never cache)
   if (url.pathname.startsWith('/api/') || url.pathname === '/version.json') {
+    return;
+  }
+
+  const isNavigationRequest = event.request.mode === 'navigate';
+  const isDocumentRequest = event.request.destination === 'document';
+
+  // Always prefer network for HTML/app shell so the first open gets the latest deployment.
+  if (isNavigationRequest || isDocumentRequest || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          return cached || caches.match('/') || new Response('Offline - Cek koneksi internet', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        })
+    );
     return;
   }
   

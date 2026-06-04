@@ -657,7 +657,7 @@ function PersonnelTab() {
  </div>
  )}
  </div>
- <p className="text-[10px] font-sans text-[#9CA3AF] mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke R2 bucket.</p>
+ <p className="text-[10px] font-sans text-[#9CA3AF] mt-1">Upload gambar TTD (JPG/PNG). Otomatis ke Vercel Blob.</p>
  </div>
  </div>
  <div className="flex gap-2 pt-2">

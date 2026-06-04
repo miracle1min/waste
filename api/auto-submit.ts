@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { parseForm, fileToBuffer } from './_lib/parse-form.js';
-import { uploadToR2 } from './_lib/r2.js';
+import { buildBlobProxyUrl, getRequestOrigin, uploadToBlob } from './_lib/blob.js';
 import { appendGroupedToGoogleSheets, appendTesterToGoogleSheets } from './_lib/google-sheets.js';
 import { resolveTenantCredentials, extractTenantId } from './_lib/tenant-resolver.js';
 import { requireAuth, getAuthorizedTenantId, handleAuthError } from './_lib/auth.js';
@@ -33,6 +34,125 @@ function safeJsonParse(input: string | undefined, fallback: any[] = []): any[] {
   }
 }
 
+function formatDateToSheetTab(dateStr: string): string {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y.slice(-2)}`;
+}
+
+type UploadKind = 'dokumentasi' | 'pdf';
+
+function getUploadConfig(kind: UploadKind): {
+  maxSize: number;
+  allowedContentTypes: string[];
+} {
+  if (kind === 'pdf') {
+    return {
+      maxSize: 25 * 1024 * 1024,
+      allowedContentTypes: ['application/pdf'],
+    };
+  }
+
+  return {
+    maxSize: 5 * 1024 * 1024,
+    allowedContentTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
+  };
+}
+
+function sanitizeSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+/** Get production origin for Sheets — replaces localhost in dev mode */
+function getSheetsOrigin(req: VercelRequest): string {
+  const origin = getRequestOrigin(req);
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return process.env.PUBLIC_URL || `https://${(req.headers.host as string)?.replace(/:.*$/, '') || 'gacoanku.my.id'}`;
+    }
+  } catch {}
+  return origin;
+}
+
+/** Rewrite localhost proxy URLs to production domain for Sheets persistence */
+function resolveProxyOrigin(url: string, sheetsOrigin: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return url.replace(parsed.origin, sheetsOrigin.replace(/\/$/, ''));
+    }
+  } catch {}
+  return url;
+}
+
+async function readJsonBody<T>(req: VercelRequest): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let bodyText = '';
+
+    // Try express rawBody first (vercel dev sometimes pre-parses)
+    if ((req as any).rawBody) {
+      bodyText = (req as any).rawBody.toString('utf8');
+    } else if ((req as any).body && typeof (req as any).body === 'object') {
+      // Already parsed by middleware
+      return resolve((req as any).body as T);
+    }
+
+    if (bodyText) {
+      try { return resolve(JSON.parse(bodyText) as T); }
+      catch { reject(new Error(`Format data tidak valid: "${bodyText.substring(0, 50)}..."`)); }
+      return;
+    }
+
+    let streamEnded = false;
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      streamEnded = true;
+      bodyText = Buffer.concat(chunks).toString('utf8');
+      if (!bodyText) {
+        return reject(new Error('Payload upload kosong.'));
+      }
+      try { resolve(JSON.parse(bodyText) as T); }
+      catch { reject(new Error(`Format data tidak valid: "${bodyText.substring(0, 50)}..."`)); }
+    });
+    req.on('error', (err) => reject(err));
+    // Timeout safeguard
+    setTimeout(() => {
+      if (!streamEnded) {
+        reject(new Error('Timeout membaca request body.'));
+      }
+    }, 15000);
+  });
+}
+
+function parseClientPayload(clientPayload: string | null): { kind: UploadKind; tenantId: string } {
+  if (!clientPayload) {
+    throw new Error('clientPayload wajib diisi.');
+  }
+
+  const payload = JSON.parse(clientPayload) as { kind?: UploadKind; tenantId?: string };
+  if (!payload.kind || !payload.tenantId) {
+    throw new Error('Payload upload tidak lengkap.');
+  }
+  if (!['dokumentasi', 'pdf'].includes(payload.kind)) {
+    throw new Error('Jenis upload tidak didukung.');
+  }
+  return { kind: payload.kind, tenantId: payload.tenantId };
+}
+
+function assertAuthorizedPath(pathname: string, tenantId: string, kind: UploadKind) {
+  const expectedPrefix =
+    kind === 'pdf'
+      ? `${sanitizeSegment(tenantId)}/pdf-reports/`
+      : `${sanitizeSegment(tenantId)}/waste-management/dokumentasi/`;
+
+  if (!pathname.startsWith(expectedPrefix)) {
+    throw new Error('Path upload tidak valid.');
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed' });
@@ -40,7 +160,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (checkRateLimit(req, res, { name: "auto-submit", maxRequests: 30, windowSeconds: 60 })) return;
 
   try {
+    if (req.query.mode === 'blob-upload') {
+      const body = await readJsonBody<HandleUploadBody>(req);
+      let jwtPayload = null;
+
+      if (body.type === 'blob.generate-client-token') {
+        try {
+          jwtPayload = requireAuth(req);
+        } catch (err) {
+          return handleAuthError(err, res);
+        }
+      }
+
+      const result = await handleUpload({
+        request: req,
+        body,
+        onBeforeGenerateToken: async (pathname, clientPayload) => {
+          if (!jwtPayload) {
+            throw new Error('Unauthorized');
+          }
+
+          const authorizedTenantId = getAuthorizedTenantId(req, jwtPayload);
+          const payload = parseClientPayload(clientPayload);
+
+          if (payload.tenantId !== authorizedTenantId) {
+            throw new Error('Tenant upload tidak sesuai.');
+          }
+
+          assertAuthorizedPath(pathname, authorizedTenantId, payload.kind);
+          const config = getUploadConfig(payload.kind);
+
+          return {
+            allowedContentTypes: config.allowedContentTypes,
+            maximumSizeInBytes: config.maxSize,
+            addRandomSuffix: false,
+            tokenPayload: JSON.stringify(payload),
+          };
+        },
+        onUploadCompleted: async () => {},
+      });
+
+      return res.status(200).json(result);
+    }
+
     const { fields, files } = await parseForm(req);
+    const origin = getRequestOrigin(req);
+    const sheetsOrigin = getSheetsOrigin(req);
 
     // === PDF Backup Mode ===
     // SEC-FIX: Require authentication for all modes
@@ -70,14 +235,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       const folder = `${tenantId}/pdf-reports`;
-      const tenantCreds = await resolveTenantCredentials(tenantId);
-      const url = await uploadToR2(buffer, safeFileName, 'application/pdf', folder, {
-        accountId: tenantCreds.r2AccountId,
-        accessKeyId: tenantCreds.r2AccessKeyId,
-        secretAccessKey: tenantCreds.r2SecretAccessKey,
-        bucketName: tenantCreds.r2BucketName,
-        publicUrl: tenantCreds.r2PublicUrl,
-      });
+      const privateUrl = await uploadToBlob(buffer, safeFileName, 'application/pdf', folder);
+      const url = buildBlobProxyUrl(privateUrl, sheetsOrigin);
       const key = `${folder}/${safeFileName}`;
 
       return res.json({ success: true, url, key, fileName });
@@ -86,7 +245,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // === Single Photo Upload Mode ===
     if (fields.mode === 'upload-photo') {
       const tenantId = getAuthorizedTenantId(req, jwtPayload);
-      const tenantCreds = await resolveTenantCredentials(tenantId);
       const photoFile = files.photo;
 
       if (!photoFile || Array.isArray(photoFile) || photoFile.size === 0) {
@@ -100,11 +258,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       // SEC-FIX: Sanitize folder path to prevent path traversal
       const rawFolder = fields.folder || 'waste-management/dokumentasi';
-      const folder = rawFolder.replace(/\.\./g, '').replace(/^\/+/, '');
-      const url = await uploadToR2(buffer, name, type, folder, {
-        accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
-        secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
-      });
+      const folder = `${tenantId}/${rawFolder.replace(/\.\./g, '').replace(/^\/+/, '')}`;
+      const privateUrl = await uploadToBlob(buffer, name, type, folder);
+      const url = buildBlobProxyUrl(privateUrl, sheetsOrigin);
 
       return res.json({ success: true, url });
     }
@@ -156,6 +312,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const tenantId = getAuthorizedTenantId(req, jwtPayload);
       const tenantCreds = await resolveTenantCredentials(tenantId);
+      const targetTab = formatDateToSheetTab(tanggal);
 
       if (!tenantCreds.googleSheetsCredentials || !tenantCreds.googleSpreadsheetId) {
         return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
@@ -169,6 +326,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (Array.isArray(parsed)) testerDokumentasiUrls.push(...parsed);
         } catch {}
       }
+
+      console.log('[auto-submit][tester] append start', {
+        tenantId,
+        tanggal,
+        targetTab,
+        shift,
+        storeName,
+        testerItemsCount: testerItems.length,
+      });
 
       await appendTesterToGoogleSheets(
         tenantCreds.googleSheetsCredentials,
@@ -187,7 +353,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       );
 
-      return res.json({ success: true, message: 'Tester berhasil disimpan' });
+      console.log('[auto-submit][tester] append success', {
+        tenantId,
+        tanggal,
+        targetTab,
+        shift,
+        storeName,
+        testerItemsCount: testerItems.length,
+      });
+
+      return res.json({ success: true, message: 'Tester berhasil disimpan', targetTab });
     }
 
     // Force all string data to UPPERCASE for consistency
@@ -245,6 +420,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const warnings: string[] = [];
     const tenantId = getAuthorizedTenantId(req, jwtPayload);
     const tenantCreds = await resolveTenantCredentials(tenantId);
+    const targetTab = formatDateToSheetTab(tanggal);
 
     // Upload documentation photos — BUG-015 fix: Track failures
     const dokumentasiUrls: string[] = [];
@@ -253,11 +429,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (file && !Array.isArray(file) && file.size > 0) {
         try {
           const { buffer, name, type } = await fileToBuffer(file);
-          const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi', {
-            accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
-            secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
-          });
-          dokumentasiUrls.push(url);
+          const privateUrl = await uploadToBlob(buffer, name, type, `${tenantId}/waste-management/dokumentasi`);
+          dokumentasiUrls.push(buildBlobProxyUrl(privateUrl, sheetsOrigin));
         } catch (e) {
           console.error(`Docs upload error ${i}:`, e);
           warnings.push(`Gagal upload dokumentasi ${i + 1}`);
@@ -268,11 +441,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (singleDoc && !Array.isArray(singleDoc) && singleDoc.size > 0) {
       try {
         const { buffer, name, type } = await fileToBuffer(singleDoc);
-        const url = await uploadToR2(buffer, name, type, 'waste-management/dokumentasi', {
-          accountId: tenantCreds.r2AccountId, accessKeyId: tenantCreds.r2AccessKeyId,
-          secretAccessKey: tenantCreds.r2SecretAccessKey, bucketName: tenantCreds.r2BucketName, publicUrl: tenantCreds.r2PublicUrl
-        });
-        dokumentasiUrls.push(url);
+        const privateUrl = await uploadToBlob(buffer, name, type, `${tenantId}/waste-management/dokumentasi`);
+        dokumentasiUrls.push(buildBlobProxyUrl(privateUrl, sheetsOrigin));
       } catch (e) {
         console.error('Single docs upload error:', e);
         warnings.push('Gagal upload dokumentasi');
@@ -285,9 +455,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const preUploadedUrls = JSON.parse(fields.dokumentasiUrls);
         if (Array.isArray(preUploadedUrls)) {
           const safeUrls = preUploadedUrls.filter((u: unknown) =>
-            typeof u === 'string' && u.startsWith('https://')
+            typeof u === 'string' && /^https?:\/\//.test(u)
           );
-          dokumentasiUrls.push(...safeUrls);
+          dokumentasiUrls.push(...safeUrls.map((u: string) => resolveProxyOrigin(u, sheetsOrigin)));
         }
       } catch {}
     }
@@ -298,7 +468,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Submit to Google Sheets — BUG-033 fix: Properly propagate errors (already handled)
     const creds = tenantCreds;
     if (creds.googleSheetsCredentials && creds.googleSpreadsheetId) {
+      console.log('[auto-submit] append start', {
+        tenantId,
+        tanggal,
+        targetTab,
+        shift,
+        storeName,
+        kategoriInduk,
+        itemsProcessed: productList.length,
+      });
       await appendGroupedToGoogleSheets(creds.googleSheetsCredentials, creds.googleSpreadsheetId, data, imageUrls, shift, storeName);
+      console.log('[auto-submit] append success', {
+        tenantId,
+        tanggal,
+        targetTab,
+        shift,
+        storeName,
+        kategoriInduk,
+        itemsProcessed: productList.length,
+      });
     } else {
       return res.status(500).json({ success: false, message: 'Google Sheets credentials not configured' });
     }
@@ -306,7 +494,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response: any = {
       success: true,
       message: `Data auto-waste ${kategoriInduk} berhasil disimpan`,
-      data: { kategoriInduk, itemsProcessed: productList.length, shift, storeName },
+      data: { kategoriInduk, itemsProcessed: productList.length, shift, storeName, targetTab },
     };
     if (warnings.length > 0) {
       response.warnings = warnings;
