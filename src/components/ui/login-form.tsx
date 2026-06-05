@@ -23,11 +23,6 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-interface LoginTenant {
-  id: string;
-  name: string;
-}
-
 interface LoginFormProps {
   onLogin: (
     name: string,
@@ -143,9 +138,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [loginResult, setLoginResult] = useState<any>(null);
   const [pendingState, setPendingState] = useState<{ email: string; name: string } | null>(null);
   const [rejectedState, setRejectedState] = useState<{ email: string } | null>(null);
-  const [tenants, setTenants] = useState<LoginTenant[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState("");
-  const [tenantsLoading, setTenantsLoading] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -188,46 +180,12 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     }
   }, [onLogin]);
 
-  useEffect(() => {
-    let active = true;
-
-    fetch("/api/auth/login")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!active) return;
-        const list = Array.isArray(data.tenants) ? data.tenants : [];
-        setTenants(list);
-        if (list.length === 1) {
-          setSelectedTenantId(list[0].id);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setError("Gagal ambil daftar store. Coba refresh halaman.");
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setTenantsLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
   });
 
   const handleSubmit = async (data: LoginFormData) => {
-    if (tenants.length > 0 && !selectedTenantId) {
-      setError("Pilih store dulu sebelum login.");
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -238,7 +196,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         body: JSON.stringify({
           username: data.username,
           password: data.password,
-          tenant_id: selectedTenantId,
         }),
       });
 
@@ -260,11 +217,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   const handleGoogleLogin = () => {
-    if (!selectedTenantId) {
-      setError("Pilih store dulu sebelum login dengan Google.");
-      return;
-    }
-    window.location.href = `/api/auth/google?tenant_id=${encodeURIComponent(selectedTenantId)}`;
+    window.location.href = "/api/auth/google";
   };
 
   const handleConfirmLogin = () => {
@@ -359,7 +312,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   }
 
   return (
-    <LoginShell title="Masuk ke aplikasi" subtitle="Pilih store dan masuk.">
+    <LoginShell title="Masuk ke aplikasi" subtitle="Masuk untuk lanjut ke dashboard dan input waste.">
       <div className="space-y-4">
         {error && (
           <div className="flex items-start gap-2 rounded-lg border-2 border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2.5 text-xs text-[#fca5a5]">
@@ -370,21 +323,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
-            <div>
-              <FieldLabel>Store</FieldLabel>
-              <select
-                value={selectedTenantId}
-                onChange={(e) => setSelectedTenantId(e.target.value)}
-                disabled={isSubmitting || tenantsLoading}
-                className="h-11 w-full rounded-lg border-2 border-[#2a2a2a] bg-[#0d0d0d] px-3 text-sm text-[#f0f0f0] outline-none transition focus:border-[#FFE500] disabled:opacity-50"
-              >
-                <option value="">{tenantsLoading ? "Memuat store..." : "Pilih store"}</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
-                ))}
-              </select>
-            </div>
-
             <FormField
               control={form.control}
               name="username"
@@ -453,10 +391,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           <div className="h-px flex-1 bg-[#222]" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={isSubmitting || tenantsLoading}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isSubmitting}
+
           className="h-11 w-full rounded-lg border-2 border-[#2a2a2a] bg-[#141414] text-sm font-bold text-[#ccc] shadow-nb-sm transition-all hover:border-[#444] hover:text-white hover:-translate-x-px hover:-translate-y-px hover:shadow-nb active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-50 flex items-center justify-center gap-2"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">

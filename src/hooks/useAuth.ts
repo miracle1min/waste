@@ -58,7 +58,7 @@ export function useAuth() {
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [qcName, setQcName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("");
-  const [tenantId, setTenantId] = useState<string>("");
+  const [tenantId, setTenantId] = useState<string>("single-tenant");
   const [tenantName, setTenantName] = useState<string>("");
   const [storeCode, setStoreCode] = useState<string>("");
   const [logoutReason, setLogoutReason] = useState<string>("");
@@ -106,9 +106,10 @@ export function useAuth() {
     // Reset state
     setQcName("");
     setUserRole("");
-    setTenantId("");
-    setTenantName("");
-    setStoreCode("");
+      setTenantId("single-tenant");
+      setTenantName("");
+      setStoreCode("");
+
 
     // Small delay for logout animation, then set unauthenticated
     setTimeout(() => {
@@ -264,8 +265,8 @@ export function useAuth() {
           setIsAuthenticated(true);
           setQcName(storedQcName || "");
           setUserRole(storedRole || "");
-          setTenantId(storedTenantId || "");
-          setTenantName(storedTenantName || "");
+          setTenantId(storedTenantId || "single-tenant");
+          setTenantName(storedTenantName || "Store Testing");
           setStoreCode(storedStoreCode || "");
         } else {
           performLogout("Sesi kamu sudah expired. Silakan login ulang.");
@@ -285,6 +286,9 @@ export function useAuth() {
 
   // ── Login ──
   const login = (name: string, role?: string, tenant_id?: string, tenant_name?: string, store_code?: string, token?: string) => {
+    const resolvedTenantId = tenant_id || "single-tenant";
+    const resolvedTenantName = tenant_name || "Store Testing";
+
     localStorage.setItem("waste_app_authenticated", "true");
     localStorage.setItem("waste_app_login_time", Date.now().toString());
     if (token) {
@@ -292,13 +296,13 @@ export function useAuth() {
     }
     localStorage.setItem("waste_app_qc_name", name);
     localStorage.setItem("waste_app_role", role || "admin");
-    localStorage.setItem("waste_app_tenant_id", tenant_id || "");
-    localStorage.setItem("waste_app_tenant_name", tenant_name || "");
+    localStorage.setItem("waste_app_tenant_id", resolvedTenantId);
+    localStorage.setItem("waste_app_tenant_name", resolvedTenantName);
     localStorage.setItem("waste_app_store_code", store_code || "");
     setQcName(name);
     setUserRole(role || "admin");
-    setTenantId(tenant_id || "");
-    setTenantName(tenant_name || "");
+    setTenantId(resolvedTenantId);
+    setTenantName(resolvedTenantName);
     setStoreCode(store_code || "");
     setIsAuthenticated(true);
     isHandlingExpiry.current = false;

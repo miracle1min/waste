@@ -1,5 +1,5 @@
 import { upload } from "@vercel/blob/client";
-import { getAuthToken, getTenantId } from "./api-client";
+import { getAuthToken, getStoreName, getTenantId } from "./api-client";
 
 type UploadKind = "dokumentasi" | "pdf";
 
@@ -31,13 +31,10 @@ export async function uploadFileToBlob(
   onUploadProgress?: (progress: { loaded: number; total: number; percentage: number }) => void,
 ): Promise<string> {
   const token = getAuthToken();
-  const tenantId = getTenantId();
+  const tenantId = getTenantId() || getStoreName() || "single-tenant";
 
   if (!token) {
     throw new Error("Token autentikasi tidak ditemukan.");
-  }
-  if (!tenantId) {
-    throw new Error("Tenant tidak ditemukan.");
   }
 
   const pathname = buildUploadPath(kind, tenantId, fileName);
@@ -46,7 +43,6 @@ export async function uploadFileToBlob(
     handleUploadUrl: "/api/auto-submit?mode=blob-upload",
     headers: {
       Authorization: `Bearer ${token}`,
-      "x-tenant-id": tenantId,
     },
     clientPayload: JSON.stringify({ kind, tenantId }),
     multipart: file.size > 4_500_000,

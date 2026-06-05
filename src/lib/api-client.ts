@@ -1,12 +1,12 @@
 import { dispatchAuthExpired } from "@/hooks/useAuth";
 
 /**
- * API client that automatically adds tenant and auth headers to requests.
+ * API client that automatically adds auth headers to requests.
  * Also includes retry handling for network errors, 5xx responses, and timeouts.
  */
 
 export function getTenantId(): string {
-  return localStorage.getItem("waste_app_tenant_id") || "";
+  return localStorage.getItem("waste_app_tenant_id") || "single-tenant";
 }
 
 export function getUserRole(): string {
@@ -88,13 +88,9 @@ export async function apiFetch(
   retryConfig?: RetryConfig,
 ): Promise<Response> {
   const config = { ...DEFAULT_RETRY, ...retryConfig };
-  const tenantId = getTenantId();
   const token = getAuthToken();
   const headers = new Headers(options.headers);
 
-  if (tenantId) {
-    headers.set("x-tenant-id", tenantId);
-  }
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
@@ -195,8 +191,5 @@ export async function apiFetch(
 }
 
 export function withTenantParam(url: string): string {
-  const tenantId = getTenantId();
-  if (!tenantId) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}tenant_id=${tenantId}`;
+  return url;
 }

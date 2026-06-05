@@ -17,12 +17,10 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// BUG-019 fix: Include tenant_id and auth token headers in all API requests
+// Include auth token headers in all API requests
 function getDefaultHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const tenantId = localStorage.getItem("waste_app_tenant_id");
   const token = localStorage.getItem("waste_app_token");
-  if (tenantId) headers["x-tenant-id"] = tenantId;
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
