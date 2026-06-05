@@ -4,6 +4,7 @@
  */
 import crypto from "crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getConfiguredSingleTenantId } from "./tenant-db.js";
 
 // ===== Password Hashing (scrypt — built-in, no external deps) =====
 
@@ -182,6 +183,11 @@ export function handleAuthError(err: unknown, res: VercelResponse): VercelRespon
  * This prevents regular users from manipulating the x-tenant-id header to access other tenants' data.
  */
 export function getAuthorizedTenantId(req: VercelRequest, jwtPayload: JwtPayload): string {
+  const singleTenantId = getConfiguredSingleTenantId();
+  if (process.env.SINGLE_TENANT_MODE !== "false" && singleTenantId) {
+    return singleTenantId;
+  }
+
   if (jwtPayload.role === 'super_admin') {
     // Super admins can specify which tenant to access
     const headerTenant = (req.headers["x-tenant-id"] as string) || (req.query?.tenant_id as string);

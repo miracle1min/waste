@@ -1,8 +1,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import { createToken, requireRole, handleAuthError, hashPassword } from "../_lib/auth.js";
-import { getMasterSQL } from "../_lib/tenant-db.js";
+import { getMasterSQL, getConfiguredSingleTenantId } from "../_lib/tenant-db.js";
 import { createUser } from "../_lib/db.js";
+
+function isSingleTenantMode(): boolean {
+  return process.env.SINGLE_TENANT_MODE !== "false";
+}
+
+function getDefaultTenantName(): string {
+  return process.env.SINGLE_TENANT_NAME || process.env.ACTIVE_TENANT_NAME || "Store Testing";
+}
 
 // SEC-FIX: Sign OAuth state parameter with HMAC to prevent forgery
 function signState(data: object): string {
@@ -107,7 +115,9 @@ async function handleRedirect(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "GOOGLE_OAUTH_CLIENT_ID not configured" });
     }
 
-    const tenantId = (req.query.tenant_id as string) || "";
+    const tenantId = isSingleTenantMode()
+      ? getConfiguredSingleTenantId() || "single-tenant"
+      : (req.query.tenant_id as string) || "";
     const origin = `https://${req.headers.host || "gacoanku.my.id"}`;
     const redirectUri = `${origin}/api/auth/google`;
 
@@ -265,7 +275,9 @@ async function handleCallback(req: VercelRequest, res: VercelResponse) {
 
     // Look up tenant name
     let tenantName = "";
-    if (row.tenant_id) {
+    if (isSingleTenantMode()) {
+      tenantName = getDefaultTenantName();
+    } else if (row.tenant_id) {
       const tenantRows = await masterSql`SELECT name FROM tenants WHERE id = ${row.tenant_id}`;
       if (tenantRows.length > 0) {
         tenantName = tenantRows[0].name || "";

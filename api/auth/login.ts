@@ -4,11 +4,28 @@ import { verifyPassword, isLegacyHash, hashPassword, createToken } from "../_lib
 import { logActivity, getClientIP } from "../_lib/activity-logger.js";
 import { checkRateLimit } from "../_lib/rate-limit.js";
 import { validate, loginSchema } from "../_lib/validators.js";
+import { getConfiguredSingleTenantId } from "../_lib/tenant-db.js";
+
+function isSingleTenantMode(): boolean {
+  return process.env.SINGLE_TENANT_MODE !== "false";
+}
+
+function getDefaultTenantName(): string {
+  return process.env.SINGLE_TENANT_NAME || process.env.ACTIVE_TENANT_NAME || "Store Testing";
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET = return tenant list for login dropdown (was /api/auth/tenants)
   if (req.method === "GET") {
     try {
+      if (isSingleTenantMode()) {
+        const singleTenantId = getConfiguredSingleTenantId() || "single-tenant";
+        return res.json({
+          success: true,
+          tenants: [{ id: singleTenantId, name: getDefaultTenantName() }],
+        });
+      }
+
       const tenants = await getAllTenants();
       const publicList = tenants
         .filter((t) => t.status === "active")
@@ -29,9 +46,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const parsed = validate(loginSchema, req.body, res);
     if (!parsed) return;
     const { username, password, tenant_id } = parsed;
+    const effectiveTenantId = isSingleTenantMode()
+      ? getConfiguredSingleTenantId() || tenant_id || "single-tenant"
+      : tenant_id || undefined;
 
     // Look up user — pass tenant_id so it checks the right DB
-    const user = await getUserByUsername(username, tenant_id || undefined);
+    const user = await getUserByUsername(username, effectiveTenantId || undefined);
 
     // BUG-009 fix: Generic error message — no username enumeration
     if (!user || !verifyPassword(password, user.password_hash)) {
@@ -39,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         action: "LOGIN_FAILED",
         category: "auth",
         username: username,
-        tenantId: tenant_id || "",
+        tenantId: effectiveTenantId || "",
         ipAddress: getClientIP(req),
         userAgent: req.headers["user-agent"] || "",
         details: { reason: "Invalid credentials" },
@@ -51,11 +71,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // BUG-001 fix: Migrate legacy SHA-256 hash to scrypt on successful login
     if (isLegacyHash(user.password_hash)) {
       const newHash = hashPassword(password);
-      await updateUser(user.id, { password_hash: newHash }, user.tenant_id || undefined);
+      await updateUser(user.id, { password_hash: newHash }, (effectiveTenantId as string | undefined) || user.tenant_id || undefined);
     }
 
+    const resolvedTenantId = isSingleTenantMode()
+      ? ((effectiveTenantId as string | undefined) || user.tenant_id || "single-tenant")
+      : (user.tenant_id || "");
+
     let tenantName = "";
-    if (user.tenant_id && user.tenant_id !== "ALL") {
+    if (isSingleTenantMode()) {
+      tenantName = getDefaultTenantName();
+    } else if (user.tenant_id && user.tenant_id !== "ALL") {
       const tenant = await getTenantById(user.tenant_id);
       tenantName = tenant?.name || "";
     }
@@ -66,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       username: user.username,
       displayName: user.display_name || user.username,
       role: user.role,
-      tenantId: user.tenant_id || "",
+      tenantId: resolvedTenantId,
     });
 
     // Log successful login
@@ -75,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       category: "auth",
       userId: user.id,
       username: user.username,
-      tenantId: user.tenant_id || "",
+      tenantId: resolvedTenantId,
       tenantName: tenantName,
       ipAddress: getClientIP(req),
       userAgent: req.headers["user-agent"] || "",
@@ -90,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         username: user.username,
         display_name: user.display_name,
         role: user.role,
-        tenant_id: user.tenant_id || "",
+        tenant_id: resolvedTenantId,
         tenant_name: tenantName,
       },
     });
